@@ -28,7 +28,7 @@
               <tr style="background: #F8FAFC; text-align: left; color: #64748B;">
                 <th style="padding: 12px;">Code Souscription</th>
                 <th style="padding: 12px;">Client</th>
-                <th style="padding: 12px;">Pack</th>
+                <th style="padding: 12px;">Session</th>
                 <th style="padding: 12px;">Cotis. / Jour</th>
                 <th style="padding: 12px;">Progression</th>
                 <th style="padding: 12px; text-align: right;">Total Cotisé</th>
@@ -58,9 +58,9 @@ $(document).ready(function() {
       { data: 'nom_client_complet', render: function(d) {
         return '<strong style="color:#0F172A;">' + (d || '-') + '</strong>';
       }},
-      { data: 'libelle_pack', defaultContent: '-' },
-      { data: 'montant_cotisation_journaliere', render: function(d) {
-        return '<span style="font-weight:700; color:#15803D;">' + Number(d || 0).toLocaleString('fr-FR') + ' F</span>';
+      { data: 'libelle_session', defaultContent: '-' },
+      { data: 'montant_total_prevu', render: function(d) {
+        return '<span style="font-weight:700; color:#15803D;">' + Number(d || 0).toLocaleString('fr-FR') + ' FCFA</span>';
       }},
       { data: null, render: function(d) {
         var cotise = d.nombre_jour_cotise || 0;
