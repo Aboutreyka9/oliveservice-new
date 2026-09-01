@@ -142,7 +142,7 @@ $statutSouscription = $souscription['statut_souscription'] ?? '-';
                 <i data-lucide="clipboard-list" style="width: 18px; height: 18px; color: #059669;"></i> Liste des cautisations
               </h3>
               <?php if ($montantRestant > 0 && $joursRestants > 0): ?>
-                <button class="btn btn-sm" id="paymentBtn" data-bs-toggle="modal" data-bs-target="#paymentModal" style="background: #059669; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 700; font-size: 13px;">
+                <button class="btn btn-sm" id="paymentBtn" onclick="openPaymentModal()" style="background: #059669; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 700; font-size: 13px; cursor: pointer;">
                   <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Faire paiement
                 </button>
               <?php else: ?>
@@ -176,129 +176,129 @@ $statutSouscription = $souscription['statut_souscription'] ?? '-';
 </div>
 
 <!-- Modal: Formulaire de Paiement -->
-<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl" role="document">
-    <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
-      <div class="modal-header" style="background: #1E3A5F; color: white; border: none; padding: 18px 28px;">
-        <h5 class="modal-title" style="font-size: 18px; font-weight: 700; margin: 0;">
-          <i data-lucide="wallet" style="width: 20px; height: 20px; margin-right: 8px;"></i> Formulaire de Paiement
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer" style="color: white; opacity: 0.7;"></button>
+<div class="modal-overlay" id="paymentModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 16px;">
+  <div style="background: #FFFFFF; border-radius: 16px; width: 100%; max-width: 900px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; max-height: 90vh; display: flex; flex-direction: column;">
+    <div class="modal-header" style="background: #1E3A5F; color: white; border: none; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+      <h5 class="modal-title" style="font-size: 18px; font-weight: 700; margin: 0; color: white; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="wallet" style="width: 20px; height: 20px;"></i> Formulaire de Paiement
+      </h5>
+      <button type="button" onclick="closePaymentModal()" style="background: none; border: none; color: white; opacity: 0.8; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px;">
+        <i data-lucide="x" style="width: 20px; height: 20px; color: white;"></i>
+      </button>
+    </div>
+
+    <div class="modal-body p-0" style="overflow-y: auto; flex: 1;">
+      <!-- Partie supérieure: Récapitulatif -->
+      <div style="background: #F8FAFC; border-bottom: 2px solid #E2E8F0; padding: 20px 28px;">
+        <h6 style="font-size: 14px; font-weight: 700; color: #1E3A5F; margin: 0 0 12px 0; display: flex; align-items: center; gap: 6px;">
+          <i data-lucide="file-text" style="width: 16px; height: 16px;"></i> Récapitulatif de la situation
+        </h6>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+          <div>
+            <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Client</span>
+            <div style="font-size: 16px; font-weight: 700; color: #0F172A; margin-top: 4px;"><?= htmlspecialchars($nomClient) ?></div>
+          </div>
+          <div>
+            <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Code Souscription</span>
+            <div style="font-size: 15px; font-weight: 700; color: #1E3A5F; margin-top: 4px;">
+              <code style="background: #EFF6FF; padding: 3px 8px; border-radius: 4px;"><?= htmlspecialchars($codeSouscription) ?></code>
+            </div>
+          </div>
+          <div>
+            <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Session</span>
+            <div style="font-size: 15px; font-weight: 600; color: #334155; margin-top: 4px;"><?= htmlspecialchars($libelleSession) ?></div>
+          </div>
+          <div>
+            <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Montant total</span>
+            <div style="font-size: 18px; font-weight: 800; color: #1E3A5F; margin-top: 4px;" id="recap_montant_total"><?= number_format($montantTotal, 0, ',', ' ') ?> FCFA</div>
+          </div>
+          <div>
+            <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Déjà payé</span>
+            <div style="font-size: 18px; font-weight: 800; color: #15803D; margin-top: 4px;" id="recap_montant_paye"><?= number_format($montantPaye, 0, ',', ' ') ?> FCFA</div>
+          </div>
+          <div>
+            <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Restant à payer</span>
+            <div style="font-size: 18px; font-weight: 800; color: #DC2626; margin-top: 4px;" id="recap_montant_restant"><?= number_format($montantRestant, 0, ',', ' ') ?> FCFA</div>
+          </div>
+          <div>
+            <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Cotisation / jour</span>
+            <div style="font-size: 18px; font-weight: 800; color: #059669; margin-top: 4px;" id="recap_prix_jour"><?= number_format($prixCotisationJournaliere, 0, ',', ' ') ?> FCFA</div>
+          </div>
+          <div>
+            <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Jours totaux</span>
+            <div style="font-size: 18px; font-weight: 800; color: #0F172A; margin-top: 4px;" id="recap_jours_total"><?= $joursTotal ?></div>
+          </div>
+          <div>
+            <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Jours restants</span>
+            <div style="font-size: 18px; font-weight: 800; color: #DC2626; margin-top: 4px;" id="recap_jours_restants"><?= $joursRestants ?></div>
+          </div>
+        </div>
       </div>
 
-      <div class="modal-body p-0">
-        <!-- Partie supérieure: Récapitulatif -->
-        <div style="background: #F8FAFC; border-bottom: 2px solid #E2E8F0; padding: 20px 28px;">
-          <h6 style="font-size: 14px; font-weight: 700; color: #1E3A5F; margin: 0 0 12px 0; display: flex; align-items: center; gap: 6px;">
-            <i data-lucide="file-text" style="width: 16px; height: 16px;"></i> Récapitulatif de la situation
-          </h6>
+      <!-- Partie inférieure: Formulaire -->
+      <div style="padding: 24px 28px;">
+        <h6 style="font-size: 14px; font-weight: 700; color: #1E3A5F; margin: 0 0 16px 0; display: flex; align-items: center; gap: 6px;">
+          <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Informations de paiement
+        </h6>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-            <div>
-              <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Client</span>
-              <div style="font-size: 16px; font-weight: 700; color: #0F172A; margin-top: 4px;"><?= htmlspecialchars($nomClient) ?></div>
-            </div>
-            <div>
-              <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Code Souscription</span>
-              <div style="font-size: 15px; font-weight: 700; color: #1E3A5F; margin-top: 4px;">
-                <code style="background: #EFF6FF; padding: 3px 8px; border-radius: 4px;"><?= htmlspecialchars($codeSouscription) ?></code>
-              </div>
-            </div>
-            <div>
-              <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Session</span>
-              <div style="font-size: 15px; font-weight: 600; color: #334155; margin-top: 4px;"><?= htmlspecialchars($libelleSession) ?></div>
-            </div>
-            <div>
-              <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Montant total</span>
-              <div style="font-size: 18px; font-weight: 800; color: #1E3A5F; margin-top: 4px;" id="recap_montant_total"><?= number_format($montantTotal, 0, ',', ' ') ?> FCFA</div>
-            </div>
-            <div>
-              <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Déjà payé</span>
-              <div style="font-size: 18px; font-weight: 800; color: #15803D; margin-top: 4px;" id="recap_montant_paye"><?= number_format($montantPaye, 0, ',', ' ') ?> FCFA</div>
-            </div>
-            <div>
-              <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Restant à payer</span>
-              <div style="font-size: 18px; font-weight: 800; color: #DC2626; margin-top: 4px;" id="recap_montant_restant"><?= number_format($montantRestant, 0, ',', ' ') ?> FCFA</div>
-            </div>
-            <div>
-              <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Cotisation / jour</span>
-              <div style="font-size: 18px; font-weight: 800; color: #059669; margin-top: 4px;" id="recap_prix_jour"><?= number_format($prixCotisationJournaliere, 0, ',', ' ') ?> FCFA</div>
-            </div>
-            <div>
-              <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Jours totaux</span>
-              <div style="font-size: 18px; font-weight: 800; color: #0F172A; margin-top: 4px;" id="recap_jours_total"><?= $joursTotal ?></div>
-            </div>
-            <div>
-              <span style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase;">Jours restants</span>
-              <div style="font-size: 18px; font-weight: 800; color: #DC2626; margin-top: 4px;" id="recap_jours_restants"><?= $joursRestants ?></div>
-            </div>
+        <div class="row g-4" style="margin-bottom: 16px; display: flex; gap: 16px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 240px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Montant de la cotisation par jour</label>
+            <input type="text" id="dailyCotisation" class="form-control" readonly style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 10px 14px; font-size: 15px; font-weight: 700; color: #059669;" value="<?= number_format($prixCotisationJournaliere, 0, ',', ' ') ?> FCFA">
+          </div>
+          <div style="flex: 1; min-width: 240px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Mode de paiement</label>
+            <select class="form-select" id="paymentMode" style="border-radius: 8px; border: 1px solid #CBD5E1; padding: 10px 14px; font-size: 14px; width: 100%;">
+              <option value="especes">Espèces</option>
+              <option value="mobile_money">Mobile Money</option>
+              <option value="cheque">Chèque</option>
+              <option value="virement">Virement bancaire</option>
+            </select>
           </div>
         </div>
 
-        <!-- Partie inférieure: Formulaire -->
-        <div style="padding: 24px 28px;">
-          <h6 style="font-size: 14px; font-weight: 700; color: #1E3A5F; margin: 0 0 16px 0; display: flex; align-items: center; gap: 6px;">
-            <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Informations de paiement
-          </h6>
-
-          <div class="row g-4" style="margin-bottom: 16px;">
-            <div class="col-md-6">
-              <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Montant de la cotisation par jour</label>
-              <input type="text" id="dailyCotisation" class="form-control" readonly style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 10px 14px; font-size: 15px; font-weight: 700; color: #059669;" value="<?= number_format($prixCotisationJournaliere, 0, ',', ' ') ?> FCFA">
-            </div>
-            <div class="col-md-6">
-              <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Mode de paiement</label>
-              <select class="form-select" id="paymentMode" style="border-radius: 8px; border: 1px solid #CBD5E1; padding: 10px 14px; font-size: 14px;">
-                <option value="especes">Espèces</option>
-                <option value="mobile_money">Mobile Money</option>
-                <option value="cheque">Chèque</option>
-                <option value="virement">Virement bancaire</option>
-              </select>
-            </div>
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Type de paiement</label>
+          <div style="display: flex; gap: 20px; margin-bottom: 4px;">
+            <label style="font-size: 13px; color: #334155; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="type_paiement" id="typeMontant" value="montant" checked style="accent-color: #1E3A5F;">
+              Par saisie du montant
+            </label>
+            <label style="font-size: 13px; color: #334155; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="type_paiement" id="typeJours" value="jours" style="accent-color: #1E3A5F;">
+              Par saisie du nombre de jours
+            </label>
           </div>
+        </div>
 
-          <div style="margin-bottom: 16px;">
-            <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Type de paiement</label>
-            <div class="d-flex gap-4" style="margin-bottom: 4px;">
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="type_paiement" id="typeMontant" value="montant" checked style="border-color: #1E3A5F;">
-                <label class="form-check-label" for="typeMontant" style="font-size: 13px; color: #334155;">Par saisie du montant</label>
-              </div>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="type_paiement" id="typeJours" value="jours" style="border-color: #1E3A5F;">
-                <label class="form-check-label" for="typeJours" style="font-size: 13px; color: #334155;">Par saisie du nombre de jours</label>
-              </div>
+        <div style="margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 240px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Montant à verser</label>
+            <div style="display: flex;">
+              <input type="number" id="montantInput" class="form-control" style="border-radius: 8px 0 0 8px; border: 1px solid #CBD5E1; padding: 10px 14px; font-size: 15px; font-weight: 700; color: #0F172A; width: 100%;" value="<?= (float)$prixCotisationJournaliere ?>" min="0" step="<?= (float)$prixCotisationJournaliere ?>">
+              <span style="background: #F8FAFC; border: 1px solid #CBD5E1; border-left: none; border-radius: 0 8px 8px 0; font-weight: 700; color: #64748B; padding: 0 14px; display: flex; align-items: center;">FCFA</span>
             </div>
+            <small style="color: #94A3B8; font-size: 11px; display: block; margin-top: 4px;">Doit être un multiple de la cotisation journalière</small>
           </div>
+          <div style="flex: 1; min-width: 240px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Nombre de jours</label>
+            <input type="number" id="joursInput" class="form-control" style="border-radius: 8px; border: 1px solid #CBD5E1; padding: 10px 14px; font-size: 15px; font-weight: 700; color: #0F172A;" min="1" value="1">
+          </div>
+        </div>
 
-          <div class="row g-4" style="margin-bottom: 20px;">
-            <div class="col-md-6">
-              <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Montant à versser</label>
-              <div class="input-group">
-                <input type="number" id="montantInput" class="form-control" style="border-radius: 8px 0 0 8px; border: 1px solid #CBD5E1; padding: 10px 14px; font-size: 15px; font-weight: 700; color: #0F172A;" value="<?= number_format($prixCotisationJournaliere, 0, ',', ' ') ?>" min="0" step="<?= $prixCotisationJournaliere ?>">
-                <span class="input-group-text" style="background: #F8FAFC; border: 1px solid #CBD5E1; border-left: none; border-radius: 0 8px 8px 0; font-weight: 700; color: #64748B;">FCFA</span>
-              </div>
-              <small style="color: #94A3B8; font-size: 11px; display: block; margin-top: 4px;">Doit être un multiple de la cotisation journalière</small>
-            </div>
-            <div class="col-md-6">
-              <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Nombre de jours</label>
-              <input type="number" id="joursInput" class="form-control" style="border-radius: 8px; border: 1px solid #CBD5E1; padding: 10px 14px; font-size: 15px; font-weight: 700; color: #0F172A;" min="1" value="1">
-            </div>
-          </div>
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Date du prochain rendez-vous</label>
+          <input type="text" id="nextAppointment" class="form-control" readonly style="background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 8px; padding: 10px 14px; font-size: 15px; font-weight: 700; color: #1E3A5F;">
+        </div>
 
-          <div style="margin-bottom: 24px;">
-            <label style="display: block; font-weight: 600; margin-bottom: 6px; color: #1E3A5F; font-size: 13px;">Date du prochain rendez-vous</label>
-            <input type="text" id="nextAppointment" class="form-control" readonly style="background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 8px; padding: 10px 14px; font-size: 15px; font-weight: 700; color: #1E3A5F;">
-          </div>
-
-          <div style="display: flex; justify-content: end; gap: 12px; padding-top: 16px; border-top: 1px solid #E2E8F0;">
-            <button type="button" class="btn" data-bs-dismiss="modal" style="background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; border-radius: 8px; padding: 10px 24px; font-weight: 700;">
-              Annuler
-            </button>
-            <button type="button" class="btn" id="savePaymentBtn" style="background: #1E3A5F; color: white; border: none; border-radius: 8px; padding: 10px 28px; font-weight: 700;">
-              <i data-lucide="save" style="width: 18px; height: 18px;"></i> Valider le paiement
-            </button>
-          </div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 16px; border-top: 1px solid #E2E8F0;">
+          <button type="button" class="btn" onclick="closePaymentModal()" style="background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; border-radius: 8px; padding: 10px 24px; font-weight: 700; cursor: pointer;">
+            Annuler
+          </button>
+          <button type="button" class="btn" id="savePaymentBtn" style="background: #1E3A5F; color: white; border: none; border-radius: 8px; padding: 10px 28px; font-weight: 700; cursor: pointer;">
+            <i data-lucide="save" style="width: 18px; height: 18px;"></i> Valider le paiement
+          </button>
         </div>
       </div>
     </div>
@@ -310,6 +310,27 @@ const PRIX_COTISATION = <?= $prixCotisationJournaliere ?>;
 const MONTANT_RESTANT = <?= $montantRestant ?>;
 const JOURS_RESTANTS = <?= $joursRestants ?>;
 const CODE_SOUSCRIPTION = '<?= htmlspecialchars($codeSouscription) ?>';
+
+function openPaymentModal() {
+    const modal = document.getElementById('paymentModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        if (window.lucide) window.lucide.createIcons();
+    }
+}
+
+function closePaymentModal() {
+    const modal = document.getElementById('paymentModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+document.getElementById('paymentModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePaymentModal();
+    }
+});
 
 function formatCurrency(amount) {
     return Number(amount).toLocaleString('fr-FR') + ' FCFA';
@@ -327,6 +348,8 @@ function calculateNextDate(jours) {
 
 function loadHistory() {
     const tbody = document.getElementById('historyBody');
+    if (!tbody) return;
+
     fetch('<?= RACINE ?>cautisation-payment/history', {
         method: 'POST',
         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -339,16 +362,34 @@ function loadHistory() {
             return;
         }
         tbody.innerHTML = data.data.map(c => {
-            let modeLabel = c.mode_paiement;
+            let modeLabel = c.mode_paiement || 'especes';
             const modeIcons = {'especes':'💶', 'mobile_money':'📱', 'cheque':'📝', 'virement':'🏦'};
-            modeLabel = (modeIcons[c.mode_paiement] || '💰') + ' ' + c.mode_paiement.replace('_', ' ');
-            const statutStyle = c.statut === 'valide' ? 'background:#DCFCE7; color:#15803D' : 'background:#FEE2E2; color:#DC2626';
+            const modeClean = modeLabel.replace('_', ' ');
+            const modeDisplay = (modeIcons[modeLabel] || '💰') + ' ' + modeClean.charAt(0).toUpperCase() + modeClean.slice(1);
+            
+            const rawStatut = String(c.statut || 'valide').trim().toLowerCase();
+            let statutLabel = 'Validé';
+            let statutStyle = 'background:#DCFCE7; color:#15803D';
+            
+            if (rawStatut === 'en attente') {
+                statutLabel = 'En attente';
+                statutStyle = 'background:#FEF3C7; color:#92400E';
+            } else if (rawStatut === 'annule' || rawStatut === 'ennule') {
+                statutLabel = 'Annulé';
+                statutStyle = 'background:#FEE2E2; color:#DC2626';
+            } else if (rawStatut === 'valide' || rawStatut === 'validé') {
+                statutLabel = 'Validé';
+                statutStyle = 'background:#DCFCE7; color:#15803D';
+            } else {
+                statutLabel = c.statut || 'Validé';
+            }
+
             return '<tr>' +
-                '<td style="padding: 10px 12px; color: #334155; font-weight: 600;">' + c.date_paiement + '</td>' +
+                '<td style="padding: 10px 12px; color: #334155; font-weight: 600;">' + (c.date_paiement || '-') + '</td>' +
                 '<td style="padding: 10px 12px; text-align: right; font-weight: 700; color: #15803D;">' + formatCurrency(c.montant) + '</td>' +
-                '<td style="padding: 10px 12px; text-align: center;"><span style="background:#EFF6FF; color:#1E3A5F; padding:4px 10px; border-radius:6px; font-weight:700; font-size:13px;">' + c.nombre_jours + 'j</span></td>' +
-                '<td style="padding: 10px 12px; color: #334155;">' + modeLabel + '</td>' +
-                '<td style="padding: 10px 12px; text-align: center;"><span class="badge" style="' + statutStyle + '; padding:6px 10px; border-radius:6px; font-weight:700; font-size:11px;">' + c.statut + '</span></td>' +
+                '<td style="padding: 10px 12px; text-align: center;"><span style="background:#EFF6FF; color:#1E3A5F; padding:4px 10px; border-radius:6px; font-weight:700; font-size:13px;">' + (c.nombre_jours || 0) + 'j</span></td>' +
+                '<td style="padding: 10px 12px; color: #334155;">' + modeDisplay + '</td>' +
+                '<td style="padding: 10px 12px; text-align: center;"><span class="badge" style="' + statutStyle + '; padding:6px 12px; border-radius:6px; font-weight:700; font-size:11px; display:inline-block;">' + statutLabel + '</span></td>' +
             '</tr>';
         }).join('');
     })
@@ -362,7 +403,8 @@ const joursInput = document.getElementById('joursInput');
 const nextAppointment = document.getElementById('nextAppointment');
 
 function updateCalculations() {
-    const type = document.querySelector('input[name="type_paiement"]:checked').value;
+    const typeRadio = document.querySelector('input[name="type_paiement"]:checked');
+    const type = typeRadio ? typeRadio.value : 'montant';
     let montant, jours;
 
     if (type === 'montant') {
@@ -386,26 +428,32 @@ document.getElementById('savePaymentBtn').addEventListener('click', function() {
     const montant = parseFloat(montantInput.value) || 0;
     const jours = parseInt(joursInput.value) || 0;
     const mode = document.getElementById('paymentMode').value;
-    const type = document.querySelector('input[name="type_paiement"]:checked').value;
+    const typeRadio = document.querySelector('input[name="type_paiement"]:checked');
+    const type = typeRadio ? typeRadio.value : 'montant';
 
     if (montant <= 0) {
-        alert('⚠️ Le montant doit être supérieur à 0.');
+        if (window.toastr) toastr.warning('Le montant doit être supérieur à 0.');
+        else alert('Le montant doit être supérieur à 0.');
         return;
     }
     if (jours <= 0) {
-        alert('⚠️ Le nombre de jours doit être supérieur à 0.');
+        if (window.toastr) toastr.warning('Le nombre de jours doit être supérieur à 0.');
+        else alert('Le nombre de jours doit être supérieur à 0.');
         return;
     }
     if (PRIX_COTISATION > 0 && montant % PRIX_COTISATION > 0.01) {
-        alert('⚠️ Le montant doit être un multiple de ' + formatCurrency(PRIX_COTISATION) + '.');
+        if (window.toastr) toastr.warning('Le montant doit être un multiple de ' + formatCurrency(PRIX_COTISATION) + '.');
+        else alert('Le montant doit être un multiple de ' + formatCurrency(PRIX_COTISATION) + '.');
         return;
     }
     if (montant > MONTANT_RESTANT) {
-        alert('⚠️ Le montant dépasse le montant restant à payer (' + formatCurrency(MONTANT_RESTANT) + ').');
+        if (window.toastr) toastr.warning('Le montant dépasse le montant restant à payer (' + formatCurrency(MONTANT_RESTANT) + ').');
+        else alert('Le montant dépasse le montant restant à payer (' + formatCurrency(MONTANT_RESTANT) + ').');
         return;
     }
     if (jours > JOURS_RESTANTS) {
-        alert('⚠️ Le nombre de jours dépasse le nombre de jours restants (' + JOURS_RESTANTS + ' jours).');
+        if (window.toastr) toastr.warning('Le nombre de jours dépasse le nombre de jours restants (' + JOURS_RESTANTS + ' jours).');
+        else alert('Le nombre de jours dépasse le nombre de jours restants (' + JOURS_RESTANTS + ' jours).');
         return;
     }
 
@@ -431,18 +479,25 @@ document.getElementById('savePaymentBtn').addEventListener('click', function() {
         btn.innerHTML = '<i data-lucide="save" style="width: 18px; height: 18px;"></i> Valider le paiement';
 
         if (result.status === 1) {
+            closePaymentModal();
             loadHistory();
             updateCalculations();
-            alert('✅ Paiement enregistré avec succès !\n\nCode : ' + result.code_cautisation + '\nProchain RDV : ' + result.prochain_rdv);
-            location.reload();
+            if (window.toastr) {
+                toastr.success('Paiement enregistré avec succès ! Code : ' + result.code_cautisation + ' | Prochain RDV : ' + result.prochain_rdv);
+            } else {
+                alert('✅ Paiement enregistré avec succès !\n\nCode : ' + result.code_cautisation + '\nProchain RDV : ' + result.prochain_rdv);
+            }
+            setTimeout(function() { location.reload(); }, 1500);
         } else {
-            alert('❌ ' + result.message);
+            if (window.toastr) toastr.error(result.message || 'Erreur lors de l\'enregistrement');
+            else alert('❌ ' + result.message);
         }
     })
     .catch(err => {
         btn.disabled = false;
         btn.innerHTML = '<i data-lucide="save" style="width: 18px; height: 18px;"></i> Valider le paiement';
-        alert('❌ Erreur : ' + err.message);
+        if (window.toastr) toastr.error('Erreur : ' + err.message);
+        else alert('❌ Erreur : ' + err.message);
     });
 });
 

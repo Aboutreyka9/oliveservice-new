@@ -322,3 +322,17 @@ Rôles autorisés:
 - POST /cautisations/search → liste des souscriptions
 - GET /cautisations/:code_souscription → affichage situation
 - POST /cautisations/payment → enregistrement du paiement
+
+---
+
+## 🔑 AUTHENTIFICATION & ACCÈS COMPTES
+
+### Comptes Administrateur par défaut
+
+- **Identifiant** : `admin@gmail.com` ou `0544564564`
+- **Mot de passe par défaut** : `admin`
+
+### Règles d'authentification
+
+- **Recherche d'identifiant** : Acceptation flexible de l'adresse email ou du numéro de téléphone (support du format international avec ou sans indicatif `+225`, nettoyé via `Validator::cleanPhone`).
+- **Hachage du mot de passe** : Hachage standard PHP `password_hash` (`PASSWORD_DEFAULT`). Fallback avec auto-mise à jour en hash sécurisé dans la base de données si un mot de passe texte hérité est saisi.

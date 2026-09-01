@@ -1,3 +1,4 @@
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="<?= RACINE ?>public/json/func.js?v=<?= time() ?>"></script>
 <script src="<?= RACINE ?>public/json/validator.js?v=<?= time() ?>"></script>

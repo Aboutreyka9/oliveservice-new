@@ -274,16 +274,30 @@ $(document).ready(function() {
   var baseCotisPack = 0;
 
   function calculerMontantTotalEtape2() {
+    baseCotisPack = parseFloat($('#prix_cotisation_pack').val() || '0');
     var jours = parseInt($('#nombre_jour_pack').val() || '0', 10);
-    var total = jours * baseCotisPack;
-    $('#montant_pack').val(Math.round(total));
+    if (!jours && $('#session_code').val()) {
+      jours = parseInt($('#session_code').find('option:selected').data('jours') || '0', 10);
+      if (jours > 0) {
+        $('#nombre_jour_pack').val(jours);
+      }
+    }
+    var total = Math.round(jours * baseCotisPack);
+    $('#montant_pack').val(total);
+    $('#montant_pack_display').val(Number(total).toLocaleString('fr-FR') + ' FCFA');
   }
+
+  $('#prix_cotisation_pack').on('input change', function() {
+    calculerMontantTotalEtape2();
+  });
 
   $('#session_code').on('change', function() {
     var jours = parseInt($(this).find('option:selected').data('jours') || '0', 10);
     $('#nombre_jour_pack').val(jours);
     calculerMontantTotalEtape2();
   });
+
+  calculerMontantTotalEtape2();
 
   $('#btn-step-1-next').on('click', function() {
     var libelle = $('#libelle_pack').val().trim();

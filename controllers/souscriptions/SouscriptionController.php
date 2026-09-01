@@ -34,8 +34,14 @@ class SouscriptionController extends BaseController
         foreach ($grouped as $s) {
             $id = $s['id_souscription'];
             $idCrypte = $this->validator->crypter($id);
-            $soldeRestant = (float)($s['montant_total_prevu'] ?? 0) - (float)($s['montant_total_cotise'] ?? 0);
-            $joursRestants = max(0, (int)($s['nombre_jour_total'] ?? 0) - (int)($s['nombre_jour_cotise'] ?? 0));
+            
+            $sumPrixCotisation = (float)($s['sum_prix_cotisation_pack'] ?? 0);
+            $nombreJourSession = (int)($s['nombre_jour_session'] ?? 0);
+            $totaleSouscription = (float)($s['totale_souscription'] ?? ($sumPrixCotisation * $nombreJourSession));
+            $montantCotise = (float)($s['montant_total_cotise'] ?? 0);
+            $soldeRestant = max(0, $totaleSouscription - $montantCotise);
+            $joursRestants = max(0, $nombreJourSession - (int)($s['nombre_jour_cotise'] ?? 0));
+
             $nbPacks = count($s['packs'] ?? []);
             if ($nbPacks > 1) {
                 $packLabel = $s['packs'][0] . ' <small style="color:#64748B;">+' . ($nbPacks - 1) . ' autre(s)</small>';
@@ -53,9 +59,11 @@ class SouscriptionController extends BaseController
                     : '-',
                 'libelle_pack' => $packLabel,
                 'nombre_packs' => $nbPacks,
-                'solde_restant' => max(0, $soldeRestant),
+                'sum_prix_cotisation_pack' => $sumPrixCotisation,
+                'totale_souscription' => $totaleSouscription,
+                'solde_restant' => $soldeRestant,
                 'jours_restants' => $joursRestants,
-                'progression' => ($s['nombre_jour_total'] ?? 0) > 0 ? round((($s['nombre_jour_cotise'] ?? 0) / ($s['nombre_jour_total'] ?? 1)) * 100) : 0
+                'progression' => $nombreJourSession > 0 ? round((($s['nombre_jour_cotise'] ?? 0) / $nombreJourSession) * 100) : 0
             ]);
         }
         $this->json(['data' => $data]);

@@ -17,7 +17,8 @@ class ModelSouscription extends BaseModel
                        z.libelle_zone,
                        sess.libelle_session,
                        sess.nombre_jour_session,
-                       (SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as montant_total_prevu,
+                       (SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as sum_prix_cotisation_pack,
+                       ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) * COALESCE(sess.nombre_jour_session, 0)) as totale_souscription,
                        (SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND mc.statut_cautisation_client = 'valide') as montant_total_cotise,
                        (SELECT COALESCE(SUM(mc.nombre_jour), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND mc.statut_cautisation_client = 'valide') as nombre_jour_cotise,
                        sess.nombre_jour_session as nombre_jour_total
@@ -171,12 +172,18 @@ class ModelSouscription extends BaseModel
     public function getSoldeRestant(string $souscriptionCode): float
     {
         try {
-            $sql = "SELECT montant_total_prevu, montant_total_cotise FROM souscriptions WHERE code_souscription = ? LIMIT 1";
+            $sql = "
+                SELECT ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) * COALESCE(sess.nombre_jour_session, 0)) as totale_souscription,
+                       (SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND mc.statut_cautisation_client = 'valide') as montant_total_cotise
+                FROM souscriptions s
+                LEFT JOIN sessions sess ON sess.code_session = s.session_code
+                WHERE s.code_souscription = ? LIMIT 1
+            ";
             $stmt = $this->getCon()->prepare($sql);
             $stmt->execute([$souscriptionCode]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$row) return 0;
-            return max(0, (float)($row['montant_total_prevu'] ?? 0) - (float)($row['montant_total_cotise'] ?? 0));
+            return max(0, (float)($row['totale_souscription'] ?? 0) - (float)($row['montant_total_cotise'] ?? 0));
         } catch (Exception $e) {
             error_log("ModelSouscription::getSoldeRestant error: " . $e->getMessage());
             return 0;

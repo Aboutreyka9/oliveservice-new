@@ -32,6 +32,7 @@
                 <th style="padding: 12px;">Client</th>
                 <th style="padding: 12px;">Session</th>
                 <th style="padding: 12px;">Cotis. / Jour</th>
+                <th style="padding: 12px; text-align: right;">Total Souscription</th>
                 <th style="padding: 12px;">Progression</th>
                 <th style="padding: 12px; text-align: right;">Total Cotisé</th>
                 <th style="padding: 12px; text-align: right;">Reste à Payer</th>
@@ -69,9 +70,12 @@ $(document).ready(function() {
         return '<strong style="color:#0F172A;">' + (d || '-') + '</strong>';
       }},
       { data: 'libelle_session', defaultContent: '-' },
-      { data: 'montant_total_prevu', render: function(d) {
+      { data: 'sum_prix_cotisation_pack', render: function(d) {
         return '<span style="font-weight:700; color:#15803D;">' + Number(d || 0).toLocaleString('fr-FR') + ' FCFA</span>';
       }},
+      { data: 'totale_souscription', render: function(d) {
+        return '<strong style="color:#1E3A5F;">' + Number(d || 0).toLocaleString('fr-FR') + ' FCFA</strong>';
+      }, className: 'text-end' },
       { data: null, render: function(d) {
         var cotise = d.nombre_jour_cotise || 0;
         var total = d.nombre_jour_session || 0;
@@ -82,11 +86,11 @@ $(document).ready(function() {
       }},
       { data: 'montant_total_cotise', render: function(d) {
         return '<strong style="color:#0F172A;">' + Number(d || 0).toLocaleString('fr-FR') + ' FCFA</strong>';
-      }},
+      }, className: 'text-end' },
       { data: 'solde_restant', render: function(d) {
         if ((d || 0) <= 0) return '<span style="color:#15803D; font-weight:800;">Soldé</span>';
         return '<strong style="color:#DC2626;">' + Number(d).toLocaleString('fr-FR') + ' FCFA</strong>';
-      }},
+      }, className: 'text-end' },
       { data: 'date_souscription', defaultContent: '-', className: 'text-center' },
       { data: null, width: '180px', orderable: false, render: function(d) {
         var btns = '<a href="' + window.RACINE + 'souscription/edition/' + (d.editId || d.id_souscription) + '" class="btn btn-sm btn-secondary" style="margin-right:6px; font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +

@@ -136,14 +136,19 @@ class CautisationPaymentController extends BaseController
         
         $data = [];
         foreach ($cautisations as $c) {
+            $datePaiement = '-';
+            if (!empty($c['created_at_cautisation_client'])) {
+                $datePaiement = date('d-m-Y H:i', strtotime($c['created_at_cautisation_client']));
+            } elseif (!empty($c['date_cautisation'])) {
+                $datePaiement = date('d-m-Y H:i', strtotime($c['date_cautisation']));
+            }
+
             $data[] = [
-                'date_paiement' => isset($c['created_at_cautisation_client']) 
-                    ? date('d-m-Y', strtotime($c['created_at_cautisation_client'])) 
-                    : '-',
+                'date_paiement' => $datePaiement,
                 'montant' => $c['montant_cautisation_client'] ?? 0,
-                'nombre_jours' => $c['nombre_jour'] ?? 0,
+                'nombre_jours' => $c['nombre_jour'] ?? $c['nombre_jour_paye'] ?? 0,
                 'mode_paiement' => $c['mode_paiement'] ?? '-',
-                'statut' => $c['statut_cautisation_client'] ?? '-'
+                'statut' => !empty($c['statut_cautisation_client']) ? $c['statut_cautisation_client'] : (!empty($c['statut_cautisation']) ? $c['statut_cautisation'] : 'valide')
             ];
         }
 

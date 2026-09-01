@@ -355,16 +355,33 @@ class UserController extends BaseController
         $notEmpty = Validator::validateRequiredFields($_POST);
 
         if ($notEmpty === true) {
-            $login = trim($this->post('login'));
+            $loginRaw = trim($this->post('login'));
+            $cleanPhone = Validator::cleanPhone($loginRaw);
             $password = $this->post('password');
 
-            // 1. Recherche dans la table USERS
-            $user = $this->validator->getByElement('users', 'telephone_user', $login);
+            // 1. Recherche dans la table USERS par email ou téléphone (brut ou nettoyé)
+            $user = $this->validator->getByElement('users', 'email_user', $loginRaw);
+            if (!$user && !empty($cleanPhone)) {
+                $user = $this->validator->getByElement('users', 'telephone_user', $cleanPhone);
+            }
             if (!$user) {
-                $user = $this->validator->getByElement('users', 'email_user', $login);
+                $user = $this->validator->getByElement('users', 'telephone_user', $loginRaw);
             }
 
-            if (isset($user) && !empty($user) && password_verify($password, $user['password_user'] ?? '')) {
+            $passwordMatched = false;
+            if (isset($user) && !empty($user)) {
+                $hashInDb = $user['password_user'] ?? '';
+                if (password_verify($password, $hashInDb)) {
+                    $passwordMatched = true;
+                } elseif ($hashInDb === $password) {
+                    $passwordMatched = true;
+                    // Auto-mise à jour du mot de passe avec hash sécurisé
+                    $newHash = password_hash($password, PASSWORD_DEFAULT);
+                    $this->model->getCon()->prepare("UPDATE users SET password_user = ? WHERE id_user = ?")->execute([$newHash, $user['id_user']]);
+                }
+            }
+
+            if ($user && $passwordMatched) {
                 if ($user['statut_user'] === 'actif') {
                     $userRoles = $this->model->getUserRoles($user['code_user']);
                     $roleCodes = !empty($userRoles) ? array_column($userRoles, 'role_code') : ['ROLE_USER'];
@@ -449,20 +466,20 @@ class UserController extends BaseController
                 }
             }
 
-            // 2. Si pas trouvé dans USERS, recherche directe dans la table ENSEIGNANTS
+            // 2. Si pas trouvé dans USERS, recherche directe dans la table ENSEIGNANTS (si elle existe)
             try {
                 $stmtEnsLogin = $this->model->getCon()->prepare("
                     SELECT * FROM enseignants 
                     WHERE (email_enseignant = ? OR telephone_enseignant = ?)
                     LIMIT 1
                 ");
-                $stmtEnsLogin->execute([$login, $login]);
+                $stmtEnsLogin->execute([$loginRaw, $loginRaw]);
                 $ens = $stmtEnsLogin->fetch(PDO::FETCH_ASSOC);
             } catch (Exception $e) {
                 $ens = null;
             }
 
-            if ($ens && !empty($ens['password_enseignant']) && password_verify($password, $ens['password_enseignant'])) {
+            if ($ens && !empty($ens['password_enseignant']) && (password_verify($password, $ens['password_enseignant']) || $ens['password_enseignant'] === $password)) {
                 if ($ens['statut_enseignant'] === 'actif') {
                     $sessionData = [
                         'id_user' => $ens['id_enseignant'],
