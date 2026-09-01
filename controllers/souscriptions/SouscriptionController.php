@@ -30,7 +30,7 @@ class SouscriptionController extends BaseController
                 'nom_client_complet' => trim($s['nom_client'] ?? ''),
                 'solde_restant' => max(0, $soldeRestant),
                 'jours_restants' => $joursRestants,
-                'progression' => $s['nombre_jour_total'] > 0 ? round((($s['nombre_jour_cotise'] ?? 0) / $s['nombre_jour_total']) * 100) : 0
+                'progression' => ($s['nombre_jour_total'] ?? 0) > 0 ? round((($s['nombre_jour_cotise'] ?? 0) / ($s['nombre_jour_total'] ?? 1)) * 100) : 0
             ]);
         }
         $this->json(['data' => $data]);
@@ -236,7 +236,8 @@ class SouscriptionController extends BaseController
         $sql = "SELECT p.code_pack, p.libelle_pack, p.prix_cotisation_pack, p.image_pack,
                        c.libelle_categorie_pack, c.code_categorie_pack,
                        COUNT(pa.article_code) as nombre_articles,
-                       (SELECT COUNT(*) FROM pack_souscriptions ps WHERE ps.pack_code = p.code_pack) as nombre_souscriptions
+                       (SELECT COUNT(*) FROM pack_souscriptions ps WHERE ps.pack_code = p.code_pack) as nombre_souscriptions,
+                       (SELECT nombre_jour_session FROM sessions WHERE code_session = p.session_code) as nombre_jour_session
                 FROM packs p
                 LEFT JOIN categorie_packs c ON c.code_categorie_pack = p.categorie_pack_code
                 LEFT JOIN pack_articles pa ON pa.pack_code = p.code_pack

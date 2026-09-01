@@ -93,9 +93,9 @@
 
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 20px;">
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Session d'activité</label>
-                  <select id="filter-session" class="form-control select2" style="width: 100%; box-sizing: border-box;">
-                    <option value="">Toutes les sessions</option>
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Session d'activité <span style="color: #EF4444;">*</span></label>
+                  <select id="filter-session" class="form-control select2" style="width: 100%; box-sizing: border-box;" required>
+                    <option value="">-- Choisir une session --</option>
                     <?php foreach ($sessions as $s): ?>
                       <option value="<?= $s['code_session'] ?>"><?= htmlspecialchars($s['libelle_session']) ?></option>
                     <?php endforeach; ?>
@@ -248,8 +248,8 @@ function loadPacks() {
   var categorieCode = $('#filter-categorie').val();
   var container = $('#packs-container');
 
-  if (!sessionCode && !categorieCode) {
-    container.html('<p style="color: #94A3B8; text-align: center; padding: 40px 0; font-style: italic;">Sélectionnez une session et/ou une catégorie pour afficher les packs disponibles.</p>');
+  if (!sessionCode) {
+    container.html('<p style="color: #94A3B8; text-align: center; padding: 40px 0; font-style: italic;">Sélectionnez une session pour afficher les packs disponibles.</p>');
     return;
   }
 
@@ -274,7 +274,7 @@ function loadPacks() {
             '</div>' +
             '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #475569;">' +
               '<div><strong>Montant :</strong> <span style="color: #15803D; font-weight: 700;">' + Number(pack.prix_cotisation_pack || 0).toLocaleString('fr-FR') + ' FCFA</span></div>' +
-              '<div><strong>Durée :</strong> ' + (pack.nombre_jour_pack || 0) + ' jours</div>' +
+              '<div><strong>Durée :</strong> ' + (pack.nombre_jour_session || 0) + ' jours</div>' +
               '<div><strong>Articles :</strong> ' + (pack.nombre_articles || 0) + ' article(s)</div>' +
               '<div><strong>Souscriptions :</strong> ' + (pack.nombre_souscriptions || 0) + '</div>' +
             '</div>' +
@@ -384,6 +384,10 @@ $(document).ready(function() {
   });
 
   $('#btn-step-2-next').on('click', function() {
+    if (!$('#filter-session').val()) {
+      showMessage('danger', 'Veuillez sélectionner une session d\'activité.');
+      return;
+    }
     if (selectedPacks.length === 0) {
       showMessage('danger', 'Veuillez sélectionner au moins un pack.');
       return;
@@ -393,6 +397,10 @@ $(document).ready(function() {
 
   $('#form-souscription-wizard').on('submit', function(e) {
     e.preventDefault();
+    if (!$('#filter-session').val()) {
+      showMessage('danger', 'Veuillez sélectionner une session d\'activité.');
+      return;
+    }
     if (selectedPacks.length === 0) {
       showMessage('danger', 'Aucun pack sélectionné.');
       return;

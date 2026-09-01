@@ -122,15 +122,17 @@ class ModelSouscription extends BaseModel
             $anneeCode = $souscriptionData['annee_code'] ?? ($_SESSION['annee_active_code'] ?? '0GklBk07waYoLB6pHwY');
             $etabCode = $souscriptionData['etablissement_code'] ?? '5454544456';
             $stmtPack = $this->getCon()->prepare("
-                INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription, user_code, zone_code)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
             $stmtPack->execute([
                 $souscriptionData['code_souscription'],
                 $packCode,
                 $anneeCode,
                 $etabCode,
-                date('Y-m-d H:i:s')
+                date('Y-m-d H:i:s'),
+                $souscriptionData['user_code'] ?? '',
+                $souscriptionData['zone_code'] ?? ''
             ]);
 
             $this->getCon()->commit();
@@ -211,8 +213,8 @@ class ModelSouscription extends BaseModel
             $anneeCode = $souscriptionData['annee_code'] ?? ($_SESSION['annee_active_code'] ?? '0GklBk07waYoLB6pHwY');
             $etabCode = $souscriptionData['etablissement_code'] ?? '5454544456';
             $stmtPack = $this->getCon()->prepare("
-                INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription, user_code, zone_code)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
 
             foreach ($packCodes as $packCode) {
@@ -221,7 +223,9 @@ class ModelSouscription extends BaseModel
                     $packCode,
                     $anneeCode,
                     $etabCode,
-                    date('Y-m-d H:i:s')
+                    date('Y-m-d H:i:s'),
+                    $souscriptionData['user_code'] ?? '',
+                    $souscriptionData['zone_code'] ?? ''
                 ]);
             }
 
