@@ -260,6 +260,7 @@ $route->addRoute('/cotisation/formulaire', [$cotisationController, 'formulaire']
 $route->addRoute('/cautisation-payment/search-form', [$cautisationPaymentController, 'searchForm']);
 $route->addRoute('/cautisation-payment/search', [$cautisationPaymentController, 'search']);
 $route->addRoute('/cautisation-payment/situation', [$cautisationPaymentController, 'situation']);
+$route->addRoute('/cautisation-payment/situation/{param}', [$cautisationPaymentController, 'situation']);
 $route->addRoute('/cautisation-payment/situation-details', [$cautisationPaymentController, 'situationDetails']);
 $route->addRoute('/cautisation-payment/history', [$cautisationPaymentController, 'history']);
 $route->addRoute('/cautisation-payment/savepayment', [$cautisationPaymentController, 'savepayment']);

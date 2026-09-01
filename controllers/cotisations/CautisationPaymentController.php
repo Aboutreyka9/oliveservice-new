@@ -23,23 +23,23 @@ class CautisationPaymentController extends BaseController
     public function search()
     {
         $this->requireAuth();
-        
+
         // Pour les requêtes AJAX, ne pas vérifier le CSRF token
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
             return;
         }
-        
+
         $criteria = $this->post('criteria') ?? '';
         $type = $this->post('type') ?? 'all'; // all, phone, name, code, subscription
-        
+
         if (empty($criteria)) {
             $this->json(['error' => 'Veuillez entrer un critère de recherche'], 400);
             return;
         }
 
         $souscriptions = $this->searchSouscriptions($criteria, $type);
-        
+
         if (empty($souscriptions)) {
             $this->json(['message' => 'Aucune souscription trouvée'], 404);
             return;
@@ -69,7 +69,7 @@ class CautisationPaymentController extends BaseController
     public function situation($codesouscription = null)
     {
         $this->requireAuth();
-        
+
         $code = $codesouscription ?? ($_GET['code'] ?? null);
         if (!$code) {
             header('Location: ' . RACINE . 'cautisation-payment/search-form');
@@ -93,12 +93,12 @@ class CautisationPaymentController extends BaseController
     public function situationDetails()
     {
         $this->requireAuth();
-        
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
             return;
         }
-        
+
         $code = $this->post('code_souscription');
         if (!$code) {
             $this->json(['error' => 'Code souscription requis'], 400);
@@ -120,12 +120,12 @@ class CautisationPaymentController extends BaseController
     public function history()
     {
         $this->requireAuth();
-        
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
             return;
         }
-        
+
         $code = $this->post('code_souscription');
         if (!$code) {
             $this->json(['error' => 'Code souscription requis'], 400);
@@ -133,7 +133,7 @@ class CautisationPaymentController extends BaseController
         }
 
         $cautisations = $this->model->getBySouscription($code);
-        
+
         $data = [];
         foreach ($cautisations as $c) {
             $datePaiement = '-';
@@ -161,18 +161,18 @@ class CautisationPaymentController extends BaseController
     public function savepayment()
     {
         $this->requireAuth();
-        
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
             return;
         }
-        
+
         $codeSouscription = $this->post('code_souscription');
-        $montant = (float)($this->post('montant') ?? 0);
-        $nombreJours = (int)($this->post('nombre_jours') ?? 0);
+        $montant = (float) ($this->post('montant') ?? 0);
+        $nombreJours = (int) ($this->post('nombre_jours') ?? 0);
         $modePaiement = $this->post('mode_paiement') ?? 'especes';
         $typePaiement = $this->post('type_paiement') ?? 'montant'; // montant ou jours
-        
+
         // Valider les données
         $validationResult = CautisationValidator::validatePaymentData([
             'code_souscription' => $codeSouscription,
@@ -195,13 +195,13 @@ class CautisationPaymentController extends BaseController
         }
 
         // Vérifier le statut
-        if ($souscription['statut_souscription'] !== 'valide') {
-            $this->error('Cette souscription ne peut pas être payée (statut: ' . $souscription['statut_souscription'] . ')');
-            return;
-        }
+        // if ($souscription['statut_souscription'] !== 'valide') {
+        //     $this->error('Cette souscription ne peut pas être payée (statut: ' . $souscription['statut_souscription'] . ')');
+        //     return;
+        // }
 
         // Récupérer le prix de cotisation journalière
-        $prixCotisationJournaliere = (float)($souscription['prix_cotisation_pack'] ?? 0);
+        $prixCotisationJournaliere = (float) ($souscription['prix_cotisation_pack'] ?? 0);
         if ($prixCotisationJournaliere <= 0) {
             $this->error('Prix de cotisation introuvable');
             return;
@@ -214,8 +214,8 @@ class CautisationPaymentController extends BaseController
             // Validation: le montant doit être un multiple du prix
             $validAmount = CautisationValidator::validateAmount($montant, $prixCotisationJournaliere);
             if (!$validAmount['valid']) {
-                $this->error($validAmount['message'] . 
-                    (isset($validAmount['suggested_amount']) ? 
+                $this->error($validAmount['message'] .
+                    (isset($validAmount['suggested_amount']) ?
                         '. Montant suggéré: ' . CautisationValidator::formatCurrency($validAmount['suggested_amount']) : ''));
                 return;
             }
@@ -223,7 +223,7 @@ class CautisationPaymentController extends BaseController
         }
 
         // Vérifier le montant restant
-        $montantRestant = (float)($souscription['montant_restant_a_payer'] ?? 0);
+        $montantRestant = (float) ($souscription['montant_restant_a_payer'] ?? 0);
         $validMontantRestant = CautisationValidator::validateAmountNotExceeds($montant, $montantRestant);
         if (!$validMontantRestant['valid']) {
             $this->error($validMontantRestant['message']);
@@ -231,7 +231,7 @@ class CautisationPaymentController extends BaseController
         }
 
         // Vérifier le nombre de jours restants
-        $joursRestants = (int)($souscription['nombre_jours_restant'] ?? 0);
+        $joursRestants = (int) ($souscription['nombre_jours_restant'] ?? 0);
         $validDaysRestant = CautisationValidator::validateDaysNotExceeds($nombreJours, $joursRestants);
         if (!$validDaysRestant['valid']) {
             $this->error($validDaysRestant['message']);
@@ -240,13 +240,13 @@ class CautisationPaymentController extends BaseController
 
         // Générer le code de cautisation
         $codeCautisation = CautisationValidator::generateCode('CAUT-');
-        
+
         // Préparer les données
         $userCode = Context::user() ?? '';
         $anneeCode = Context::annee() ?? $souscription['annee_code'] ?? '';
         $zoneCode = $souscription['zone_code'] ?? '';
         $etabCode = $souscription['etablissement_code'] ?? '5454544456';
-        
+
         // Récupérer la caisse ouverte
         $caisse = $this->getOpenCaisse($zoneCode, $etabCode);
         $caisseCode = $caisse['code_caisse'] ?? 'CAISSE-DEFAULT';
@@ -275,7 +275,7 @@ class CautisationPaymentController extends BaseController
         if ($this->model->createCotisation($cautisationData)) {
             // Calculer la date du prochain rendez-vous
             $dateProchainRdv = CautisationValidator::calculateNextDate($nombreJours);
-            
+
             $this->success('Paiement enregistré avec succès !', [
                 'code_cautisation' => $codeCautisation,
                 'prochain_rdv' => $dateProchainRdv,
@@ -292,7 +292,7 @@ class CautisationPaymentController extends BaseController
     private function searchSouscriptions(string $criteria, string $type): array
     {
         $con = $this->model->getCon();
-        
+
         $sql = "
             SELECT s.*, 
                    c.nom_client, c.telephone_client,
@@ -304,7 +304,7 @@ class CautisationPaymentController extends BaseController
         ";
 
         $params = [];
-        
+
         if ($type === 'phone' || $type === 'all') {
             $sql_phone = $sql . " AND c.telephone_client LIKE ?";
             $stmt = $con->prepare($sql_phone);
@@ -316,9 +316,9 @@ class CautisationPaymentController extends BaseController
         }
 
         if ($type === 'name' || $type === 'all') {
-             $sql_name = $sql . " AND c.nom_client LIKE ?";
-             $stmt = $con->prepare($sql_name);
-             $stmt->execute(['%' . $criteria . '%']);
+            $sql_name = $sql . " AND c.nom_client LIKE ?";
+            $stmt = $con->prepare($sql_name);
+            $stmt->execute(['%' . $criteria . '%']);
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             if (!empty($results)) {
                 return $results;
@@ -354,7 +354,7 @@ class CautisationPaymentController extends BaseController
     private function getSouscriptionWithDetails(string $codeSouscription): ?array
     {
         $con = $this->model->getCon();
-        
+
         $sql = "
             SELECT s.*,
                    c.code_client, c.nom_client, c.telephone_client,
@@ -369,7 +369,7 @@ class CautisationPaymentController extends BaseController
             WHERE s.code_souscription = ?
             LIMIT 1
         ";
-        
+
         $stmt = $con->prepare($sql);
         $stmt->execute([$codeSouscription]);
         $souscription = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -379,13 +379,13 @@ class CautisationPaymentController extends BaseController
         }
 
         // Calculer les montants et jours restants
-        $prixCotisationJournaliere = (float)($souscription['montant_total_cautisation'] ?? 0);
-        $joursTotal = (int)($souscription['nombre_jour_session'] ?? 0);
+        $prixCotisationJournaliere = (float) ($souscription['montant_total_cautisation'] ?? 0);
+        $joursTotal = (int) ($souscription['nombre_jour_session'] ?? 0);
         $montantTotal = $prixCotisationJournaliere * $joursTotal;
-        $montantPaye = (float)($souscription['montant_total_paye'] ?? 0);
+        $montantPaye = (float) ($souscription['montant_total_paye'] ?? 0);
         $montantRestant = max(0, $montantTotal - $montantPaye);
-        
-        $joursPayes = (int)($souscription['nombre_jours_payes'] ?? 0);
+
+        $joursPayes = (int) ($souscription['nombre_jours_payes'] ?? 0);
         $joursRestants = max(0, $joursTotal - $joursPayes);
 
         $souscription['montant_total_a_payer'] = $montantTotal;
@@ -418,8 +418,8 @@ class CautisationPaymentController extends BaseController
         $stmt = $con->prepare($sql);
         $stmt->execute([$codeSouscription]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        $dailyCotisation = (float)($result['daily_cotisation'] ?? 0);
-        $nombreJours = (int)($result['nombre_jours'] ?? 0);
+        $dailyCotisation = (float) ($result['daily_cotisation'] ?? 0);
+        $nombreJours = (int) ($result['nombre_jours'] ?? 0);
         return $dailyCotisation * $nombreJours;
     }
 

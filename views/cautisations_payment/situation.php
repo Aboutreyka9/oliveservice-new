@@ -430,7 +430,7 @@ document.getElementById('savePaymentBtn').addEventListener('click', function() {
     const mode = document.getElementById('paymentMode').value;
     const typeRadio = document.querySelector('input[name="type_paiement"]:checked');
     const type = typeRadio ? typeRadio.value : 'montant';
-
+// toastr.warning('Le montant doit être supérieur à 0.'); return;
     if (montant <= 0) {
         if (window.toastr) toastr.warning('Le montant doit être supérieur à 0.');
         else alert('Le montant doit être supérieur à 0.');

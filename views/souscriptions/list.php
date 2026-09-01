@@ -92,8 +92,9 @@ $(document).ready(function() {
         return '<strong style="color:#DC2626;">' + Number(d).toLocaleString('fr-FR') + ' FCFA</strong>';
       }, className: 'text-end' },
       { data: 'date_souscription', defaultContent: '-', className: 'text-center' },
-      { data: null, width: '180px', orderable: false, render: function(d) {
-        var btns = '<a href="' + window.RACINE + 'souscription/edition/' + (d.editId || d.id_souscription) + '" class="btn btn-sm btn-secondary" style="margin-right:6px; font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
+      { data: null, width: '250px', orderable: false, render: function(d) {
+        var btns = '<a href="' + window.RACINE + 'cautisation-payment/situation/' + d.code_souscription + '" class="btn btn-sm btn-success" style="margin-right:6px; font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px; background:#15803D; border-color:#15803D;" title="Gérer la situation et enregistrer un paiement"><i data-lucide="credit-card" style="width:14px;height:14px;"></i> Situation</a>' +
+                   '<a href="' + window.RACINE + 'souscription/edition/' + (d.editId || d.id_souscription) + '" class="btn btn-sm btn-secondary" style="margin-right:6px; font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
                    '<a href="' + window.RACINE + 'souscription/details/' + (d.editId || d.id_souscription) + '" class="btn btn-sm btn-info" style="font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>';
         return btns;
       }, className: 'text-end' }

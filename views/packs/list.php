@@ -26,7 +26,8 @@
                 <th style="padding: 12px;">Zone</th>
                 <th style="padding: 12px; text-align: center;">Durée (jour)</th>
                 <th style="padding: 12px; text-align: right;">Cotisation / Jour</th>
-                <th style="padding: 12px;">Statut</th>
+                <th style="padding: 12px; text-align: right;">Montant Total</th>
+                <th style="padding: 12px; text-align: center;">Statut</th>
                 <th style="padding: 12px; text-align: right;">Actions</th>
               </tr>
             </thead>
@@ -43,6 +44,7 @@ $(document).ready(function() {
     ajax: '<?= RACINE ?>pack/apiList',
     processing: true,
     autoWidth: false,
+    order: [],
     columns: [
       { data: 'id_pack', defaultContent: '-', width: '50px' },
       { data: 'code_pack', width: '120px', render: function(d) {
@@ -60,6 +62,9 @@ $(document).ready(function() {
       }},
       { data: 'prix_cotisation_pack', width: '140px', className: 'text-end', render: function(d) {
         return '<span style="font-weight:700; color:#15803D;">' + Number(d || 0).toLocaleString('fr-FR') + ' FCFA</span>';
+      }},
+      { data: 'montant_total', width: '140px', className: 'text-end', render: function(d) {
+        return '<strong style="color:#1E3A5F;">' + Number(d || 0).toLocaleString('fr-FR') + ' FCFA</strong>';
       }},
       { data: 'statut_pack', width: '80px', className: 'text-center', render: function(d, type, row) {
         var isActif = (d === 'actif');
@@ -79,7 +84,33 @@ $(document).ready(function() {
       }, className: 'text-end' }
     ],
     language: { url: '<?= RACINE ?>json/datatables-i18n-fr-FR.json' },
-    drawCallback: function() { if (window.lucide) lucide.createIcons(); }
+    drawCallback: function() {
+      var api = this.api();
+      var rows = api.rows({ page: 'current' }).nodes();
+      var lastGroup = null;
+
+      api.rows({ page: 'current' }).data().each(function(rowData, i) {
+        var anneeName = rowData.libelle_annee || rowData.annee_code || '-';
+        var zoneName = rowData.libelle_zone || rowData.zone_code || '-';
+        var groupKey = 'Année : ' + anneeName + ' | Zone : ' + zoneName;
+
+        if (lastGroup !== groupKey) {
+          $(rows).eq(i).before(
+            '<tr class="group-header" style="background:#F1F5F9; font-weight:700; color:#1E3A5F;">' +
+            '<td colspan="11" style="padding:10px 14px; border-top:2px solid #CBD5E1; border-bottom:1px solid #CBD5E1;">' +
+            '<div style="display:flex; align-items:center; gap:8px;">' +
+            '<i data-lucide="layers" style="width:16px; height:16px; color:#1E3A5F;"></i>' +
+            '<span>' + groupKey + '</span>' +
+            '</div>' +
+            '</td>' +
+            '</tr>'
+          );
+          lastGroup = groupKey;
+        }
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
   });
 
   $(document).on('change', '.toggle-statut-pack', function() {

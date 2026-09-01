@@ -21,12 +21,14 @@ class PackController extends BaseController
                    c.libelle_categorie_pack,
                    s.libelle_session,
                    s.nombre_jour_session,
-                   z.libelle_zone
+                   z.libelle_zone,
+                   a.libelle_annee
             FROM packs p
             LEFT JOIN categorie_packs c ON c.code_categorie_pack = p.categorie_pack_code
             LEFT JOIN sessions s ON s.code_session = p.session_code
             LEFT JOIN zones z ON z.code_zone = p.zone_code
-            ORDER BY p.id_pack DESC
+            LEFT JOIN annees a ON a.code_annee = p.annee_code
+            ORDER BY p.annee_code ASC, p.zone_code ASC, p.id_pack DESC
         ";
         $items = $this->model->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
         $data = [];
@@ -34,13 +36,19 @@ class PackController extends BaseController
         foreach ($items as $i) {
             $id = $i['id_pack'];
             $idCrypte = $this->validator->crypter($id);
+            $prixCotis = (float)($i['prix_cotisation_pack'] ?? 0);
+            $nbJours = (int)($i['nombre_jour_session'] ?? 0);
+            $montantTotal = $prixCotis * $nbJours;
+
             $data[] = array_merge($i, [
                 'id' => $id,
                 'editId' => $idCrypte,
+                'libelle_annee' => $i['libelle_annee'] ?? ($i['annee_code'] ?? '-'),
                 'libelle_categorie' => $i['libelle_categorie_pack'] ?? ($i['categorie_pack_code'] ?? '-'),
                 'libelle_session' => $i['libelle_session'] ?? ($i['session_code'] ?? '-'),
                 'libelle_zone' => $i['libelle_zone'] ?? ($i['zone_code'] ?? '-'),
-                'nombre_jour_session' => $i['nombre_jour_session'] ?? 0
+                'nombre_jour_session' => $nbJours,
+                'montant_total' => $montantTotal
             ]);
         }
         $this->json(['data' => $data]);
