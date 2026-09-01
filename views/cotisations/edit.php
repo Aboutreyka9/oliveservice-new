@@ -1,3 +1,4 @@
+
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
 <?php 
 $isEdit = !empty($item['id_cautisation_client']);
@@ -47,7 +48,7 @@ $commerciaux = $commerciaux ?? [];
                     <option value="<?= $s['code_souscription'] ?>" 
                             data-cotis="<?= $s['montant_cotisation_journaliere'] ?? 1000 ?>"
                             <?= ($item['souscription_code'] ?? '') === $s['code_souscription'] ? 'selected' : '' ?>>
-                      <?= htmlspecialchars(trim(($s['nom_client'] ?? '') . ' ' . ($s['prenom_client'] ?? ''))) ?> - Pack <?= htmlspecialchars($s['libelle_pack'] ?? 'Pack') ?> (Réf: <?= $s['code_souscription'] ?> - <?= number_format((float)($s['montant_cotisation_journaliere'] ?? 1000), 0, ',', ' ') ?> F/j)
+                      <?= htmlspecialchars(trim($s['nom_client'] ?? '')) ?> - Pack <?= htmlspecialchars($s['libelle_pack'] ?? 'Pack') ?> (Réf: <?= $s['code_souscription'] ?> - <?= number_format((float)($s['montant_cotisation_journaliere'] ?? 1000), 0, ',', ' ') ?> F/j)
                     </option>
                   <?php endforeach; ?>
                 </select>

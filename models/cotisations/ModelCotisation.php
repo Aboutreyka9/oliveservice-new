@@ -4,8 +4,8 @@ class ModelCotisation extends BaseModel
 {
     protected string $table = 'cautisation_clients';
     protected string $primaryKey = 'id_cautisation_client';
-    protected ?string $statusField = 'statut_cautisation';
-    protected ?string $createdAtField = 'created_at_cautisation';
+    protected ?string $statusField = 'statut_cautisation_client';
+    protected ?string $createdAtField = 'created_at_cautisation_client';
 
     public function getAllWithDetails(): array
     {
@@ -14,13 +14,11 @@ class ModelCotisation extends BaseModel
                 SELECT c.*, 
                        cli.nom_client, cli.telephone_client,
                        s.code_souscription, s.montant_cotisation_journaliere, s.statut_souscription,
-                       p.libelle_pack,
+                       (SELECT p.libelle_pack FROM pack_souscriptions ps JOIN packs p ON p.code_pack = ps.pack_code WHERE ps.souscription_code = c.souscription_code LIMIT 1) as libelle_pack,
                        u.nom_user as nom_commercial, u.prenom_user as prenom_commercial
                 FROM cautisation_clients c
                 LEFT JOIN clients cli ON cli.code_client = c.client_code
                 LEFT JOIN souscriptions s ON s.code_souscription = c.souscription_code
-                LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription
-                LEFT JOIN packs p ON p.code_pack = ps.pack_code
                 LEFT JOIN users u ON u.code_user = c.commercial_code
                 ORDER BY c.date_cautisation DESC, c.id_cautisation_client DESC
             ";
@@ -36,7 +34,7 @@ class ModelCotisation extends BaseModel
         try {
             $sql = "
                 SELECT c.*, 
-                       u.nom_user as nom_commercial, u.prenom_user as prenom_commercial
+                       u.nom_user as nom_commercial
                 FROM cautisation_clients c
                 LEFT JOIN users u ON u.code_user = c.commercial_code
                 WHERE c.souscription_code = ?

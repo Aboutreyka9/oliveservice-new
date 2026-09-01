@@ -1,9 +1,8 @@
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
 <?php 
 $isEdit = !empty($item['id_client']);
-$title = $isEdit ? 'Éditer le Client' : 'Nouveau Client';
-$zones = $zones ?? [];
-?>
+  $title = $isEdit ? 'Éditer le Client' : 'Nouveau Client';
+  ?>
 <div class="app-layout">
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
   <main class="main-content">
@@ -44,11 +43,6 @@ $zones = $zones ?? [];
               </div>
 
               <div class="form-group">
-                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Prénom(s) <span style="color: #EF4444;">*</span></label>
-                <input type="text" name="prenom_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" value="<?= htmlspecialchars($item['prenom_client'] ?? '') ?>" required placeholder="Ex: Yao Jean">
-              </div>
-
-              <div class="form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">N° CNI / Pièce d'identité</label>
                 <input type="text" name="cni_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" value="<?= htmlspecialchars($item['cni_client'] ?? '') ?>" placeholder="Ex: C0123456789">
               </div>
@@ -71,37 +65,9 @@ $zones = $zones ?? [];
                 <input type="email" name="email_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" value="<?= htmlspecialchars($item['email_client'] ?? '') ?>" placeholder="Ex: client@gmail.com">
               </div>
 
-              <div class="form-group">
-                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Zone Commerciale <span style="color: #EF4444;">*</span></label>
-                <select name="zone_code" class="form-control select2" style="width: 100%; box-sizing: border-box;" required>
-                  <option value="">-- Sélectionner une zone --</option>
-                  <?php foreach ($zones as $z): ?>
-                    <option value="<?= $z['code_zone'] ?>" <?= ($item['zone_code'] ?? '') === $z['code_zone'] ? 'selected' : '' ?>>
-                      <?= htmlspecialchars($z['libelle_zone']) ?> (<?= htmlspecialchars($z['code_zone']) ?>)
-                    </option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
-
               <div class="form-group" style="grid-column: 1 / -1;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Quartier / Repère de Résidence</label>
-                <input type="text" name="quartier_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" value="<?= htmlspecialchars($item['quartier_client'] ?? '') ?>" placeholder="Ex: Yopougon Ananeraie, Carrefour de la Pharmacie">
-              </div>
-            </div>
-          </div>
-
-          <!-- BLOC 3 : STATUT DE SCRIPTION -->
-          <div style="margin-bottom: 24px;">
-            <h3 style="font-size: 14px; font-weight: 800; color: #1E3A5F; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px;">
-              <i data-lucide="check-circle-2" style="width: 16px; height: 16px; color: #1E3A5F;"></i> Étape 3 : Statut du Compte
-            </h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-              <div class="form-group">
-                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Statut du Client <span style="color: #EF4444;">*</span></label>
-                <select name="statut_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;">
-                  <option value="actif" <?= ($item['statut_client'] ?? 'actif') === 'actif' ? 'selected' : '' ?>>Actif</option>
-                  <option value="inactif" <?= ($item['statut_client'] ?? '') === 'inactif' ? 'selected' : '' ?>>Inactif</option>
-                </select>
+                <input type="text" name="lieu_residence_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" value="<?= htmlspecialchars($item['lieu_residence_client'] ?? '') ?>" placeholder="Ex: Yopougon Ananeraie, Carrefour de la Pharmacie">
               </div>
             </div>
           </div>

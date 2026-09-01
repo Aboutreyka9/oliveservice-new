@@ -51,8 +51,8 @@ class CautisationPaymentController extends BaseController
             $data[] = [
                 'code_souscription' => $s['code_souscription'],
                 'nom_client' => $s['nom_client'] ?? '-',
-                'prenom_client' => $s['prenom_client'] ?? '',
-                'nom_complet' => trim(($s['nom_client'] ?? '') . ' ' . ($s['prenom_client'] ?? '')),
+                'prenom_client' => '',
+                'nom_complet' => trim(($s['nom_client'] ?? '')),
                 'telephone' => $s['telephone_client'] ?? '-',
                 'libelle_session' => $s['libelle_session'] ?? '-',
                 'montant_total' => $montantTotal,
@@ -249,8 +249,12 @@ class CautisationPaymentController extends BaseController
         $cautisationData = [
             'code_cautisation_client' => $codeCautisation,
             'souscription_code' => $codeSouscription,
+            'client_code' => $souscription['client_code'] ?? Context::user() ?? '',
+            'commercial_code' => $userCode,
+            'date_cautisation' => date('Y-m-d H:i:s'),
             'montant_cautisation_client' => $montant,
             'nombre_jour' => $nombreJours,
+            'nombre_jour_paye' => $nombreJours,
             'statut_cautisation_client' => 'valide',
             'mode_paiement' => $modePaiement,
             'created_at_cautisation_client' => date('Y-m-d H:i:s'),
@@ -286,9 +290,9 @@ class CautisationPaymentController extends BaseController
         
         $sql = "
             SELECT s.*, 
-                   c.nom_client, c.prenom_client, c.telephone_client,
+                   c.nom_client, c.telephone_client,
                    sess.libelle_session, sess.nombre_jour_session
-            FROM souscriptions s
+             FROM souscriptions s
             LEFT JOIN clients c ON c.code_client = s.client_code
             LEFT JOIN sessions sess ON sess.code_session = s.session_code
             WHERE s.statut_souscription = 'valide'
@@ -307,9 +311,9 @@ class CautisationPaymentController extends BaseController
         }
 
         if ($type === 'name' || $type === 'all') {
-            $sql_name = $sql . " AND (c.nom_client LIKE ? OR c.prenom_client LIKE ?)";
-            $stmt = $con->prepare($sql_name);
-            $stmt->execute(['%' . $criteria . '%', '%' . $criteria . '%']);
+             $sql_name = $sql . " AND c.nom_client LIKE ?";
+             $stmt = $con->prepare($sql_name);
+             $stmt->execute(['%' . $criteria . '%']);
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             if (!empty($results)) {
                 return $results;
@@ -348,25 +352,17 @@ class CautisationPaymentController extends BaseController
         
         $sql = "
             SELECT s.*,
-                   c.code_client, c.nom_client, c.prenom_client, c.telephone_client,
+                   c.code_client, c.nom_client, c.telephone_client,
                    c.sexe_client, c.lieu_residence_client, c.profession_client, c.email_client,
                    sess.libelle_session, sess.nombre_jour_session,
-                   p.libelle_pack, p.prix_cotisation_pack,
-                   COALESCE(SUM(p2.prix_cotisation_pack), 0) as montant_total_cautisation,
-                   COALESCE(SUM(cc.montant_cautisation_client), 0) as montant_total_paye,
-                   COALESCE(SUM(cc.nombre_jour), 0) as nombre_jours_payes
+                   (SELECT COALESCE(SUM(p.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p ON p.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as montant_total_cautisation,
+                   (SELECT COALESCE(SUM(cc.montant_cautisation_client), 0) FROM cautisation_clients cc WHERE cc.souscription_code = s.code_souscription AND cc.statut_cautisation_client = 'valide') as montant_total_paye,
+                   (SELECT COALESCE(SUM(cc.nombre_jour), 0) FROM cautisation_clients cc WHERE cc.souscription_code = s.code_souscription AND cc.statut_cautisation_client = 'valide') as nombre_jours_payes
             FROM souscriptions s
             LEFT JOIN clients c ON c.code_client = s.client_code
             LEFT JOIN sessions sess ON sess.code_session = s.session_code
-            LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription
-            LEFT JOIN packs p ON p.code_pack = ps.pack_code
-            LEFT JOIN packs p2 ON p2.code_pack IN (
-                SELECT pack_code FROM pack_souscriptions WHERE souscription_code = s.code_souscription
-            )
-            LEFT JOIN cautisation_clients cc ON cc.souscription_code = s.code_souscription 
-                AND cc.statut_cautisation_client = 'valide'
             WHERE s.code_souscription = ?
-            GROUP BY s.id_souscription
+            LIMIT 1
         ";
         
         $stmt = $con->prepare($sql);
@@ -378,11 +374,12 @@ class CautisationPaymentController extends BaseController
         }
 
         // Calculer les montants et jours restants
-        $montantTotal = (float)($souscription['montant_total_cautisation'] ?? 0);
+        $prixCotisationJournaliere = (float)($souscription['montant_total_cautisation'] ?? 0);
+        $joursTotal = (int)($souscription['nombre_jour_session'] ?? 0);
+        $montantTotal = $prixCotisationJournaliere * $joursTotal;
         $montantPaye = (float)($souscription['montant_total_paye'] ?? 0);
         $montantRestant = max(0, $montantTotal - $montantPaye);
         
-        $joursTotal = (int)($souscription['nombre_jour_session'] ?? 0);
         $joursPayes = (int)($souscription['nombre_jours_payes'] ?? 0);
         $joursRestants = max(0, $joursTotal - $joursPayes);
 
@@ -392,26 +389,33 @@ class CautisationPaymentController extends BaseController
         $souscription['nombre_jours_total'] = $joursTotal;
         $souscription['nombre_jours_payes'] = $joursPayes;
         $souscription['nombre_jours_restant'] = $joursRestants;
+        $souscription['prix_cotisation_pack'] = $prixCotisationJournaliere;
 
         return $souscription;
     }
 
     /**
-     * Récupère le montant total des packs d'une souscription
+     * Récupère le montant total à payer (cotisation par jour × jours de session)
      */
     private function getTotalPackAmount(string $codeSouscription): float
     {
         $con = $this->model->getCon();
         $sql = "
-            SELECT COALESCE(SUM(p.prix_cotisation_pack), 0) as total
-            FROM pack_souscriptions ps
+            SELECT COALESCE(SUM(p.prix_cotisation_pack), 0) as daily_cotisation,
+                   COALESCE(sess.nombre_jour_session, 0) as nombre_jours
+            FROM souscriptions s
+            LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription
             LEFT JOIN packs p ON p.code_pack = ps.pack_code
-            WHERE ps.souscription_code = ?
+            LEFT JOIN sessions sess ON sess.code_session = s.session_code
+            WHERE s.code_souscription = ?
+            GROUP BY s.id_souscription
         ";
         $stmt = $con->prepare($sql);
         $stmt->execute([$codeSouscription]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (float)($result['total'] ?? 0);
+        $dailyCotisation = (float)($result['daily_cotisation'] ?? 0);
+        $nombreJours = (int)($result['nombre_jours'] ?? 0);
+        return $dailyCotisation * $nombreJours;
     }
 
     /**

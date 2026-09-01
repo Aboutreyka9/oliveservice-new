@@ -16,7 +16,39 @@ class ClientController extends BaseController
     public function apiList()
     {
         $this->requireAuth();
-        $clients = $this->model->getAllWithZone();
+        $anneeCode = Context::annee();
+        $zoneCode = Context::zone();
+        $userCode = Context::user();
+
+        $sql = "
+            SELECT DISTINCT c.*, z.libelle_zone
+            FROM clients c
+            LEFT JOIN zones z ON z.code_zone = c.zone_code
+            INNER JOIN souscriptions s ON s.client_code = c.code_client
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if ($anneeCode !== '0GklBk07waYoLB6pHwY') {
+            $sql .= " AND s.annee_code = ?";
+            $params[] = $anneeCode;
+        }
+
+        if ($zoneCode !== null && $zoneCode !== '') {
+            $sql .= " AND s.zone_code = ?";
+            $params[] = $zoneCode;
+        }
+
+        if ($userCode !== null && $userCode !== '') {
+            $sql .= " AND s.user_code = ?";
+            $params[] = $userCode;
+        }
+
+        $sql .= " ORDER BY c.created_at_client DESC";
+
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $clients = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $data = [];
 
         foreach ($clients as $c) {
@@ -25,7 +57,7 @@ class ClientController extends BaseController
             $data[] = array_merge($c, [
                 'id' => $id,
                 'editId' => $idCrypte,
-                'nom_complet' => trim(($c['nom_client'] ?? '') . ' ' . ($c['prenom_client'] ?? ''))
+                'nom_complet' => trim($c['nom_client'] ?? '')
             ]);
         }
 
@@ -151,14 +183,12 @@ class ClientController extends BaseController
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'client/list'); exit();
         }
-        $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
-        $this->loadView('../views/clients/edit.php', ['item' => $item, 'zones' => $zones, 'encryptedId' => $encryptedId]);
+        $this->loadView('../views/clients/edit.php', ['item' => $item, 'encryptedId' => $encryptedId]);
     }
 
     public function formulaire()
     {
         $this->requireAuth();
-        $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
-        $this->loadView('../views/clients/edit.php', ['item' => [], 'zones' => $zones]);
+        $this->loadView('../views/clients/edit.php', ['item' => []]);
     }
 }

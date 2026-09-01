@@ -10,7 +10,6 @@ $cycleController = new CycleController();
 $filiereController = new FiliereController();
 $filiereCycleController = new FiliereCycleController();
 $niveauController = new NiveauController();
-$filiereNiveauController = new FiliereNiveauController();
 $salleController = new SalleController();
 $anneeController = new AnneeController();
 $sessionController = new SessionController();
@@ -43,7 +42,6 @@ $enseignantController = new EnseignantController();
 $enseignantMatiereController = new EnseignantMatiereController();
 $emploiController = new EmploiController();
 $absenceController = new AbsenceController();
-$noteController = new NoteController();
 $bulletinController = new BulletinController();
 $evenementController = new EvenementController();
 $galerieController = new GalerieController();
@@ -135,15 +133,15 @@ $route->addRoute('/niveau/details/{param}', [$niveauController, 'details']);
 $route->addRoute('/niveau/edition/{param}', [$niveauController, 'edition']);
 $route->addRoute('/niveau/formulaire', [$niveauController, 'formulaire']);
 
-// Module: filiere_niveau (FiliereNiveauController)
-$route->addRoute('/filiere_niveau/list', [$filiereNiveauController, 'list']);
-$route->addRoute('/filiere_niveau/apiList', [$filiereNiveauController, 'apiList']);
-$route->addRoute('/filiere_niveau/add', [$filiereNiveauController, 'add']);
-$route->addRoute('/filiere_niveau/edit', [$filiereNiveauController, 'edit']);
-$route->addRoute('/filiere_niveau/changer', [$filiereNiveauController, 'changer']);
-$route->addRoute('/filiere_niveau/details/{param}', [$filiereNiveauController, 'details']);
-$route->addRoute('/filiere_niveau/edition/{param}', [$filiereNiveauController, 'edition']);
-$route->addRoute('/filiere_niveau/formulaire', [$filiereNiveauController, 'formulaire']);
+// Module: filiere_niveau (FiliereNiveauController) - removed by user
+// $route->addRoute('/filiere_niveau/list', [$filiereNiveauController, 'list']);
+// $route->addRoute('/filiere_niveau/apiList', [$filiereNiveauController, 'apiList']);
+// $route->addRoute('/filiere_niveau/add', [$filiereNiveauController, 'add']);
+// $route->addRoute('/filiere_niveau/edit', [$filiereNiveauController, 'edit']);
+// $route->addRoute('/filiere_niveau/changer', [$filiereNiveauController, 'changer']);
+// $route->addRoute('/filiere_niveau/details/{param}', [$filiereNiveauController, 'details']);
+// $route->addRoute('/filiere_niveau/edition/{param}', [$filiereNiveauController, 'edition']);
+// $route->addRoute('/filiere_niveau/formulaire', [$filiereNiveauController, 'formulaire']);
 
 // Module: salle (SalleController)
 $route->addRoute('/salle/list', [$salleController, 'list']);
@@ -258,13 +256,14 @@ $route->addRoute('/cotisation/details/{param}', [$cotisationController, 'details
 $route->addRoute('/cotisation/edition/{param}', [$cotisationController, 'edition']);
 $route->addRoute('/cotisation/formulaire', [$cotisationController, 'formulaire']);
 
-// Module: cautisation_payment (CautisationPaymentController)
+// Module: cautisation-payment (CautisationPaymentController)
 $route->addRoute('/cautisation-payment/search-form', [$cautisationPaymentController, 'searchForm']);
 $route->addRoute('/cautisation-payment/search', [$cautisationPaymentController, 'search']);
 $route->addRoute('/cautisation-payment/situation', [$cautisationPaymentController, 'situation']);
 $route->addRoute('/cautisation-payment/situation-details', [$cautisationPaymentController, 'situationDetails']);
 $route->addRoute('/cautisation-payment/history', [$cautisationPaymentController, 'history']);
 $route->addRoute('/cautisation-payment/savepayment', [$cautisationPaymentController, 'savepayment']);
+
 
 // Module: distribution (DistributionController)
 $route->addRoute('/distribution/list', [$distributionController, 'list']);
@@ -495,15 +494,15 @@ $route->addRoute('/absence/details/{param}', [$absenceController, 'details']);
 $route->addRoute('/absence/edition/{param}', [$absenceController, 'edition']);
 $route->addRoute('/absence/formulaire', [$absenceController, 'formulaire']);
 
-// Module: note (NoteController)
-$route->addRoute('/note/list', [$noteController, 'list']);
-$route->addRoute('/note/apiList', [$noteController, 'apiList']);
-$route->addRoute('/note/add', [$noteController, 'add']);
-$route->addRoute('/note/edit', [$noteController, 'edit']);
-$route->addRoute('/note/changer', [$noteController, 'changer']);
-$route->addRoute('/note/details/{param}', [$noteController, 'details']);
-$route->addRoute('/note/edition/{param}', [$noteController, 'edition']);
-$route->addRoute('/note/formulaire', [$noteController, 'formulaire']);
+// Module: note (NoteController) - removed by user
+// $route->addRoute('/note/list', [$noteController, 'list']);
+// $route->addRoute('/note/apiList', [$noteController, 'apiList']);
+// $route->addRoute('/note/add', [$noteController, 'add']);
+// $route->addRoute('/note/edit', [$noteController, 'edit']);
+// $route->addRoute('/note/changer', [$noteController, 'changer']);
+// $route->addRoute('/note/details/{param}', [$noteController, 'details']);
+// $route->addRoute('/note/edition/{param}', [$noteController, 'edition']);
+// $route->addRoute('/note/formulaire', [$noteController, 'formulaire']);
 
 // Module: bulletin (BulletinController)
 $route->addRoute('/bulletin/list', [$bulletinController, 'list']);

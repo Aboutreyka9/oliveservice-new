@@ -25,7 +25,7 @@ class CotisationController extends BaseController
             $data[] = array_merge($c, [
                 'id' => $id,
                 'editId' => $idCrypte,
-                'nom_client_complet' => trim(($c['nom_client'] ?? '') . ' ' . ($c['prenom_client'] ?? '')),
+                'nom_client_complet' => trim(($c['nom_client'] ?? '')),
                 'nom_commercial_complet' => trim(($c['nom_commercial'] ?? '') . ' ' . ($c['prenom_commercial'] ?? ''))
             ]);
         }
@@ -95,7 +95,7 @@ class CotisationController extends BaseController
             'reference_paiement' => $data['reference_paiement'] ?? '',
             'recu_numero' => $data['recu_numero'] ?? $codeCotisation,
             'photo_recu' => $filename,
-            'statut_cautisation' => 'valide',
+            'statut_cautisation_client' => 'valide',
             'annee_code' => $anneeCode,
             'etablissement_code' => $etabCode,
             'user_code' => $userCode,
@@ -157,7 +157,7 @@ class CotisationController extends BaseController
             }
 
             $stmtSous = $this->model->getCon()->prepare("
-                SELECT s.*, c.nom_client, c.prenom_client, p.libelle_pack 
+                SELECT s.*, c.nom_client, p.libelle_pack 
                 FROM souscriptions s 
                 LEFT JOIN clients c ON c.code_client = s.client_code 
                 LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
@@ -196,7 +196,7 @@ class CotisationController extends BaseController
             header('Location: ' . RACINE . 'cotisation/list'); exit();
         }
         $souscriptions = $this->model->getCon()->query("
-            SELECT s.code_souscription, c.nom_client, c.prenom_client, p.libelle_pack 
+            SELECT s.code_souscription, c.nom_client, p.libelle_pack 
             FROM souscriptions s 
             LEFT JOIN clients c ON c.code_client = s.client_code 
             LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
@@ -217,7 +217,7 @@ class CotisationController extends BaseController
     {
         $this->requireAuth();
         $souscriptions = $this->model->getCon()->query("
-            SELECT s.code_souscription, s.montant_cotisation_journaliere, s.montant_total_cotise, s.montant_total_prevu, s.nombre_jour_total, s.nombre_jour_cotise, c.nom_client, c.prenom_client, p.libelle_pack 
+            SELECT s.code_souscription, s.montant_cotisation_journaliere, s.montant_total_cotise, s.montant_total_prevu, s.nombre_jour_total, s.nombre_jour_cotise, c.nom_client, p.libelle_pack 
             FROM souscriptions s 
             LEFT JOIN clients c ON c.code_client = s.client_code 
             LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 

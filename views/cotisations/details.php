@@ -1,8 +1,9 @@
+
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
 <?php 
 $item = $item ?? [];
 $souscription = $souscription ?? [];
-$nomClient = trim(($souscription['nom_client'] ?? '') . ' ' . ($souscription['prenom_client'] ?? ''));
+$nomClient = trim($souscription['nom_client'] ?? '');
 $montant = (float)($item['montant_cautisation'] ?? 0);
 ?>
 <div class="app-layout">

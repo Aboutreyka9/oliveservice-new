@@ -122,7 +122,7 @@ require_once __DIR__ . '/../controllers/accessoires/AccessoireController.php';
 require_once __DIR__ . '/../controllers/enseignants/EnseignantController.php';
 require_once __DIR__ . '/../controllers/emplois_temps/EmploiController.php';
 require_once __DIR__ . '/../controllers/absences/AbsenceController.php';
-require_once __DIR__ . '/../controllers/notes/NoteController.php';
+// require_once __DIR__ . '/../controllers/notes/NoteController.php';
 
 // Médias & Communication Controllers
 require_once __DIR__ . '/../controllers/evenements/EvenementController.php';
@@ -146,7 +146,7 @@ require_once __DIR__ . '/../models/ModelFiliereCycle.php';
 require_once __DIR__ . '/../controllers/filiere_cycles/FiliereCycleController.php';
 
 require_once __DIR__ . '/../models/ModelFiliereNiveau.php';
-require_once __DIR__ . '/../controllers/filiere_niveaux/FiliereNiveauController.php';
+// require_once __DIR__ . '/../controllers/filiere_niveaux/FiliereNiveauController.php';
 
 
 
