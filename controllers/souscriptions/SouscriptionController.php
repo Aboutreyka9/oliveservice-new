@@ -17,17 +17,39 @@ class SouscriptionController extends BaseController
     {
         $this->requireAuth();
         $items = $this->model->getAllWithDetails();
-        $data = [];
 
+        $grouped = [];
         foreach ($items as $s) {
+            $code = $s['code_souscription'];
+            if (!isset($grouped[$code])) {
+                $grouped[$code] = $s;
+                $grouped[$code]['packs'] = [];
+            }
+            if (!empty($s['libelle_pack'])) {
+                $grouped[$code]['packs'][] = $s['libelle_pack'];
+            }
+        }
+
+        $data = [];
+        foreach ($grouped as $s) {
             $id = $s['id_souscription'];
             $idCrypte = $this->validator->crypter($id);
             $soldeRestant = (float)($s['montant_total_prevu'] ?? 0) - (float)($s['montant_total_cotise'] ?? 0);
             $joursRestants = max(0, (int)($s['nombre_jour_total'] ?? 0) - (int)($s['nombre_jour_cotise'] ?? 0));
+            $nbPacks = count($s['packs'] ?? []);
+            if ($nbPacks > 1) {
+                $packLabel = $s['packs'][0] . ' <small style="color:#64748B;">+' . ($nbPacks - 1) . ' autre(s)</small>';
+            } elseif ($nbPacks === 1) {
+                $packLabel = $s['packs'][0];
+            } else {
+                $packLabel = '-';
+            }
             $data[] = array_merge($s, [
                 'id' => $id,
                 'editId' => $idCrypte,
                 'nom_client_complet' => trim($s['nom_client'] ?? ''),
+                'libelle_pack' => $packLabel,
+                'nombre_packs' => $nbPacks,
                 'solde_restant' => max(0, $soldeRestant),
                 'jours_restants' => $joursRestants,
                 'progression' => ($s['nombre_jour_total'] ?? 0) > 0 ? round((($s['nombre_jour_cotise'] ?? 0) / ($s['nombre_jour_total'] ?? 1)) * 100) : 0
