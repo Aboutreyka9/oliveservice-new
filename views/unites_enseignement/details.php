@@ -1,0 +1,108 @@
+<?php
+require_once __DIR__ . '/../../public/inc/header.php';
+$item = isset($item) ? $item : [];
+$matieres = isset($matieres) ? $matieres : [];
+?>
+<div class="app-layout">
+  <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
+  <main class="main-content">
+    <?php require_once __DIR__ . '/../../public/inc/nav.php'; ?>
+    <div class="content-wrapper" style="padding: 24px; width: 100%; box-sizing: border-box;">
+      
+      <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+        <div>
+          <h1 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0;">Fiche Unité d'Enseignement (UE) : <?= htmlspecialchars($item['libelle_ue'] ?? 'UE') ?></h1>
+          <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Filière : <strong><?= htmlspecialchars($item['libelle_filiere'] ?? '-') ?></strong> &bull; Crédits : <strong><?= htmlspecialchars($item['credits_ue'] ?? '-') ?> ECTS</strong></p>
+        </div>
+        <div style="display: flex; gap: 12px;">
+          <a href="<?= RACINE ?>ue/list" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px;">
+            <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> Retour aux UE
+          </a>
+          <a href="<?= RACINE ?>ue/edition/<?= $encryptedId ?>" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px;">
+            <i data-lucide="edit" style="width: 18px; height: 18px;"></i> Modifier l'UE
+          </a>
+        </div>
+      </div>
+
+      <!-- CARD 1 (COL-12) : DÉTAILS DE L'UE -->
+      <div class="card" style="background: #FFFFFF; border-radius: 12px; padding: 24px 28px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 24px; width: 100%; box-sizing: border-box;">
+        <h3 style="font-size: 15px; font-weight: 800; color: #1E3A5F; margin: 0 0 18px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #EFF6FF; padding-bottom: 10px;">
+          <i data-lucide="layers" style="width: 18px; height: 18px;"></i> Caractéristiques Pédagogiques & Crédits LMD
+        </h3>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px;">
+            <span style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase;">Intitulé de l'UE</span>
+            <div style="font-size: 18px; font-weight: 800; color: #0F172A; margin-top: 4px;"><?= htmlspecialchars($item['libelle_ue'] ?? '-') ?></div>
+            <div style="font-size: 12px; color: #64748B; margin-top: 2px;">Code : <code><?= htmlspecialchars($item['code_ue'] ?? '-') ?></code></div>
+          </div>
+
+          <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 10px; padding: 16px;">
+            <span style="font-size: 11px; font-weight: 700; color: #1E3A5F; text-transform: uppercase;">Volume Crédits ECTS</span>
+            <div style="font-size: 24px; font-weight: 800; color: #1E3A5F; margin-top: 4px;"><?= htmlspecialchars($item['credits_ue'] ?? '-') ?> Crédits</div>
+            <div style="font-size: 12px; color: #64748B; margin-top: 2px;">Filière : <?= htmlspecialchars($item['libelle_filiere'] ?? '-') ?></div>
+          </div>
+
+          <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 10px; padding: 16px;">
+            <span style="font-size: 11px; font-weight: 700; color: #15803D; text-transform: uppercase;">Statut</span>
+            <div style="margin-top: 6px;">
+              <?php if (($item['statut_ue'] ?? '') === 'actif'): ?>
+                <span class="badge" style="background:#DCFCE7; color:#15803D; padding:4px 12px; border-radius:10px; font-weight:700; font-size:12px;">Actif</span>
+              <?php else: ?>
+                <span class="badge" style="background:#FEE2E2; color:#B91C1C; padding:4px 12px; border-radius:10px; font-weight:700; font-size:12px;">Inactif</span>
+              <?php endif; ?>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2 (COL-12) : ÉLÉMENTS CONSTITUTIFS / MATIÈRES RATTACHÉES -->
+      <div class="card" style="background: #FFFFFF; border-radius: 12px; padding: 24px 28px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid #EFF6FF;">
+          <h3 style="font-size: 15px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="book-open" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Éléments Constitutifs (ECUE) & Matières (<?= count($matieres) ?>)
+          </h3>
+          <a href="<?= RACINE ?>matiere/formulaire" class="btn btn-sm btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; font-weight: 700; border-radius: 6px; font-size: 12px;">
+            + Ajouter une matière
+          </a>
+        </div>
+
+        <?php if (empty($matieres)): ?>
+          <p style="color: #94A3B8; text-align: center; padding: 30px 0; font-style: italic;">Aucune matière rattachée pour le moment à cette unité d'enseignement.</p>
+        <?php else: ?>
+          <div style="width: 100%; overflow-x: auto;">
+            <table class="table" style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #F8FAFC; text-align: left; color: #64748B; font-size: 12px;">
+                  <th style="padding: 10px;">Code</th>
+                  <th style="padding: 10px;">Libellé de la Matière</th>
+                  <th style="padding: 10px; text-align: center;">Coefficient</th>
+                  <th style="padding: 10px; text-align: center;">Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($matieres as $m): ?>
+                  <tr style="border-bottom: 1px solid #F1F5F9;">
+                    <td style="padding: 10px; font-family: monospace; font-weight: 700; color: #1E3A5F;">
+                      <a href="<?= RACINE ?>matiere/details/<?= $this->validator->crypter($m['id_matiere']) ?>" style="color: #1E3A5F; text-decoration: underline;">
+                        <?= htmlspecialchars($m['code_matiere'] ?? '-') ?>
+                      </a>
+                    </td>
+                    <td style="padding: 10px; font-weight: 700; color: #0F172A;"><?= htmlspecialchars($m['libelle_matiere'] ?? '-') ?></td>
+                    <td style="padding: 10px; text-align: center; font-weight: 800; color: #1E3A5F;"><?= htmlspecialchars($m['coefficient_matiere'] ?? ($m['coefficient'] ?? '1.0')) ?></td>
+                    <td style="padding: 10px; text-align: center;">
+                      <span class="badge" style="background:#DCFCE7; color:#15803D; padding:2px 8px; border-radius:8px; font-weight:700; font-size:11px;">Actif</span>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endif; ?>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script>$(document).ready(function() { if (window.lucide) lucide.createIcons(); });</script>
+<?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>
