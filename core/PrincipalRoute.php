@@ -9,6 +9,7 @@ require_once __DIR__ . '/../core/BaseController.php';
 require_once __DIR__ . '/../core/BaseModel.php';
 require_once __DIR__ . '/../core/Router.php';
 require_once __DIR__ . '/../core/Context.php';
+require_once __DIR__ . '/../core/CautisationValidator.php';
 
 // GEICG & Core Models
 require_once __DIR__ . '/../models/home/ModelHome.php';
@@ -36,6 +37,7 @@ require_once __DIR__ . '/../models/souscriptions/ModelSouscription.php';
 require_once __DIR__ . '/../controllers/souscriptions/SouscriptionController.php';
 require_once __DIR__ . '/../models/cotisations/ModelCotisation.php';
 require_once __DIR__ . '/../controllers/cotisations/CotisationController.php';
+require_once __DIR__ . '/../controllers/cotisations/CautisationPaymentController.php';
 require_once __DIR__ . '/../models/distributions/ModelDistribution.php';
 require_once __DIR__ . '/../controllers/distributions/DistributionController.php';
 require_once __DIR__ . '/../models/type_depenses/ModelTypeDepense.php';

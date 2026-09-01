@@ -48,6 +48,9 @@ class SouscriptionController extends BaseController
                 'id' => $id,
                 'editId' => $idCrypte,
                 'nom_client_complet' => trim($s['nom_client'] ?? ''),
+                'date_souscription' => isset($s['created_at_souscription']) && !empty($s['created_at_souscription'])
+                    ? date('d-m-Y', strtotime($s['created_at_souscription']))
+                    : '-',
                 'libelle_pack' => $packLabel,
                 'nombre_packs' => $nbPacks,
                 'solde_restant' => max(0, $soldeRestant),
@@ -206,7 +209,7 @@ class SouscriptionController extends BaseController
             header('Location: ' . RACINE . 'souscription/list'); exit();
         }
         $clients = $this->model->getCon()->query("SELECT code_client, nom_client, telephone_client FROM clients")->fetchAll(PDO::FETCH_ASSOC);
-        $packs = $this->model->getCon()->query("SELECT code_pack, libelle_pack, prix_cotisation_pack, nombre_jour_pack FROM packs WHERE statut_pack='actif'")->fetchAll(PDO::FETCH_ASSOC);
+        $packs = $this->model->getCon()->query("SELECT code_pack, libelle_pack, prix_cotisation_pack FROM packs WHERE statut_pack='actif'")->fetchAll(PDO::FETCH_ASSOC);
         $sessions = $this->model->getCon()->query("SELECT code_session, libelle_session FROM sessions WHERE statut_session='actif'")->fetchAll(PDO::FETCH_ASSOC);
         $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -224,7 +227,7 @@ class SouscriptionController extends BaseController
     {
         $this->requireAuth();
         $clients = $this->model->getCon()->query("SELECT code_client, nom_client, telephone_client FROM clients")->fetchAll(PDO::FETCH_ASSOC);
-        $packs = $this->model->getCon()->query("SELECT code_pack, libelle_pack, prix_cotisation_pack, nombre_jour_pack FROM packs WHERE statut_pack='actif'")->fetchAll(PDO::FETCH_ASSOC);
+        $packs = $this->model->getCon()->query("SELECT code_pack, libelle_pack, prix_cotisation_pack FROM packs WHERE statut_pack='actif'")->fetchAll(PDO::FETCH_ASSOC);
         $sessions = $this->model->getCon()->query("SELECT code_session, libelle_session FROM sessions WHERE statut_session='actif'")->fetchAll(PDO::FETCH_ASSOC);
         $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
 

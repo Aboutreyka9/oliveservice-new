@@ -21,19 +21,21 @@
          
         </div>
       </div>
+
       <div class="card" style="background: #FFFFFF; border-radius: 12px; padding: 24px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden;">
         <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
           <table id="table-souscriptions" class="table display nowrap" style="width:100%; max-width:100%; border-collapse: collapse;">
             <thead>
               <tr style="background: #F8FAFC; text-align: left; color: #64748B;">
                 <th style="padding: 12px;">Code Souscription</th>
+                <th style="padding: 12px; text-align: center;">Statut</th>
                 <th style="padding: 12px;">Client</th>
                 <th style="padding: 12px;">Session</th>
                 <th style="padding: 12px;">Cotis. / Jour</th>
                 <th style="padding: 12px;">Progression</th>
                 <th style="padding: 12px; text-align: right;">Total Cotisé</th>
                 <th style="padding: 12px; text-align: right;">Reste à Payer</th>
-                <th style="padding: 12px; text-align: center;">Statut</th>
+                <th style="padding: 12px;">Date</th>
                 <th style="padding: 12px; text-align: right;">Actions</th>
               </tr>
             </thead>
@@ -54,6 +56,14 @@ $(document).ready(function() {
       { data: 'code_souscription', width: '130px', render: function(d) {
         if (!d) return '-';
         return '<code style="font-weight:700; color:#334155; background:#F1F5F9; padding:2px 6px; border-radius:4px;">' + d + '</code>';
+      }},
+      { data: 'statut_souscription', className: 'text-center', width: '100px', render: function(d) {
+        var badge = 'bg-primary';
+        var libelle = 'Validée';
+        if (d === 'solde') { badge = 'bg-success'; libelle = 'Soldée'; }
+        else if (d === 'annule') { badge = 'bg-danger'; libelle = 'Annulée'; }
+        else if (d === 'reconduite') { badge = 'bg-warning text-dark'; libelle = 'Reconduite'; }
+        return '<span class="badge ' + badge + '">' + libelle + '</span>';
       }},
       { data: 'nom_client_complet', render: function(d) {
         return '<strong style="color:#0F172A;">' + (d || '-') + '</strong>';
@@ -77,14 +87,7 @@ $(document).ready(function() {
         if ((d || 0) <= 0) return '<span style="color:#15803D; font-weight:800;">Soldé</span>';
         return '<strong style="color:#DC2626;">' + Number(d).toLocaleString('fr-FR') + ' FCFA</strong>';
       }},
-      { data: 'statut_souscription', className: 'text-center', width: '100px', render: function(d) {
-        var badge = 'bg-primary';
-        var libelle = 'Validée';
-        if (d === 'solde') { badge = 'bg-success'; libelle = 'Soldée'; }
-        else if (d === 'annule') { badge = 'bg-danger'; libelle = 'Annulée'; }
-        else if (d === 'reconduite') { badge = 'bg-warning text-dark'; libelle = 'Reconduite'; }
-        return '<span class="badge ' + badge + '">' + libelle + '</span>';
-      }},
+      { data: 'date_souscription', defaultContent: '-', className: 'text-center' },
       { data: null, width: '180px', orderable: false, render: function(d) {
         var btns = '<a href="' + window.RACINE + 'souscription/edition/' + (d.editId || d.id_souscription) + '" class="btn btn-sm btn-secondary" style="margin-right:6px; font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
                    '<a href="' + window.RACINE + 'souscription/details/' + (d.editId || d.id_souscription) + '" class="btn btn-sm btn-info" style="font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>';

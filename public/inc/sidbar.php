@@ -291,6 +291,11 @@
                 <a href="<?= RACINE ?>cotisation/list" class="nav-item sub <?= strpos($currentUri, '/cotisation/') !== false ? 'active' : '' ?>" data-title="Cotisations">
                     <i data-lucide="wallet"></i> <span>Cotisations</span>
                 </a>
+                 <a href="<?= RACINE ?>cautisation-payment/search-form" class="nav-item sub <?= strpos($currentUri, '/cotisation/') !== false ? 'active' : '' ?>" data-title="Cotisations">
+                    <i data-lucide="wallet"></i> <span>Cotisations</span>
+                </a>
+                 
+                
             </div>
         </div>
 

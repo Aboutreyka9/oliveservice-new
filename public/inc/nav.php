@@ -29,19 +29,7 @@
         <button class="btn-icon mobile-menu-btn" id="mobileMenuBtn" title="Menu mobile">
             <i data-lucide="menu"></i>
         </button>
-        <div class="context-bar" style="display: inline-flex; gap: 8px; margin-right: 12px; flex-wrap: wrap;">
-            <span class="badge" style="background:#EFF6FF; color:#1E3A5F; padding:4px 10px; border-radius:8px; font-weight:700; font-size:11px;">
-                <i data-lucide="calendar" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> <?= htmlspecialchars($_SESSION['annee_active_libelle'] ?? 'Année') ?>
-            </span>
-            <span class="badge" style="background:#F0FDF4; color:#15803D; padding:4px 10px; border-radius:8px; font-weight:700; font-size:11px;">
-                <i data-lucide="building-2" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> <?= htmlspecialchars($_SESSION['etablissement_active_libelle'] ?? 'Établissement') ?>
-            </span>
-            <?php if (!empty($_SESSION['zone_active_libelle'])): ?>
-            <span class="badge" style="background:#FEF3C7; color:#92400E; padding:4px 10px; border-radius:8px; font-weight:700; font-size:11px;">
-                <i data-lucide="map-pin" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> <?= htmlspecialchars($_SESSION['zone_active_libelle']) ?>
-            </span>
-            <?php endif; ?>
-        </div>
+        
         <div class="search-wrapper search-wrapper--desktop">
             <div class="search-box">
                 <i data-lucide="search"></i>

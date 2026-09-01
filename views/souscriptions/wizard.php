@@ -313,7 +313,7 @@ function renderRecap() {
               '<td style="padding: 10px 12px;"><span style="display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: #1E3A5F; color: #FFF;">' + (pack.libelle_categorie_pack || '') + '</span></td>' +
               '<td style="padding: 10px 12px; text-align: right; font-weight: 700; color: #15803D;">' + Number(pack.prix_cotisation_pack || 0).toLocaleString('fr-FR') + ' FCFA</td>' +
               '<td style="padding: 10px 12px; text-align: center;">' + (pack.nombre_articles || 0) + '</td>' +
-              '<td style="padding: 10px 12px; text-align: center;">' + (pack.nombre_jour_pack || 0) + '</td>' +
+              '<td style="padding: 10px 12px; text-align: center;">' + (pack.nombre_jour_session || 0) + '</td>' +
               '<td style="padding: 10px 12px; text-align: center;">' +
                 '<button type="button" class="btn btn-sm remove-pack-row" style="border-radius: 6px; font-weight: 600; background: #DC2626; border-color: #DC2626; color: #FFF;">' +
                   '<i data-lucide="trash" style="width: 14px; height: 14px;"></i>' +
@@ -369,7 +369,11 @@ $(document).ready(function() {
     loadPacks();
   });
 
-  $('#filter-session, #filter-categorie').on('change', function() {
+  $('#filter-session').on('change', function() {
+    selectedPacks = [];
+    loadPacks();
+  });
+  $('#filter-categorie').on('change', function() {
     loadPacks();
   });
 

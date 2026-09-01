@@ -22,6 +22,7 @@ $clientController = new ClientController();
 $zoneCommercialController = new ZoneCommercialController();
 $souscriptionController = new SouscriptionController();
 $cotisationController = new CotisationController();
+$cautisationPaymentController = new CautisationPaymentController();
 $distributionController = new DistributionController();
 $classeController = new ClasseController();
 $semestreController = new SemestreController();
@@ -256,6 +257,14 @@ $route->addRoute('/cotisation/changer', [$cotisationController, 'changer']);
 $route->addRoute('/cotisation/details/{param}', [$cotisationController, 'details']);
 $route->addRoute('/cotisation/edition/{param}', [$cotisationController, 'edition']);
 $route->addRoute('/cotisation/formulaire', [$cotisationController, 'formulaire']);
+
+// Module: cautisation_payment (CautisationPaymentController)
+$route->addRoute('/cautisation-payment/search-form', [$cautisationPaymentController, 'searchForm']);
+$route->addRoute('/cautisation-payment/search', [$cautisationPaymentController, 'search']);
+$route->addRoute('/cautisation-payment/situation', [$cautisationPaymentController, 'situation']);
+$route->addRoute('/cautisation-payment/situation-details', [$cautisationPaymentController, 'situationDetails']);
+$route->addRoute('/cautisation-payment/history', [$cautisationPaymentController, 'history']);
+$route->addRoute('/cautisation-payment/savepayment', [$cautisationPaymentController, 'savepayment']);
 
 // Module: distribution (DistributionController)
 $route->addRoute('/distribution/list', [$distributionController, 'list']);

@@ -450,13 +450,17 @@ class UserController extends BaseController
             }
 
             // 2. Si pas trouvé dans USERS, recherche directe dans la table ENSEIGNANTS
-            $stmtEnsLogin = $this->model->getCon()->prepare("
-                SELECT * FROM enseignants 
-                WHERE (email_enseignant = ? OR telephone_enseignant = ?)
-                LIMIT 1
-            ");
-            $stmtEnsLogin->execute([$login, $login]);
-            $ens = $stmtEnsLogin->fetch(PDO::FETCH_ASSOC);
+            try {
+                $stmtEnsLogin = $this->model->getCon()->prepare("
+                    SELECT * FROM enseignants 
+                    WHERE (email_enseignant = ? OR telephone_enseignant = ?)
+                    LIMIT 1
+                ");
+                $stmtEnsLogin->execute([$login, $login]);
+                $ens = $stmtEnsLogin->fetch(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                $ens = null;
+            }
 
             if ($ens && !empty($ens['password_enseignant']) && password_verify($password, $ens['password_enseignant'])) {
                 if ($ens['statut_enseignant'] === 'actif') {
