@@ -298,15 +298,18 @@
             </div>
         </div>
 
-        <!-- MODULE DÉCHARGER / VERSEMENT COMMERCIAL -->
+        <!-- MODULE MA CAISSE & VERSEMENTS (COMMERCIAL) -->
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-decharger" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="arrow-down-circle" style="width: 16px; height: 16px; color: #047857;"></i> <span>Ma Caisse & Verser</span>
+                    <i data-lucide="wallet" style="width: 16px; height: 16px; color: #047857;"></i> <span>Ma Caisse & Verser</span>
                 </div>
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
             <div class="nav-section-items" id="sec-decharger">
+                <a href="<?= RACINE ?>cloture_caisse/formulaire" class="nav-item sub <?= strpos($currentUri, '/cloture_caisse/formulaire') !== false ? 'active' : '' ?>" data-title="Ma Caisse Journalière">
+                    <i data-lucide="lock"></i> <span>Ma Caisse Journalière</span>
+                </a>
                 <a href="<?= RACINE ?>versement/formulaire" class="nav-item sub <?= strpos($currentUri, '/versement/formulaire') !== false ? 'active' : '' ?>" data-title="Faire un Versement">
                     <i data-lucide="send"></i> <span>Faire un Versement</span>
                 </a>

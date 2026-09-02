@@ -1,5 +1,6 @@
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
 <?php 
+$item = $item ?? [];
 $isEdit = !empty($item['id_depense']);
 $title = $isEdit ? 'Éditer la Dépense' : 'Saisie d\'une Dépense d\'Exploitation';
 $typeDepenses = $typeDepenses ?? [];

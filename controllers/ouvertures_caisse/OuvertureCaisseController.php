@@ -16,14 +16,29 @@ class OuvertureCaisseController extends BaseController
     public function apiList()
     {
         $this->requireAuth();
-        $items = $this->model->getAll();
+        $sql = "
+            SELECT o.*, u.nom_user, u.prenom_user
+            FROM ouvertures_caisse o
+            LEFT JOIN users u ON u.code_user = o.user_code
+            WHERE 1=1
+        ";
+        $params = [];
+        if (Context::isCommercial()) {
+            $sql .= " AND o.user_code = ?";
+            $params[] = Context::user();
+        }
+        $sql .= " ORDER BY o.date_ouverture DESC, o.id_ouverture DESC";
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $data = [];
         foreach ($items as $i) {
             $id = $i['id_ouverture'];
             $idCrypte = $this->validator->crypter($id);
             $data[] = array_merge($i, [
                 'id' => $id,
-                'editId' => $idCrypte
+                'editId' => $idCrypte,
+                'nom_auteur_complet' => trim(($i['nom_user'] ?? '') . ' ' . ($i['prenom_user'] ?? ''))
             ]);
         }
         $this->json(['data' => $data]);

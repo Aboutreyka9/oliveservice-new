@@ -16,14 +16,31 @@ class ClotureCaisseController extends BaseController
     public function apiList()
     {
         $this->requireAuth();
-        $items = $this->model->getAll();
+        $sql = "
+            SELECT c.*, u.nom_user, u.prenom_user, val.nom_user as nom_validator, val.prenom_user as prenom_validator
+            FROM clotures_caisse c
+            LEFT JOIN users u ON u.code_user = c.user_code
+            LEFT JOIN users val ON val.code_user = c.user_validation
+            WHERE 1=1
+        ";
+        $params = [];
+        if (Context::isCommercial()) {
+            $sql .= " AND c.user_code = ?";
+            $params[] = Context::user();
+        }
+        $sql .= " ORDER BY c.date_cloture DESC, c.id_cloture DESC";
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $data = [];
         foreach ($items as $i) {
             $id = $i['id_cloture'];
             $idCrypte = $this->validator->crypter($id);
             $data[] = array_merge($i, [
                 'id' => $id,
-                'editId' => $idCrypte
+                'editId' => $idCrypte,
+                'nom_auteur_complet' => trim(($i['nom_user'] ?? '') . ' ' . ($i['prenom_user'] ?? '')),
+                'nom_validator_complet' => trim(($i['nom_validator'] ?? '') . ' ' . ($i['prenom_validator'] ?? ''))
             ]);
         }
         $this->json(['data' => $data]);
@@ -127,7 +144,8 @@ class ClotureCaisseController extends BaseController
         if (empty($data['code_cloture'])) {
             $data['code_cloture'] = $this->validator->generateCode('clotures_caisse', 'code_cloture', 'CLO-', 8);
         }
-        $data['statut_cloture'] = 'valide';
+        $statutInitial = Context::isCommercial() ? 'attente' : 'valide';
+        $data['statut_cloture'] = $statutInitial;
         $data['created_at_cloture'] = date('Y-m-d H:i:s');
         $data['user_code'] = $userCode;
         $data['etablissement_code'] = $etabCode;

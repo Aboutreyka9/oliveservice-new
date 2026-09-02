@@ -29,6 +29,7 @@
               <th>Date Ouverture</th>
               <th>Heure</th>
               <th>Fond Initial (FCFA)</th>
+              <th>Commercial / Auteur</th>
               <th>Statut</th>
               <th>Actions</th>
             </tr>
@@ -40,100 +41,5 @@
     </div>
   </main>
 </div>
-
-<script>
-$(document).ready(function() {
-  if (window.lucide) lucide.createIcons();
-
-  $('#table_ouvertures_caisse').DataTable({
-    ajax: {
-      url: window.RACINE + 'ouverture_caisse/apiList',
-      type: 'GET'
-    },
-    columns: [
-      { data: 'id_ouverture' },
-      { 
-        data: 'code_ouverture',
-        render: function(data) {
-          return '<code style="font-weight:700; color:#1E3A5F;">' + (data || '-') + '</code>';
-        }
-      },
-      { 
-        data: 'date_ouverture',
-        render: function(data) {
-          if (!data) return '-';
-          return new Date(data).toLocaleDateString('fr-FR');
-        }
-      },
-      { data: 'heure_ouverture' },
-      { 
-        data: 'fond_initial',
-        render: function(data) {
-          return '<strong style="color:#0F172A;">' + Number(data || 0).toLocaleString('fr-FR') + ' FCFA</strong>';
-        }
-      },
-      { 
-        data: 'statut_ouverture',
-        width: '130px',
-        className: 'text-center',
-        render: function(d, type, row) {
-          var val = d || 'ouverte';
-          var isOuverte = (val === 'ouverte');
-          var currentBg = isOuverte ? '#DCFCE7' : '#F1F5F9';
-          var currentText = isOuverte ? '#166534' : '#475569';
-          var currentBorder = isOuverte ? '#86EFAC' : '#CBD5E1';
-
-          return '<select class="select-statut-ouverture" data-id="' + row.id_ouverture + '" style="background:' + currentBg + '; color:' + currentText + '; border:1px solid ' + currentBorder + '; font-weight:700; font-size:12px; border-radius:8px; padding:4px 8px; cursor:pointer; outline:none;">' +
-                 '<option value="ouverte" ' + (isOuverte ? 'selected' : '') + ' style="background:#fff; color:#166534;">Ouverte</option>' +
-                 '<option value="cloturee" ' + (!isOuverte ? 'selected' : '') + ' style="background:#fff; color:#475569;">Clôturée</option>' +
-                 '</select>';
-        }
-      },
-      { 
-        data: null,
-        orderable: false,
-        render: function(data, type, row) {
-          return '<a href="' + window.RACINE + 'ouverture_caisse/edition/' + (row.editId || row.id_ouverture) + '" class="btn btn-sm btn-info" style="border-radius:6px; font-weight:600; padding:4px 10px;"><i data-lucide="edit-3" style="width:14px; height:14px;"></i> Éditer</a>';
-        }
-      }
-    ],
-    language: {
-      url: '<?= RACINE ?>json/datatables-i18n-fr-FR.json'
-    },
-    drawCallback: function() {
-      if (window.lucide) lucide.createIcons();
-    }
-  });
-
-  $(document).on('change', '.select-statut-ouverture', function() {
-    var id = $(this).data('id');
-    var newStatut = $(this).val();
-
-    $.ajax({
-      url: window.RACINE + 'ouverture_caisse/changer',
-      type: 'POST',
-      headers: { 'X-Requested-With': 'XMLHttpRequest' },
-      data: {
-        id: id,
-        statut: newStatut,
-        csrf_token: '<?= Validator::generateCsrfToken() ?>'
-      },
-      dataType: 'json',
-      success: function(res) {
-        if (res.status === 1 || res.success) {
-          if (window.toastr) toastr.success(res.message || 'Statut mis à jour avec succès');
-          table.ajax.reload(null, false);
-        } else {
-          if (window.toastr) toastr.error(res.message || 'Erreur lors du changement de statut');
-          table.ajax.reload(null, false);
-        }
-      },
-      error: function() {
-        if (window.toastr) toastr.error('Erreur réseau');
-        table.ajax.reload(null, false);
-      }
-    });
-  });
-});
-</script>
+<script src="<?= RACINE ?>public/assets/js/modules/ouvertures_caisse.js?v=1.0"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

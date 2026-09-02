@@ -60,6 +60,8 @@ class DepenseController extends BaseController
             move_uploaded_file($_FILES['piece_justificative']['tmp_name'], $uploadDir . $filename);
         }
 
+        $statutInitial = Context::isCommercial() ? 'inactif' : 'actif';
+
         $depenseData = [
             'code_depense' => $codeDepense,
             'type_depense_code' => $data['type_depense_code'],
@@ -69,7 +71,7 @@ class DepenseController extends BaseController
             'annee_code' => $anneeCode,
             'etablissement_code' => $etabCode,
             'user_code' => $userCode,
-            'statut_depense' => $data['statut_depense'] ?? 'actif',
+            'statut_depense' => $data['statut_depense'] ?? $statutInitial,
             'created_at_depense' => date('Y-m-d H:i:s')
         ];
 
@@ -156,7 +158,7 @@ class DepenseController extends BaseController
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'depense/list'); exit();
         }
-        $typeDepenses = $this->model->getCon()->query("SELECT code_type_depense, libelle_type_depense FROM type_depenses WHERE statut_type_depense='actif'")->fetchAll(PDO::FETCH_ASSOC);
+        $typeDepenses = $this->model->getCon()->query("SELECT code_type_depense, libelle_type_depense FROM type_depenses ORDER BY libelle_type_depense ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         $this->loadView('../views/depenses/edit.php', [
             'item' => $item,
@@ -168,7 +170,7 @@ class DepenseController extends BaseController
     public function formulaire()
     {
         $this->requireAuth();
-        $typeDepenses = $this->model->getCon()->query("SELECT code_type_depense, libelle_type_depense FROM type_depenses WHERE statut_type_depense='actif'")->fetchAll(PDO::FETCH_ASSOC);
+        $typeDepenses = $this->model->getCon()->query("SELECT code_type_depense, libelle_type_depense FROM type_depenses ORDER BY libelle_type_depense ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         $this->loadView('../views/depenses/edit.php', [
             'item' => [],

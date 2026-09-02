@@ -220,7 +220,14 @@ class CautisationPaymentController extends BaseController
         $codeCautisation = $this->validator->generateCode('cautisation_clients', 'code_cautisation_client', 'COT-', 8);
 
         $caisse = $this->getOpenCaisse($zoneCode, $etabCode);
-        $caisseCode = $caisse['code_caisse'] ?? 'CAISSE-DEFAULT';
+        
+        // RÈGLE DE SÉCURITÉ : Si le commercial n'a pas ouvert sa caisse aujourd'hui, bloquer la saisie de cotisation
+        if (Context::isCommercial() && !$caisse) {
+            $this->error('Votre caisse est actuellement FERMÉE pour aujourd\'hui. Veuillez effectuer l\'ouverture de caisse avant de collecter des cotisations.');
+            return;
+        }
+
+        $caisseCode = $caisse['code_caisse'] ?? ($caisse['code_ouverture'] ?? 'CAISSE-DEFAULT');
 
         // RÈGLE RBAC : Statut initial = 'en_attente' pour les commerciaux, 'valide' pour finance/admin
         $statutInitial = Context::isCommercial() ? 'en_attente' : 'valide';
@@ -450,6 +457,23 @@ class CautisationPaymentController extends BaseController
     private function getOpenCaisse(string $zoneCode, string $etabCode): ?array
     {
         $con = $this->model->getCon();
+        $userCode = Context::user();
+        $dateToday = date('Y-m-d');
+
+        // 1. Chercher une ouverture de caisse active pour ce commercial aujourd'hui
+        if (Context::isCommercial()) {
+            $stmt = $con->prepare("
+                SELECT code_ouverture as code_caisse, fond_initial, date_ouverture
+                FROM ouvertures_caisse 
+                WHERE user_code = ? AND date_ouverture = ? AND statut_ouverture = 'ouverte'
+                ORDER BY id_ouverture DESC LIMIT 1
+            ");
+            $stmt->execute([$userCode, $dateToday]);
+            $ouv = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($ouv) return $ouv;
+        }
+
+        // 2. Fallback caisses agence/établissement
         $stmt = $con->prepare("
             SELECT * FROM caisses 
             WHERE etablissement_code = ? AND statut_caisse = 'ouverte'
