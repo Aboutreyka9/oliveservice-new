@@ -4,7 +4,7 @@ class CaisseCommercialController extends BaseController
 {
     protected function resolveModel()
     {
-        return new ModelClotureCaisse();
+        return new ModelCaisse();
     }
 
     public function list()
@@ -300,7 +300,7 @@ class CaisseCommercialController extends BaseController
             'zone_code' => Context::zone() ?? 'DEFAULT'
         ];
 
-        $modelOuv = new ModelOuvertureCaisse();
+        $modelOuv = new ModelCaisse();
         if ($modelOuv->create($data)) {
             $this->success('Votre caisse du jour est maintenant OUVERTE ! Vous pouvez démarrer vos encaissements.', ['reload' => true]);
         } else {

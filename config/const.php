@@ -9,10 +9,10 @@ if (!defined('RACINE')) {
 }
 
 if (!defined('ONESIGNAL_APP_ID')) {
-    define('ONESIGNAL_APP_ID', '54d8db10-a446-4542-9b2c-2d49d1433d59');
+    define('ONESIGNAL_APP_ID', $_ENV['ONESIGNAL_APP_ID'] ?? getenv('ONESIGNAL_APP_ID') ?: '54d8db10-a446-4542-9b2c-2d49d1433d59');
 }
 if (!defined('ONESIGNAL_REST_API_KEY')) {
-    define('ONESIGNAL_REST_API_KEY', getenv('ONESIGNAL_REST_API_KEY') ?: '');
+    define('ONESIGNAL_REST_API_KEY', $_ENV['ONESIGNAL_REST_API_KEY'] ?? getenv('ONESIGNAL_REST_API_KEY') ?: '');
 }
 
 

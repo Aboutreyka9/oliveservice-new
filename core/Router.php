@@ -18,6 +18,23 @@ class Router
 
             if (preg_match($pattern, $url, $matches)) {
                 array_shift($matches); // Supprimer l'URL complète capturée
+
+                // Lazy loading : Instanciation dynamique du contrôleur uniquement au moment du match
+                if (is_array($callback) && count($callback) === 2 && is_string($callback[0])) {
+                    $controllerClass = $callback[0];
+                    $methodName = $callback[1];
+                    if (class_exists($controllerClass)) {
+                        $controllerInstance = new $controllerClass();
+                        return call_user_func_array([$controllerInstance, $methodName], $matches ?: []);
+                    }
+                } elseif (is_string($callback) && strpos($callback, '@') !== false) {
+                    list($controllerClass, $methodName) = explode('@', $callback);
+                    if (class_exists($controllerClass)) {
+                        $controllerInstance = new $controllerClass();
+                        return call_user_func_array([$controllerInstance, $methodName], $matches ?: []);
+                    }
+                }
+
                 return call_user_func_array($callback, $matches ?: []);
             }
         }
