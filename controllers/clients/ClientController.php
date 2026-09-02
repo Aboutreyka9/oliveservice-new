@@ -73,13 +73,58 @@ class ClientController extends BaseController
         $data = $_POST;
         unset($data['csrf_token']);
 
+        // Nettoyage préalable des formats téléphoniques (+225 / 225)
+        $this->cleanPhoneFields($data);
+
+        // 1. Contrôle par téléphone (si renseigné)
         if (!empty($data['telephone_client'])) {
-            if (!$this->checkUnique('clients', 'telephone_client', $data['telephone_client'], 'Téléphone client')) return;
+            $telClean = $data['telephone_client'];
+            $stmtCheck = $this->model->getCon()->prepare("SELECT code_client, nom_client FROM clients WHERE telephone_client = ? LIMIT 1");
+            $stmtCheck->execute([$telClean]);
+            $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+            if ($existing) {
+                $this->error("Un client existe déjà avec ce numéro de téléphone ({$telClean}) : {$existing['nom_client']} (Code: {$existing['code_client']}).");
+                return;
+            }
+        }
+
+        // 2. Contrôle par numéro CNI (si renseigné)
+        $cniVal = trim($data['numero_cni'] ?? ($data['cni_client'] ?? ''));
+        if (!empty($cniVal)) {
+            $stmtCheckCni = $this->model->getCon()->prepare("SELECT code_client, nom_client FROM clients WHERE numero_cni = ? LIMIT 1");
+            $stmtCheckCni->execute([$cniVal]);
+            $existingCni = $stmtCheckCni->fetch(PDO::FETCH_ASSOC);
+
+            if ($existingCni) {
+                $this->error("Un client existe déjà avec ce numéro de CNI ({$cniVal}) : {$existingCni['nom_client']} (Code: {$existingCni['code_client']}).");
+                return;
+            }
+        }
+
+        // 3. Contrôle anti-doublon par Nom complet + Lieu de résidence
+        if (!empty($data['nom_client']) && !empty($data['lieu_residence_client'])) {
+            $nom = trim($data['nom_client']);
+            $residence = trim($data['lieu_residence_client']);
+
+            $stmtCheckNom = $this->model->getCon()->prepare("SELECT code_client, nom_client, telephone_client FROM clients WHERE LOWER(nom_client) = LOWER(?) AND LOWER(lieu_residence_client) = LOWER(?) LIMIT 1");
+            $stmtCheckNom->execute([$nom, $residence]);
+            $existingNom = $stmtCheckNom->fetch(PDO::FETCH_ASSOC);
+
+            if ($existingNom) {
+                $this->error("Un client nommé '$nom' résidant à '$residence' existe déjà (Contact: {$existingNom['telephone_client']}, Code: {$existingNom['code_client']}).");
+                return;
+            }
         }
 
         $userCode = Context::user() ?? '';
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
+        if (empty($zoneCode)) {
+            $stmtDefaultZone = $this->model->getCon()->query("SELECT code_zone FROM zones LIMIT 1");
+            $defaultZone = $stmtDefaultZone->fetch(PDO::FETCH_ASSOC);
+            $zoneCode = $defaultZone['code_zone'] ?? '6QIlVfXP0LiXE9tBzHownYLAAqDi2';
+        }
 
         if (empty($data['code_client'])) {
             $data['code_client'] = $this->validator->generateCode('clients', 'code_client', 'CLI-', 8);

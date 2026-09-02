@@ -463,10 +463,10 @@ class CautisationPaymentController extends BaseController
         // 1. Chercher une ouverture de caisse active pour ce commercial aujourd'hui
         if (Context::isCommercial()) {
             $stmt = $con->prepare("
-                SELECT code_ouverture as code_caisse, fond_initial, date_ouverture
-                FROM ouvertures_caisse 
-                WHERE user_code = ? AND date_ouverture = ? AND statut_ouverture = 'ouverte'
-                ORDER BY id_ouverture DESC LIMIT 1
+                SELECT code_caisse, montant_total_attendu as fond_initial, date_ouverture
+                FROM caisses 
+                WHERE user_code = ? AND DATE(date_ouverture) = ? AND statut_caisse = 'ouverte'
+                ORDER BY id_caisse DESC LIMIT 1
             ");
             $stmt->execute([$userCode, $dateToday]);
             $ouv = $stmt->fetch(PDO::FETCH_ASSOC);

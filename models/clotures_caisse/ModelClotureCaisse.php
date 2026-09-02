@@ -2,8 +2,8 @@
 
 class ModelClotureCaisse extends BaseModel
 {
-    protected string $table = 'clotures_caisse';
-    protected string $primaryKey = 'id_cloture';
-    protected ?string $statusField = 'statut_cloture';
-    protected ?string $createdAtField = 'created_at_cloture';
+    protected string $table = 'caisses';
+    protected string $primaryKey = 'id_caisse';
+    protected ?string $statusField = 'decission_caisse';
+    protected ?string $createdAtField = 'created_at_caisse';
 }

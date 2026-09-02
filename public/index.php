@@ -20,8 +20,7 @@ $souscriptionController = new SouscriptionController();
 $cotisationController = new CotisationController();
 $cautisationPaymentController = new CautisationPaymentController();
 $distributionController = new DistributionController();
-$ouvertureCaisseController = new OuvertureCaisseController();
-$clotureCaisseController = new ClotureCaisseController();
+$caisseCommercialController = new CaisseCommercialController();
 $typeDepenseController = new TypeDepenseController();
 $depenseController = new DepenseController();
 $versementController = new VersementController();
@@ -207,24 +206,19 @@ $route->addRoute('/distribution/formulaire', [$distributionController, 'formulai
 // -------------------------------------------------------------
 // Module: Caisse & Finances (Ouverture, Clôture, Dépenses, Versements)
 // -------------------------------------------------------------
-$route->addRoute('/ouverture_caisse/list', [$ouvertureCaisseController, 'list']);
-$route->addRoute('/ouverture_caisse/apiList', [$ouvertureCaisseController, 'apiList']);
-$route->addRoute('/ouverture_caisse/add', [$ouvertureCaisseController, 'add']);
-$route->addRoute('/ouverture_caisse/edit', [$ouvertureCaisseController, 'edit']);
-$route->addRoute('/ouverture_caisse/changer', [$ouvertureCaisseController, 'changer']);
-$route->addRoute('/ouverture_caisse/details/{param}', [$ouvertureCaisseController, 'details']);
-$route->addRoute('/ouverture_caisse/edition/{param}', [$ouvertureCaisseController, 'edition']);
-$route->addRoute('/ouverture_caisse/formulaire', [$ouvertureCaisseController, 'formulaire']);
 
-$route->addRoute('/cloture_caisse/list', [$clotureCaisseController, 'list']);
-$route->addRoute('/cloture_caisse/apiList', [$clotureCaisseController, 'apiList']);
-$route->addRoute('/cloture_caisse/getDailyTotals', [$clotureCaisseController, 'getDailyTotals']);
-$route->addRoute('/cloture_caisse/add', [$clotureCaisseController, 'add']);
-$route->addRoute('/cloture_caisse/edit', [$clotureCaisseController, 'edit']);
-$route->addRoute('/cloture_caisse/changer', [$clotureCaisseController, 'changer']);
-$route->addRoute('/cloture_caisse/details/{param}', [$clotureCaisseController, 'details']);
-$route->addRoute('/cloture_caisse/edition/{param}', [$clotureCaisseController, 'edition']);
-$route->addRoute('/cloture_caisse/formulaire', [$clotureCaisseController, 'formulaire']);
+
+$route->addRoute('/caisse_commercial/list', [$caisseCommercialController, 'list']);
+$route->addRoute('/caisse_commercial/apiList', [$caisseCommercialController, 'apiList']);
+$route->addRoute('/caisse_commercial/getDailyTotals', [$caisseCommercialController, 'getDailyTotals']);
+$route->addRoute('/caisse_commercial/apiGetCommercialSession', [$caisseCommercialController, 'apiGetCommercialSession']);
+$route->addRoute('/caisse_commercial/ouvrirMaCaisse', [$caisseCommercialController, 'ouvrirMaCaisse']);
+$route->addRoute('/caisse_commercial/add', [$caisseCommercialController, 'add']);
+$route->addRoute('/caisse_commercial/edit', [$caisseCommercialController, 'edit']);
+$route->addRoute('/caisse_commercial/changer', [$caisseCommercialController, 'changer']);
+$route->addRoute('/caisse_commercial/details/{param}', [$caisseCommercialController, 'details']);
+$route->addRoute('/caisse_commercial/edition/{param}', [$caisseCommercialController, 'edition']);
+$route->addRoute('/caisse_commercial/formulaire', [$caisseCommercialController, 'formulaire']);
 
 $route->addRoute('/type_depense/list', [$typeDepenseController, 'list']);
 $route->addRoute('/type_depense/apiList', [$typeDepenseController, 'apiList']);

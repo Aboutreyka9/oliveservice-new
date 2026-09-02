@@ -74,8 +74,7 @@ require_once __DIR__ . '/../controllers/cotisations/CotisationController.php';
 require_once __DIR__ . '/../controllers/cotisations/CautisationPaymentController.php';
 require_once __DIR__ . '/../controllers/distributions/DistributionController.php';
 
-require_once __DIR__ . '/../controllers/ouvertures_caisse/OuvertureCaisseController.php';
-require_once __DIR__ . '/../controllers/clotures_caisse/ClotureCaisseController.php';
+require_once __DIR__ . '/../controllers/caisse_commercial/CaisseCommercialController.php';
 require_once __DIR__ . '/../controllers/type_depenses/TypeDepenseController.php';
 require_once __DIR__ . '/../controllers/depenses/DepenseController.php';
 require_once __DIR__ . '/../controllers/versements/VersementController.php';

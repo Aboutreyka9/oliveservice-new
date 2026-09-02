@@ -307,7 +307,7 @@
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
             <div class="nav-section-items" id="sec-decharger">
-                <a href="<?= RACINE ?>cloture_caisse/formulaire" class="nav-item sub <?= strpos($currentUri, '/cloture_caisse/formulaire') !== false ? 'active' : '' ?>" data-title="Ma Caisse Journalière">
+                <a href="<?= RACINE ?>caisse_commercial/formulaire" class="nav-item sub <?= strpos($currentUri, '/caisse_commercial/') !== false ? 'active' : '' ?>" data-title="Ma Caisse Journalière">
                     <i data-lucide="lock"></i> <span>Ma Caisse Journalière</span>
                 </a>
                 <a href="<?= RACINE ?>versement/formulaire" class="nav-item sub <?= strpos($currentUri, '/versement/formulaire') !== false ? 'active' : '' ?>" data-title="Faire un Versement">
@@ -383,7 +383,7 @@
                 <a href="<?= RACINE ?>depense/list" class="nav-item sub <?= strpos($currentUri, '/depense/') !== false ? 'active' : '' ?>" data-title="Dépenses d'Exploitation">
                     <i data-lucide="arrow-up-right"></i> <span>Dépenses Exploitation</span>
                 </a>
-                <a href="<?= RACINE ?>cloture_caisse/list" class="nav-item sub <?= strpos($currentUri, '/cloture_caisse/') !== false ? 'active' : '' ?>" data-title="Journal des Caisses">
+                <a href="<?= RACINE ?>caisse_commercial/list" class="nav-item sub <?= strpos($currentUri, '/caisse_commercial/list') !== false ? 'active' : '' ?>" data-title="Journal des Caisses">
                     <i data-lucide="archive"></i> <span>Journal des Caisses</span>
                 </a>
             </div>

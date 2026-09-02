@@ -293,4 +293,148 @@ class SouscriptionController extends BaseController
             $this->error('Erreur lors de la validation de la souscription.');
         }
     }
+
+    public function wizardSubmit()
+    {
+        $this->requirePost(false);
+        $this->requireAuth();
+        $data = $_POST;
+        unset($data['csrf_token']);
+
+        $nomClient = trim($data['nom_client'] ?? '');
+        $telClient = Validator::cleanPhone($data['telephone_client'] ?? '');
+        $emailClient = trim($data['email_client'] ?? '');
+        $sexeClient = trim($data['sexe_client'] ?? '');
+        $lieuClient = trim($data['lieu_residence_client'] ?? '');
+        $professionClient = trim($data['profession_client'] ?? '');
+        $sessionCode = $data['session_code'] ?? '';
+        $zoneCode = $data['zone_code'] ?? Context::zone();
+
+        $rawPacks = $data['packs'] ?? '[]';
+        $packCodes = is_array($rawPacks) ? $rawPacks : json_decode($rawPacks, true);
+
+        if (empty($nomClient) || empty($telClient) || empty($sexeClient) || empty($lieuClient)) {
+            $this->error('Veuillez remplir toutes les informations du client (Nom, Téléphone, Genre, Lieu de résidence).');
+            return;
+        }
+
+        if (empty($sessionCode)) {
+            $this->error('Veuillez sélectionner une session d\'activité.');
+            return;
+        }
+
+        if (empty($packCodes) || !is_array($packCodes)) {
+            $this->error('Veuillez sélectionner au moins un pack.');
+            return;
+        }
+
+        $db = $this->model->getCon();
+
+        // 1. DÉTECTION ET ANTI-DOUBLON CLIENT : Vérification si le client existe déjà
+        $existingClient = null;
+        if (!empty($telClient)) {
+            $stmtCheck = $db->prepare("SELECT * FROM clients WHERE telephone_client = ? LIMIT 1");
+            $stmtCheck->execute([$telClient]);
+            $existingClient = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if (!$existingClient && !empty($nomClient) && !empty($lieuClient)) {
+            $stmtCheckNom = $db->prepare("SELECT * FROM clients WHERE LOWER(nom_client) = LOWER(?) AND LOWER(lieu_residence_client) = LOWER(?) LIMIT 1");
+            $stmtCheckNom->execute([$nomClient, $lieuClient]);
+            $existingClient = $stmtCheckNom->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if ($existingClient) {
+            // REUTILISATION DU CLIENT EXISTANT (Pas de création de doublon)
+            $clientCode = $existingClient['code_client'];
+
+            // Mettre à jour les informations secondaires si manquantes
+            $updateFields = [];
+            if (empty($existingClient['email_client']) && !empty($emailClient)) $updateFields['email_client'] = $emailClient;
+            if (empty($existingClient['profession_client']) && !empty($professionClient)) $updateFields['profession_client'] = $professionClient;
+            if (!empty($updateFields)) {
+                $updateFields['updated_at_client'] = date('Y-m-d H:i:s');
+                $modelClient = new ModelClient();
+                $modelClient->update($updateFields, (int)$existingClient['id_client']);
+            }
+        } else {
+            // NOUVEAU CLIENT : Création d'une fiche client unique
+            $clientCode = $this->validator->generateCode('clients', 'code_client', 'CLI-', 8);
+            if (empty($zoneCode)) {
+                $stmtDZ = $db->query("SELECT code_zone FROM zones LIMIT 1");
+                $dz = $stmtDZ->fetch(PDO::FETCH_ASSOC);
+                $zoneCode = $dz['code_zone'] ?? '6QIlVfXP0LiXE9tBzHownYLAAqDi2';
+            }
+
+            $clientData = [
+                'code_client' => $clientCode,
+                'nom_client' => $nomClient,
+                'telephone_client' => $telClient,
+                'email_client' => $emailClient,
+                'sexe_client' => $sexeClient,
+                'lieu_residence_client' => $lieuClient,
+                'profession_client' => $professionClient,
+                'statut_client' => 'actif',
+                'created_at_client' => date('Y-m-d H:i:s'),
+                'user_code' => Context::user() ?? '',
+                'etablissement_code' => Context::etablissement(),
+                'zone_code' => $zoneCode
+            ];
+            $modelClient = new ModelClient();
+            if (!$modelClient->create($clientData)) {
+                $this->error('Erreur lors de la création de la fiche client.');
+                return;
+            }
+        }
+
+        // 2. CRÉATION DE LA SOUSCRIPTION
+        $userCode = Context::user() ?? '';
+        $etabCode = Context::etablissement();
+        $anneeCode = Context::annee();
+        $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
+
+        $inClause = implode(',', array_fill(0, count($packCodes), '?'));
+        $stmtP = $db->prepare("SELECT SUM(prix_cotisation_pack) as total_prix FROM packs WHERE code_pack IN ($inClause)");
+        $stmtP->execute($packCodes);
+        $resP = $stmtP->fetch(PDO::FETCH_ASSOC);
+        $cotisJour = (float)($resP['total_prix'] ?? 0);
+
+        $stmtS = $db->prepare("SELECT nombre_jour_session FROM sessions WHERE code_session = ?");
+        $stmtS->execute([$sessionCode]);
+        $resS = $stmtS->fetch(PDO::FETCH_ASSOC);
+        $nbJours = (int)($resS['nombre_jour_session'] ?? 170);
+
+        $montantTotalPrevu = $cotisJour * $nbJours;
+
+        $souscriptionData = [
+            'code_souscription' => $codeSouscription,
+            'client_code' => $clientCode,
+            'session_code' => $sessionCode,
+            'zone_code' => $zoneCode ?: (Context::zone() ?? ''),
+            'date_debut_souscription' => date('Y-m-d'),
+            'montant_total_prevu' => $montantTotalPrevu,
+            'montant_cotisation_journaliere' => $cotisJour,
+            'nombre_jour_total' => $nbJours,
+            'nombre_jour_cotise' => 0,
+            'montant_total_cotise' => 0,
+            'statut_distribution' => 'En attente',
+            'statut_souscription' => 'valide',
+            'user_code' => $userCode,
+            'etablissement_code' => $etabCode,
+            'annee_code' => $anneeCode,
+            'created_at_souscription' => date('Y-m-d H:i:s')
+        ];
+
+        if ($this->model->createSouscriptionWithMultiplePacks($souscriptionData, $packCodes)) {
+            $msgSuccess = $existingClient 
+                ? "Souscription rattachée au client existant '{$existingClient['nom_client']}' ($clientCode) avec succès !"
+                : "Nouveau client créé ($clientCode) et souscription enregistrée avec succès !";
+            $this->success($msgSuccess, [
+                'code_souscription' => $codeSouscription,
+                'redirect' => RACINE . 'souscription/list'
+            ]);
+        } else {
+            $this->error('Erreur lors de la validation de la souscription.');
+        }
+    }
 }

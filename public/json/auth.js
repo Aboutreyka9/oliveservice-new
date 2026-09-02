@@ -57,4 +57,19 @@ $(document).ready(function() {
             this.setAttribute('aria-label', isPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
         });
     }
+    const showPasswordCheckbox = document.getElementById('show-password');
+    if (showPasswordCheckbox) {
+        showPasswordCheckbox.addEventListener('change', function() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (passwordInput) {
+                const show = this.checked;
+                passwordInput.type = show ? 'text' : 'password';
+                if (eyeIcon) {
+                    eyeIcon.setAttribute('data-lucide', show ? 'eye-off' : 'eye');
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
+        });
+    }
 });

@@ -6,11 +6,11 @@
     <div class="content-wrapper" style="padding: 24px; width: 100%; max-width: 100%; box-sizing: border-box;">
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
         <div>
-          <h1 style="font-size: 20px; font-weight: 800; color: #0F172A; margin: 0;">Clôtures de Caisse Journalières</h1>
-          <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Gestion et consultation du registre Clôtures de Caisse Journalières</p>
+          <h1 style="font-size: 20px; font-weight: 800; color: #0F172A; margin: 0;">Historique Ma Caisse Commercial</h1>
+          <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Registre et historique des séances de caisse journalières</p>
         </div>
-        <a href="<?= RACINE ?>cloture_caisse/formulaire" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px;">
-          <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Ajouter Clôture de Caisse
+        <a href="<?= RACINE ?>caisse_commercial/formulaire" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px;">
+          <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Ma Caisse Journalière
         </a>
       </div>
       <div class="card" style="background: #FFFFFF; border-radius: 12px; padding: 24px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden;">
@@ -37,5 +37,5 @@
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/clotures_caisse.js?v=1.0"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/caisse_commercial.js?v=1.0"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>
