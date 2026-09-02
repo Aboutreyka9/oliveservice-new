@@ -66,11 +66,21 @@ $packArticles = $packArticles ?? [];
                 <div class="form-group">
                   <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Image / Visuel du Pack</label>
                   <input type="file" name="image_pack" id="image_pack" class="form-control" style="width: 100%; box-sizing: border-box; padding: 9px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" accept="image/*">
-                  <?php if (!empty($item['image_pack'] ?? '')): ?>
-                    <div style="margin-top: 8px;">
-                      <img src="<?= RACINE ?>public/assets/images/packs/<?= htmlspecialchars($item['image_pack']) ?>" style="height: 60px; border-radius: 6px; border: 1px solid #E2E8F0;">
+                  
+                  <div id="preview-pack-wrapper" style="margin-top: 12px; <?= !empty($item['image_pack'] ?? '') ? '' : 'display: none;' ?>">
+                    <div style="position: relative; display: inline-block; padding: 6px; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 10px;">
+                      <img id="preview-pack-image" src="<?= !empty($item['image_pack'] ?? '') ? RACINE . 'public/assets/images/packs/' . htmlspecialchars($item['image_pack']) : '' ?>" style="max-height: 110px; max-width: 100%; border-radius: 8px; object-fit: cover; display: block;">
+                      <span id="preview-pack-badge" style="position: absolute; top: 12px; left: 12px; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: #1E3A5F; color: #FFFFFF;">
+                        <?= !empty($item['image_pack'] ?? '') ? 'Visuel actuel' : 'Prévisualisation' ?>
+                      </span>
+                      <button type="button" id="btn-remove-pack-image" style="position: absolute; top: 10px; right: 10px; background: #EF4444; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-weight: bold;" title="Annuler / Retirer l'image">
+                        &times;
+                      </button>
                     </div>
-                  <?php endif; ?>
+                    <div id="preview-pack-info" style="font-size: 12px; color: #64748B; margin-top: 6px; font-weight: 600;">
+                      <?= !empty($item['image_pack'] ?? '') ? htmlspecialchars($item['image_pack']) : '' ?>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -191,7 +201,7 @@ $packArticles = $packArticles ?? [];
                         </td>
                         <td style="padding: 10px 12px; text-align: center;">
                           <button type="button" class="btn btn-sm remove-article-row" style="border-radius: 6px; font-weight: 600; background: #DC2626; border-color: #DC2626; color: #FFF;">
-                            <i data-lucide="trash" style="width: 14px; height: 14px;"></i>
+                            <i class="fa-solid fa-trash" data-lucide="trash" style="font-size: 13px; width: 14px; height: 14px;"></i>
                           </button>
                         </td>
                       </tr>
@@ -228,8 +238,32 @@ $(document).ready(function() {
     $('.select2').select2({ width: '100%' });
   }
 
-  var currentStep = 1;
-  var articleRowIndex = <?= max(0, count($packArticles)) ?>;
+  // Prévisualisation dynamique de l'image sélectionnée
+  $('#image_pack').on('change', function(e) {
+    var file = e.target.files[0];
+    if (file) {
+      if (!file.type.match('image.*')) {
+        if (window.toastr) toastr.error("Veuillez sélectionner un fichier image valide (JPG, PNG, WEBP, GIF)");
+        $(this).val('');
+        $('#preview-pack-wrapper').hide();
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(evt) {
+        $('#preview-pack-image').attr('src', evt.target.result);
+        $('#preview-pack-badge').text('Nouvelle image sélectionnée').css({'background': '#2563EB', 'color': '#FFFFFF'});
+        $('#preview-pack-info').text(file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)');
+        $('#preview-pack-wrapper').show();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  $('#btn-remove-pack-image').on('click', function() {
+    $('#image_pack').val('');
+    $('#preview-pack-wrapper').hide();
+    $('#preview-pack-image').attr('src', '');
+  });
 
   function showMessage(type, message) {
     var $msg = $('#form-messages');
@@ -258,9 +292,6 @@ $(document).ready(function() {
 
     hideMessage();
     if (window.lucide) lucide.createIcons();
-    if ($.fn.select2) {
-      $('.select2').select2({ width: '100%' });
-    }
     if (step === 3) {
       updateArticleCount();
     }
@@ -269,6 +300,11 @@ $(document).ready(function() {
   function updateArticleCount() {
     var count = $('#articles-pack-body tr').length;
     $('#article-count').text('(' + count + ')');
+    if (count > 0) {
+      $('#empty-articles-msg').hide();
+    } else {
+      $('#empty-articles-msg').show();
+    }
   }
 
   var baseCotisPack = 0;
@@ -347,41 +383,49 @@ $(document).ready(function() {
     showStep(2);
   });
 
-  $('#btn-add-article').on('click', function() {
+  $('#btn-add-article').on('click', function(e) {
+    if (e) e.preventDefault();
     hideMessage();
     var codeArticle = $('#article-select').val();
-    var libelleArticle = $('#article-select').find('option:selected').data('libelle') || codeArticle;
+    var $opt = $('#article-select').find('option:selected');
+    var libelleArticle = $opt.data('libelle') || $opt.text().trim() || codeArticle;
+
     if (!codeArticle) {
-      showMessage('danger', 'Veuillez sélectionner un article');
+      showMessage('danger', 'Veuillez sélectionner un article à ajouter');
       return;
     }
-    if ($('#table-articles-pack tbody tr[data-article-code="' + codeArticle + '"]').length > 0) {
-      showMessage('warning', 'Cet article est déjà dans le pack');
+    if ($('#articles-pack-body tr[data-article-code="' + codeArticle + '"]').length > 0) {
+      showMessage('warning', 'Cet article est déjà présent dans le pack');
       return;
     }
 
     var rowHtml = '<tr data-article-code="' + codeArticle + '">' +
       '<td style="padding: 10px 12px; font-weight: 700; color: #0F172A;">' + libelleArticle + '</td>' +
       '<td style="padding: 10px 12px; text-align: center;">' +
-        '<input type="number" name="articles[' + articleRowIndex + '][quantite_article]" value="1" min="1" style="width: 80px; padding: 6px 10px; border-radius: 6px; border: 1px solid #CBD5E1; text-align: center;">' +
-        '<input type="hidden" name="articles[' + articleRowIndex + '][article_code]" value="' + codeArticle + '">' +
+        '<input type="number" name="articles[' + codeArticle + '][quantite_article]" value="1" min="1" style="width: 80px; padding: 6px 10px; border-radius: 6px; border: 1px solid #CBD5E1; text-align: center;">' +
+        '<input type="hidden" name="articles[' + codeArticle + '][article_code]" value="' + codeArticle + '">' +
       '</td>' +
       '<td style="padding: 10px 12px; text-align: center;">' +
         '<button type="button" class="btn btn-sm remove-article-row" style="border-radius: 6px; font-weight: 600; background: #DC2626; border-color: #DC2626; color: #FFF;">' +
-          '<i data-lucide="trash" style="width: 14px; height: 14px;"></i>' +
+          '<i class="fa-solid fa-trash" data-lucide="trash" style="font-size: 13px; width: 14px; height: 14px;"></i>' +
         '</button>' +
       '</td>' +
     '</tr>';
 
     $('#articles-pack-body').append(rowHtml);
     articleRowIndex++;
-    $('#article-select').val('').trigger('change');
+    if ($.fn.select2 && $('#article-select').hasClass('select2-hidden-accessible')) {
+      $('#article-select').val('').trigger('change');
+    } else {
+      $('#article-select').val('');
+    }
 
     if (window.lucide) lucide.createIcons();
     updateArticleCount();
   });
 
-  $(document).on('click', '.remove-article-row', function() {
+  $(document).on('click', '.remove-article-row', function(e) {
+    if (e) e.preventDefault();
     $(this).closest('tr').remove();
     updateArticleCount();
   });

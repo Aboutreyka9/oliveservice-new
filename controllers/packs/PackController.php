@@ -62,7 +62,13 @@ class PackController extends BaseController
         unset($data['csrf_token']);
 
         if (!empty($data['libelle_pack'])) {
-            if (!$this->checkUnique('packs', 'libelle_pack', $data['libelle_pack'], 'Pack')) return;
+            $conditions = [
+                'session_code' => $data['session_code'] ?? '',
+                'categorie_pack_code' => $data['categorie_pack_code'] ?? '',
+                'zone_code' => $data['zone_code'] ?? '',
+                'libelle_pack' => $data['libelle_pack'] ?? ''
+            ];
+            if (!$this->checkUniquePair('packs', $conditions, 'Pack (Session + Catégorie + Zone + Nom)')) return;
         }
 
         $userCode = Context::user() ?? '';
@@ -78,12 +84,12 @@ class PackController extends BaseController
             unset($data['montant_pack']);
         }
 
-        if (!empty($_FILES['image_pack']['name'])) {
+        if (isset($_FILES['image_pack']) && $_FILES['image_pack']['error'] === UPLOAD_ERR_OK && !empty($_FILES['image_pack']['name'])) {
             $uploadDir = __DIR__ . '/../../public/assets/images/packs/';
             if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
+                @mkdir($uploadDir, 0777, true);
             }
-            $ext = pathinfo($_FILES['image_pack']['name'], PATHINFO_EXTENSION);
+            $ext = strtolower(pathinfo($_FILES['image_pack']['name'], PATHINFO_EXTENSION));
             $filename = 'pack_' . time() . '_' . uniqid() . '.' . $ext;
             if (move_uploaded_file($_FILES['image_pack']['tmp_name'], $uploadDir . $filename)) {
                 $data['image_pack'] = $filename;
@@ -120,7 +126,13 @@ class PackController extends BaseController
         if (!$pack) { $this->error('Pack introuvable'); return; }
 
         if (!empty($data['libelle_pack'])) {
-            if (!$this->checkUnique('packs', 'libelle_pack', $data['libelle_pack'], 'Pack', 'id_pack', $id)) return;
+            $conditions = [
+                'session_code' => $data['session_code'] ?? $pack['session_code'],
+                'categorie_pack_code' => $data['categorie_pack_code'] ?? $pack['categorie_pack_code'],
+                'zone_code' => $data['zone_code'] ?? $pack['zone_code'],
+                'libelle_pack' => $data['libelle_pack'] ?? $pack['libelle_pack']
+            ];
+            if (!$this->checkUniquePair('packs', $conditions, 'Pack (Session + Catégorie + Zone + Nom)', 'id_pack', $id)) return;
         }
 
         $data['updated_at_pack'] = date('Y-m-d H:i:s');
@@ -128,12 +140,12 @@ class PackController extends BaseController
             unset($data['montant_pack']);
         }
 
-        if (!empty($_FILES['image_pack']['name'])) {
+        if (isset($_FILES['image_pack']) && $_FILES['image_pack']['error'] === UPLOAD_ERR_OK && !empty($_FILES['image_pack']['name'])) {
             $uploadDir = __DIR__ . '/../../public/assets/images/packs/';
             if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
+                @mkdir($uploadDir, 0777, true);
             }
-            $ext = pathinfo($_FILES['image_pack']['name'], PATHINFO_EXTENSION);
+            $ext = strtolower(pathinfo($_FILES['image_pack']['name'], PATHINFO_EXTENSION));
             $filename = 'pack_' . time() . '_' . uniqid() . '.' . $ext;
             if (move_uploaded_file($_FILES['image_pack']['tmp_name'], $uploadDir . $filename)) {
                 $data['image_pack'] = $filename;
