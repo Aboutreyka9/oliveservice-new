@@ -424,6 +424,137 @@ class UserController extends BaseController
         exit();
     }
 
+    /**
+     * Traitement de la demande de réinitialisation de mot de passe (Email)
+     */
+    public function forgotPassword()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $this->render('../views/users/forgot_password.php', [], 'guest');
+            return;
+        }
+
+        $email = trim($_POST['email'] ?? '');
+
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['flash_error'] = "Veuillez saisir une adresse e-mail valide.";
+            $this->render('../views/users/forgot_password.php', [], 'guest');
+            return;
+        }
+
+        // Recherche de l'utilisateur par e-mail
+        $stmt = $this->model->getCon()->prepare("SELECT id_user, nom_user, prenom_user, email_user FROM users WHERE email_user = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            $_SESSION['flash_error'] = "Aucun compte n'est associé à cette adresse e-mail.";
+            $this->render('../views/users/forgot_password.php', [], 'guest');
+            return;
+        }
+
+        // Génération du token de réinitialisation (64 caractères) + Expiration à 30 minutes (1800 sec)
+        $resetToken = bin2hex(random_bytes(32));
+        $expiresAt = date('Y-m-d H:i:s', time() + 1800);
+
+        // Mise à jour en BDD
+        $stmtUpdate = $this->model->getCon()->prepare("UPDATE users SET token_user = ?, reset_token_expires_at = ?, updated_at_user = ? WHERE id_user = ?");
+        $stmtUpdate->execute([$resetToken, $expiresAt, date('Y-m-d H:i:s'), $user['id_user']]);
+
+        // URL de réinitialisation
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $resetLink = $protocol . '://' . $host . RACINE . 'user/reset_password?token=' . $resetToken;
+
+        // Envoi de l'e-mail via MailerService
+        MailerService::sendTemplate(
+            $email,
+            "GEICG Olive Service - Demande de réinitialisation de votre mot de passe",
+            "reset_password",
+            [
+                'userNom' => trim($user['nom_user'] . ' ' . ($user['prenom_user'] ?? '')),
+                'resetLink' => $resetLink,
+                'expirationTime' => '30 minutes'
+            ]
+        );
+
+        $_SESSION['flash_success'] = "Un lien de réinitialisation valide pendant 30 minutes vient de vous être envoyé à votre adresse e-mail.";
+        $this->render('../views/users/forgot_password.php', [], 'guest');
+    }
+
+    /**
+     * Traitement du lien de réinitialisation et enregistrement du nouveau mot de passe
+     */
+    public function resetPassword()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $token = trim($_GET['token'] ?? '');
+
+            if (empty($token)) {
+                $_SESSION['flash_error'] = "Le lien de réinitialisation est manquant ou invalide.";
+                header('Location: ' . RACINE . 'user/connexion');
+                exit();
+            }
+
+            // Vérification du token et de l'expiration (< 30 min)
+            $stmt = $this->model->getCon()->prepare("SELECT id_user FROM users WHERE token_user = ? AND reset_token_expires_at >= ?");
+            $stmt->execute([$token, date('Y-m-d H:i:s')]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) {
+                $_SESSION['flash_error'] = "Ce lien de réinitialisation est invalide ou a expiré (durée de validité : 30 minutes). Veuillez faire une nouvelle demande.";
+                header('Location: ' . RACINE . 'user/forgot_password');
+                exit();
+            }
+
+            $this->render('../views/users/reset_password.php', ['token' => $token], 'guest');
+            return;
+        }
+
+        // Soumission POST du nouveau mot de passe
+        $token = trim($_POST['token'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+
+        if (empty($token)) {
+            $_SESSION['flash_error'] = "Jeton de réinitialisation manquant.";
+            header('Location: ' . RACINE . 'user/connexion');
+            exit();
+        }
+
+        if (strlen($password) < 6) {
+            $_SESSION['flash_error'] = "Le nouveau mot de passe doit contenir au moins 6 caractères.";
+            $this->render('../views/users/reset_password.php', ['token' => $token], 'guest');
+            return;
+        }
+
+        if ($password !== $confirmPassword) {
+            $_SESSION['flash_error'] = "Les deux mots de passe ne correspondent pas.";
+            $this->render('../views/users/reset_password.php', ['token' => $token], 'guest');
+            return;
+        }
+
+        // Vérification de la validité du token
+        $stmt = $this->model->getCon()->prepare("SELECT id_user FROM users WHERE token_user = ? AND reset_token_expires_at >= ?");
+        $stmt->execute([$token, date('Y-m-d H:i:s')]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            $_SESSION['flash_error'] = "Ce lien de réinitialisation est invalide ou a expiré.";
+            header('Location: ' . RACINE . 'user/forgot_password');
+            exit();
+        }
+
+        // Mise à jour du mot de passe + suppression du token (usage unique)
+        $newHash = password_hash($password, PASSWORD_DEFAULT);
+        $stmtUpdate = $this->model->getCon()->prepare("UPDATE users SET password_user = ?, token_user = NULL, reset_token_expires_at = NULL, updated_at_user = ? WHERE id_user = ?");
+        $stmtUpdate->execute([$newHash, date('Y-m-d H:i:s'), $user['id_user']]);
+
+        $_SESSION['flash_success'] = "Votre mot de passe a été réinitialisé avec succès ! Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.";
+        header('Location: ' . RACINE . 'user/connexion');
+        exit();
+    }
+
     public function connexion()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {

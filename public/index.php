@@ -10,6 +10,8 @@ $route->addRoute('/', ['HomeController', 'index']);
 $route->addRoute('/home/dashboardData', ['HomeController', 'dashboardData']);
 $route->addRoute('/user/connexion', ['UserController', 'connexion']);
 $route->addRoute('/user/activer', ['UserController', 'activer']);
+$route->addRoute('/user/forgot_password', ['UserController', 'forgotPassword']);
+$route->addRoute('/user/reset_password', ['UserController', 'resetPassword']);
 $route->addRoute('/user/decon', ['UserController', 'decon']);
 $route->addRoute('/user/logout', ['UserController', 'logout']);
 $route->addRoute('/user/profil', ['UserController', 'profil']);
