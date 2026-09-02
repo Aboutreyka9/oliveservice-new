@@ -45,7 +45,7 @@ $(document).ready(function() {
         return '<strong style="color:#0F172A;">' + (d || '-') + '</strong>';
       }},
       { data: 'libelle_zone', render: function(d) {
-        return '<span class="badge bg-light text-dark" style="border:1px solid #CBD5E1; font-weight:700;">' + (d || '-') + '</span>';
+        return '<span style="display:inline-block; position:static; background:#EFF6FF; color:#1E3A5F; padding:4px 8px; border-radius:6px; border:1px solid #BFDBFE; font-weight:700;">' + (d || '-') + '</span>';
       }},
       { data: 'created_at_zone_commercial', defaultContent: '-' },
       { data: 'statut_zone_commercial', width: '80px', className: 'text-center', render: function(d, type, row) {

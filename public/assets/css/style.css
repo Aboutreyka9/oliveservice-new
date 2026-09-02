@@ -159,7 +159,7 @@ html, body {
 .topbar-actions { display: flex; align-items: center; gap: var(--spacing-md); }
 .btn-icon { position: relative; background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-secondary); padding: var(--spacing-xs); border-radius: var(--radius-sm); }
 .btn-icon:hover { background: var(--bg-secondary); }
-.badge { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; font-size: 0.75rem; padding: 2px 6px; border-radius: 20px; }
+.btn-icon .badge { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; font-size: 0.75rem; padding: 2px 6px; border-radius: 20px; }
 .admin-profile { display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer; }
 .admin-profile img { width: 32px; height: 32px; border-radius: 50%; }
 .admin-profile span { display: flex; align-items: center; gap: var(--spacing-xs); }

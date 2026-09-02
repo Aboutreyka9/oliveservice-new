@@ -59,9 +59,9 @@ $(document).ready(function() {
         return '<strong style="color:#0F172A; font-size:14px;">' + (d || '-') + '</strong>';
       }},
       { data: 'libelle_annee', defaultContent: '-' },
-      { data: 'libelle_zone', render: function(d) {
-        if (!d) return '<span style="color:#94A3B8; font-style:italic;">Non spécifiée</span>';
-        return '<span class="badge" style="background:#F1F5F9; color:#1E293B; padding:5px 10px; border-radius:8px; font-weight:700; border: 1px solid #CBD5E1;">' + d + '</span>';
+      { data: 'libelle_zone', defaultContent: 'Non spécifiée', render: function(d) {
+        if (!d || d === 'Non spécifiée') return '<span style="color:#94A3B8; font-style:italic;">Non spécifiée</span>';
+        return '<span style="display:inline-block; position:static; background:#EFF6FF; color:#1E3A5F; padding:5px 10px; border-radius:8px; font-weight:700; border:1px solid #BFDBFE;">' + d + '</span>';
       }},
       { data: 'nombre_jour_session', className: 'text-center', render: function(d, type, row) {
         var days = parseInt(d || 0, 10);
@@ -71,7 +71,7 @@ $(document).ready(function() {
           var diff = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
           if (diff > 0) days = diff;
         }
-        return '<span class="badge" style="background:#EFF6FF; color:#1E3A5F; padding:5px 10px; border-radius:8px; font-weight:800;">' + (days || 0) + ' jours</span>';
+        return '<span style="display:inline-block; position:static; background:#F8FAFC; color:#334155; padding:5px 10px; border-radius:8px; font-weight:800; border:1px solid #E2E8F0;">' + (days || 0) + ' jours</span>';
       }},
       { data: null, render: function(d, type, row) {
         var deb = row.date_debut_session ? row.date_debut_session : 'N/A';

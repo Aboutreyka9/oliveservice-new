@@ -78,9 +78,9 @@ $(document).ready(function() {
         var zoneVal = d || (row && row.zone ? row.zone : 'Globale');
         if (type !== 'display') return zoneVal;
         if (!zoneVal || zoneVal === 'Globale') {
-          return '<span class="badge" style="background:#F1F5F9; color:#64748B; padding:4px 8px; border-radius:6px; font-weight:600; border:1px solid #E2E8F0;">Globale</span>';
+          return '<span style="display:inline-block; position:static; background:#F1F5F9; color:#64748B; padding:4px 8px; border-radius:6px; font-weight:600; border:1px solid #E2E8F0;">Globale</span>';
         }
-        return '<span class="badge" style="background:#EFF6FF; color:#1E3A5F; padding:4px 8px; border-radius:6px; font-weight:700; border:1px solid #BFDBFE;">' + zoneVal + '</span>';
+        return '<span style="display:inline-block; position:static; background:#EFF6FF; color:#1E3A5F; padding:4px 8px; border-radius:6px; font-weight:700; border:1px solid #BFDBFE;">' + zoneVal + '</span>';
       }},
       { data: 'roles_list', render: function(d, type, row) {
         if (type !== 'display') return (row.roles_list && row.roles_list.length) ? row.roles_list.join(', ') : (row.role || '');

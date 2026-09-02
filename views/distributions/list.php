@@ -55,11 +55,11 @@ $(document).ready(function() {
       { data: 'nom_livreur_complet', defaultContent: '-' },
       { data: 'date_distribution_effectuee', defaultContent: '-' },
       { data: 'statut_distribution', className: 'text-center', width: '100px', render: function(d) {
-        var badge = 'bg-warning text-dark';
+        var style = 'background:#FEF3C7; color:#B45309; border:1px solid #FDE68A;';
         var libelle = 'En attente';
-        if (d === 'valide') { badge = 'bg-success'; libelle = 'Validée'; }
-        else if (d === 'ennule') { badge = 'bg-danger'; libelle = 'Annulée'; }
-        return '<span class="badge ' + badge + '">' + libelle + '</span>';
+        if (d === 'valide') { style = 'background:#DCFCE7; color:#15803D; border:1px solid #BBF7D0;'; libelle = 'Validée'; }
+        else if (d === 'ennule') { style = 'background:#FEE2E2; color:#B91C1C; border:1px solid #FECACA;'; libelle = 'Annulée'; }
+        return '<span style="display:inline-block; position:static; padding:4px 8px; border-radius:6px; font-weight:700; font-size:12px; ' + style + '">' + libelle + '</span>';
       }},
       { data: null, width: '160px', orderable: false, render: function(d) {
         return '<a href="' + window.RACINE + 'distribution/edition/' + (d.editId || d.id_distribution) + '" class="btn btn-sm btn-secondary" style="margin-right:6px; font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
