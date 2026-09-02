@@ -34,32 +34,5 @@
     </div>
   </main>
 </div>
-<script>
-$(document).ready(function() {
-  var table = $('#table-clients').DataTable({
-    ajax: '<?= RACINE ?>client/apiList',
-    processing: true,
-    autoWidth: false,
-    columns: [
-      { data: 'id_client', defaultContent: '-', width: '50px' },
-      { data: 'code_client', width: '120px', render: function(d) {
-        if (!d) return '-';
-        return '<code style="font-weight:700; color:#334155; background:#F1F5F9; padding:2px 6px; border-radius:4px;">' + d + '</code>';
-      }},
-      { data: 'nom_complet', render: function(d) {
-        return '<strong style="color:#0F172A;">' + (d || '-') + '</strong>';
-      }},
-      { data: 'telephone_client', defaultContent: '-' },
-      { data: 'cni_client', defaultContent: '-' },
-      { data: 'lieu_residence_client', defaultContent: '-' },
-      { data: null, width: '160px', orderable: false, render: function(d) {
-        return '<a href="' + window.RACINE + 'client/edition/' + (d.editId || d.id_client) + '" class="btn btn-sm btn-secondary" style="margin-right:6px; font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
-               '<a href="' + window.RACINE + 'client/details/' + (d.editId || d.id_client) + '" class="btn btn-sm btn-info" style="font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>';
-      }, className: 'text-end' }
-    ],
-    language: { url: '<?= RACINE ?>json/datatables-i18n-fr-FR.json' },
-    drawCallback: function() { if (window.lucide) lucide.createIcons(); }
-  });
-});
-</script>
+<script src="<?= RACINE ?>public/assets/js/modules/clients.js?v=1.0"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

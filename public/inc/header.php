@@ -97,6 +97,15 @@
     <script>
         window.RACINE = '<?= RACINE ?>';
         window.LINK = '<?= RACINE ?>';
+        window.AppConfig = {
+            racine: '<?= RACINE ?>',
+            link: '<?= RACINE ?>',
+            userCode: '<?= Context::user() ?>',
+            role: '<?= Context::role() ?>',
+            isCommercial: <?= Context::isCommercial() ? 'true' : 'false' ?>,
+            isFinance: <?= Context::isFinance() ? 'true' : 'false' ?>,
+            isAdmin: <?= Context::isAdmin() ? 'true' : 'false' ?>
+        };
     </script>
 
     <?php

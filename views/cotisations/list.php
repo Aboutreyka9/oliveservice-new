@@ -38,44 +38,5 @@
     </div>
   </main>
 </div>
-<script>
-$(document).ready(function() {
-  var table = $('#table-cotisations').DataTable({
-    ajax: '<?= RACINE ?>cotisation/apiList',
-    processing: true,
-    autoWidth: false,
-    columns: [
-      { data: 'code_cautisation_client', width: '130px', render: function(d, type, row) {
-        if (!d) return '-';
-        return '<code style="font-weight:700; color:#334155; background:#F1F5F9; padding:2px 6px; border-radius:4px;">' + d + '</code>';
-      }},
-      { data: 'date_cautisation', defaultContent: '-', width: '100px' },
-      { data: 'nom_client_complet', render: function(d) {
-        return '<strong style="color:#0F172A;">' + (d || '-') + '</strong>';
-      }},
-      { data: 'libelle_pack', defaultContent: '-' },
-      { data: 'nom_commercial_complet', defaultContent: '-' },
-      { data: 'mode_paiement', defaultContent: '-', width: '90px', className: 'text-center', render: function(d) {
-        var badge = 'bg-secondary';
-        if (d === 'espece') badge = 'bg-success';
-        else if (d === 'mobile_money') badge = 'bg-info';
-        else if (d === 'virement') badge = 'bg-primary';
-        return '<span class="badge ' + badge + '">' + (d || '-') + '</span>';
-      }},
-      { data: 'nombre_jour', className: 'text-center', width: '70px', render: function(d) {
-        return '<span class="badge bg-secondary">+' + (d || 1) + ' j</span>';
-      }},
-      { data: 'montant_cautisation_client', render: function(d) {
-        return '<strong style="color:#15803D; font-size:14px;">' + Number(d || 0).toLocaleString('fr-FR') + ' FCFA</strong>';
-      }},
-      { data: null, width: '160px', orderable: false, render: function(d) {
-        return '<a href="' + window.RACINE + 'cotisation/edition/' + (d.editId || d.id_cautisation_client) + '" class="btn btn-sm btn-secondary" style="margin-right:6px; font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
-               '<a href="' + window.RACINE + 'cotisation/details/' + (d.editId || d.id_cautisation_client) + '" class="btn btn-sm btn-info" style="font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>';
-      }, className: 'text-end' }
-    ],
-    language: { url: '<?= RACINE ?>json/datatables-i18n-fr-FR.json' },
-    drawCallback: function() { if (window.lucide) lucide.createIcons(); }
-  });
-});
-</script>
+<script src="<?= RACINE ?>public/assets/js/modules/cotisations.js?v=1.0"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>
