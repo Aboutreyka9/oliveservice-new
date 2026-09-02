@@ -31,7 +31,7 @@ class HomeController extends BaseController
                 'recentDepenses' => $recentDepenses
             ]);
         } else {
-            $this->loadView('../views/users/connexion.php');
+            $this->render('../views/users/connexion.php', [], 'guest');
         }
     }
 

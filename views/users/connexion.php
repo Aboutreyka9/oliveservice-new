@@ -1,6 +1,4 @@
 <?php
-require_once __DIR__ . '/../../public/inc/header.php';
-
 try {
     $db = (new Database())->getCon();
     $stmt = $db->query("SELECT logo_etablissement, libelle_etablissement FROM etablissements ORDER BY id_etablissement ASC LIMIT 1");
@@ -274,6 +272,21 @@ try {
           <p>à mon espace d'administration</p>
         </div>
 
+        <!-- MESSAGES FLASH D'ACTIVATION / SÉCURITÉ -->
+        <?php if (!empty($_SESSION['flash_success'])): ?>
+          <div class="alert alert-success" style="width: 100%; margin-bottom: 16px; font-size: 13px; border-radius: 8px; background: #DCFCE7; color: #15803D; border: 1px solid #86EFAC; padding: 12px; font-weight: 600; text-align: center;">
+            ✅ <?= htmlspecialchars($_SESSION['flash_success']); ?>
+          </div>
+          <?php unset($_SESSION['flash_success']); ?>
+        <?php endif; ?>
+
+        <?php if (!empty($_SESSION['flash_error'])): ?>
+          <div class="alert alert-danger" style="width: 100%; margin-bottom: 16px; font-size: 13px; border-radius: 8px; background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; padding: 12px; font-weight: 600; text-align: center;">
+            ⚠️ <?= htmlspecialchars($_SESSION['flash_error']); ?>
+          </div>
+          <?php unset($_SESSION['flash_error']); ?>
+        <?php endif; ?>
+
         <!-- ZONE DE NOTIFICATION JS COMPATIBLE -->
         <div class="notification alert alert-danger d-none" style="width: 100%; margin-bottom: 16px; font-size: 13px; border-radius: 8px;"></div>
 
@@ -358,7 +371,3 @@ try {
   </div>
 
 </div>
-
-<?php 
-require_once __DIR__ . '/../../public/inc/footer-link.php';
-?>

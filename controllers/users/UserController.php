@@ -109,6 +109,7 @@ class UserController extends BaseController
         $id_user = $maxId + 1;
         $password = password_hash($rawPassword, PASSWORD_DEFAULT);
         $etabCode = '5454544456';
+        $activationToken = bin2hex(random_bytes(32));
 
         $data = [
             'id_user' => $id_user,
@@ -119,9 +120,10 @@ class UserController extends BaseController
             'email_user' => $email ?: null,
             'sexe_user' => $_POST['sexe_user'] ?? 'M',
             'password_user' => $password,
+            'token_user' => $activationToken,
             'fonction_code' => $fonctionCode,
             'etablissement_code' => $etabCode,
-            'statut_user' => 'actif',
+            'statut_user' => 'inactif',
             'created_at_user' => date('Y-m-d H:i:s')
         ];
 
@@ -140,8 +142,51 @@ class UserController extends BaseController
             }
 
             $this->model->syncUserRoles($code_user, $rolesData);
+
+            // Construction de l'URL d'activation unique
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $activationUrl = $protocol . '://' . $host . RACINE . 'user/activer?token=' . $activationToken;
+
+            // Récupération du libellé de fonction
+            $libelleFonction = 'Collaborateur';
+            if (!empty($fonctionCode)) {
+                try {
+                    $stmtF = $this->model->getCon()->prepare("SELECT libelle_fonction FROM fonctions WHERE code_fonction = ?");
+                    $stmtF->execute([$fonctionCode]);
+                    $libelleFonction = $stmtF->fetchColumn() ?: 'Collaborateur';
+                } catch (Exception $e) {}
+            }
+
+            // Récupération de la zone
+            $libelleZone = 'Zone Globale';
+            if (!empty($_POST['zone_code'])) {
+                try {
+                    $stmtZ = $this->model->getCon()->prepare("SELECT libelle_zone FROM zones WHERE code_zone = ?");
+                    $stmtZ->execute([$_POST['zone_code']]);
+                    $libelleZone = $stmtZ->fetchColumn() ?: $_POST['zone_code'];
+                } catch (Exception $e) {}
+            }
+
+            // Envoi de l'email d'activation avec coordonnées
+            if (!empty($email)) {
+                MailerService::sendTemplate(
+                    $email,
+                    "GEICG Olive Service - Activation de votre compte & Coordonnées d'accès",
+                    "welcome_credentials",
+                    [
+                        'userNom' => trim($nom . ' ' . $prenom),
+                        'userFonction' => $libelleFonction,
+                        'userZone' => $libelleZone,
+                        'userEmail' => $email,
+                        'userPassword' => $rawPassword,
+                        'loginUrl' => $activationUrl
+                    ]
+                );
+            }
+
             $idDisplay = $email ?: ($telephone ?: $nom);
-            $this->success("Utilisateur créé avec succès ! Identifiant : <strong>{$idDisplay}</strong> | Mot de passe généré : <strong style='color:#15803D;'>{$rawPassword}</strong>", ['password' => $rawPassword]);
+            $this->success("Utilisateur créé avec succès en statut inactif ! Un e-mail d'activation avec ses accès et son mot de passe temporaire a été envoyé à <strong>{$idDisplay}</strong>.", ['password' => $rawPassword]);
         } else {
             $this->error('Erreur lors de la création de l\'utilisateur.');
         }
@@ -344,10 +389,45 @@ class UserController extends BaseController
         ]);
     }
 
+    /**
+     * Action d'activation de compte via le jeton unique reçu par e-mail
+     */
+    public function activer()
+    {
+        $token = trim($_GET['token'] ?? '');
+
+        if (empty($token)) {
+            $_SESSION['flash_error'] = "Le jeton d'activation est manquant ou invalide.";
+            header('Location: ' . RACINE . 'user/connexion');
+            exit();
+        }
+
+        // Recherche de l'utilisateur par le token d'activation
+        $stmt = $this->model->getCon()->prepare("SELECT id_user, nom_user, prenom_user, email_user, statut_user FROM users WHERE token_user = ?");
+        $stmt->execute([$token]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            $_SESSION['flash_error'] = "Ce lien d'activation est invalide ou a déjà été vérifié et utilisé.";
+            header('Location: ' . RACINE . 'user/connexion');
+            exit();
+        }
+
+        // 1. Activer le compte (statut_user = 'actif')
+        // 2. SUPPRIMER le token d'activation (token_user = NULL) pour garantir un lien à usage unique !
+        $stmtUpdate = $this->model->getCon()->prepare("UPDATE users SET statut_user = 'actif', token_user = NULL, updated_at_user = ? WHERE id_user = ?");
+        $stmtUpdate->execute([date('Y-m-d H:i:s'), $user['id_user']]);
+
+        $userName = htmlspecialchars(trim($user['nom_user'] . ' ' . ($user['prenom_user'] ?? '')));
+        $_SESSION['flash_success'] = "Félicitations {$userName} ! Votre compte a été activé avec succès. Vous pouvez maintenant vous connecter avec votre mot de passe temporaire et le personnaliser dans votre profil.";
+        header('Location: ' . RACINE . 'user/connexion');
+        exit();
+    }
+
     public function connexion()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-            $this->loadView('../views/users/connexion.php');
+            $this->render('../views/users/connexion.php', [], 'guest');
             return;
         }
 

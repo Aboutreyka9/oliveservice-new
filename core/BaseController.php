@@ -199,23 +199,77 @@ abstract class BaseController
         return $this->validator->generateCode($table, $field, $prefix, $len);
     }
 
-    protected function loadView(string $path, array $data = []): void
+    /**
+     * Rendu d'une vue avec gestion dual-layout :
+     * - 'main' (par défaut) : Layout application d'administration (avec Header, Sidebar, Nav, Footer)
+     * - 'guest' : Layout visiteur/auth (sans Sidebar ni Nav, uniquement Header et Footer)
+     * - false : Aucun layout (rendu brut)
+     * 
+     * @param string $viewPath Chemin relatif ou absolu de la vue
+     * @param array $data Données transmises à la vue
+     * @param string|bool $layout 'main', 'guest', ou false
+     */
+    protected function render(string $viewPath, array $data = [], $layout = 'main'): void
     {
         $data['isSuperAdmin'] = $this->isSuperAdmin();
         $data['currentUserName'] = $data['currentUserName'] ?? ($_SESSION[USERS_AUTH]['nom'] ?? ($_SESSION[USERS_AUTH]['nom_user'] ?? 'Utilisateur'));
         $data['currentUserEmail'] = $data['currentUserEmail'] ?? ($_SESSION[USERS_AUTH]['email'] ?? ($_SESSION[USERS_AUTH]['email_user'] ?? ''));
         $data['currentUserRole'] = $_SESSION[USERS_AUTH]['role_code'] ?? 'ROLE_USER';
 
-        if (!file_exists($path)) {
-            $candidate = __DIR__ . '/../' . ltrim(str_replace('../', '', $path), '/\\');
-            if (file_exists($candidate)) {
-                $path = $candidate;
+        $file = $viewPath;
+        if (!file_exists($file)) {
+            if (strpos($viewPath, 'views/') === false && strpos($viewPath, '../views/') === false) {
+                $file = __DIR__ . '/../views/' . ltrim($viewPath, '/\\');
+            } else {
+                $file = __DIR__ . '/../' . ltrim(str_replace('../', '', $viewPath), '/\\');
+            }
+            if (substr($file, -4) !== '.php') {
+                $file .= '.php';
             }
         }
-        foreach ($data as $key => $value) {
-            $$key = $value;
+
+        if (!file_exists($file)) {
+            $this->renderNotFound("La vue [$viewPath] est introuvable.");
+            return;
         }
-        require $path;
+
+        // Vérifier si la vue source inclut déjà manuellement header.php
+        $rawSource = file_get_contents($file);
+        $hasManualHeader = (strpos($rawSource, 'header.php') !== false);
+
+        extract($data);
+
+        // Si $layout === false ou si la vue gère déjà son propre header
+        if ($layout === false || $hasManualHeader) {
+            require $file;
+            return;
+        }
+
+        // Layout 1: 'guest' (Connexion, etc. - SANS Sidebar ni Nav)
+        if ($layout === 'guest' || $layout === 'auth') {
+            require_once __DIR__ . '/../public/inc/header.php';
+            require $file;
+            require_once __DIR__ . '/../public/inc/footer-link.php';
+            return;
+        }
+
+        // Layout 2: 'main' (Pages d'administration - AVEC Sidebar et Nav)
+        require_once __DIR__ . '/../public/inc/header.php';
+        echo '<div class="app-layout">';
+        require_once __DIR__ . '/../public/inc/sidbar.php';
+        echo '<main class="main-content">';
+        require_once __DIR__ . '/../public/inc/nav.php';
+        echo '<div class="content-wrapper" style="padding: 24px; width: 100%; max-width: 100%; box-sizing: border-box;">';
+        require $file;
+        echo '</div>';
+        echo '</main>';
+        echo '</div>';
+        require_once __DIR__ . '/../public/inc/footer-link.php';
+    }
+
+    protected function loadView(string $path, array $data = []): void
+    {
+        $this->render($path, $data, 'main');
     }
 
     protected function post(string $key, $default = '')
