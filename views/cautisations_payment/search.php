@@ -19,8 +19,8 @@
           <button type="button" id="btnRefresh" class="btn btn-secondary" style="background: #F1F5F9; border-color: #CBD5E1; color: #334155; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px;">
             <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Actualiser
           </button>
-          <a href="<?= RACINE ?>client/add" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px;">
-            <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Nouveau Client
+          <a href="<?= RACINE ?>souscription/wizard" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px;">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Nouvelle souscription
           </a>
         </div>
       </div>
