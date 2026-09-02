@@ -190,7 +190,14 @@ class SessionController extends BaseController
             header('Location: ' . RACINE . 'session/list'); exit();
         }
 
-        $annees = $this->model->getCon()->query("SELECT * FROM annees ORDER BY id_annee DESC")->fetchAll(PDO::FETCH_ASSOC);
+        $currentAnneeCode = $item['annee_code'] ?? '';
+        $sqlAnnees = "SELECT * FROM annees WHERE statut_annee = 'actif'";
+        if (!empty($currentAnneeCode)) {
+            $sqlAnnees .= " OR code_annee = " . $this->model->getCon()->quote($currentAnneeCode);
+        }
+        $sqlAnnees .= " ORDER BY id_annee DESC";
+
+        $annees = $this->model->getCon()->query($sqlAnnees)->fetchAll(PDO::FETCH_ASSOC);
         $zones = $this->model->getCon()->query("SELECT * FROM zones ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
         $this->loadView('../views/sessions/edit.php', [
             'item' => $item, 
@@ -203,7 +210,7 @@ class SessionController extends BaseController
     public function formulaire()
     {
         $this->requireAuth();
-        $annees = $this->model->getCon()->query("SELECT * FROM annees ORDER BY id_annee DESC")->fetchAll(PDO::FETCH_ASSOC);
+        $annees = $this->model->getCon()->query("SELECT * FROM annees WHERE statut_annee = 'actif' ORDER BY id_annee DESC")->fetchAll(PDO::FETCH_ASSOC);
         $zones = $this->model->getCon()->query("SELECT * FROM zones ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
         $this->loadView('../views/sessions/edit.php', [
             'item' => [],

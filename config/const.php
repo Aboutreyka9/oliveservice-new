@@ -5,7 +5,7 @@ $httpHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $isLocalEnvironment = (strpos($httpHost, 'localhost') !== false || strpos($httpHost, '127.0.0.1') !== false);
 
 if (!defined('RACINE')) {
-    define('RACINE', $isLocalEnvironment ? 'http://localhost/geicg/' : 'https://app.groupe-eicg.net/');
+    define('RACINE', $isLocalEnvironment ? 'http://localhost/geicg/' : 'https://test.oliveservice.net/');
 }
 
 if (!defined('ONESIGNAL_APP_ID')) {

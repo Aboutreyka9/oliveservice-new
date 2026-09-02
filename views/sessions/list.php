@@ -27,8 +27,8 @@
               <tr style="background: #F8FAFC; text-align: left; color: #64748B;">
                 <th style="padding: 12px;">Réf Code</th>
                 <th style="padding: 12px;">Libellé Session</th>
-                <th style="padding: 12px;">Année Académique</th>
-                <th style="padding: 12px;">Zone Commerciale</th>
+                <th style="padding: 12px;">Année </th>
+                <th style="padding: 12px;">Zone </th>
                 <th style="padding: 12px; text-align: center;">Durée Jours</th>
                 <th style="padding: 12px;">Période (Début - Fin)</th>
                 <th style="padding: 12px; text-align: center;">Statut</th>
