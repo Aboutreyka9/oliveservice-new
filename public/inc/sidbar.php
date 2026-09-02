@@ -13,17 +13,17 @@
   }
   $currentUri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
 
-  // --- SYSTÈME D'AUTORISATIONS & RBAC DU SIDEBAR (MULTI-RÔLES) ---
+  // --- SYSTÈME D'AUTORISATIONS & RBAC DU SIDEBAR (OLIVE SERVICE 4 PROFILS) ---
   $userRoles = $_SESSION[USERS_AUTH]['roles'] ?? [];
   if (empty($userRoles)) {
-      $singleRole = $_SESSION[USERS_AUTH]['role_code'] ?? ($_SESSION['role_code'] ?? 'ROLE_USER');
-      $userRoles = !empty($singleRole) ? [$singleRole] : ['ROLE_USER'];
+      $singleRole = $_SESSION[USERS_AUTH]['role_code'] ?? ($_SESSION['role_code'] ?? 'ROLE_COMMERCIAL');
+      $userRoles = !empty($singleRole) ? [$singleRole] : ['ROLE_COMMERCIAL'];
   }
   if (is_string($userRoles)) {
       $userRoles = [$userRoles];
   }
-  $userRoleCode = $userRoles[0] ?? 'ROLE_USER';
-  $isSuperAdmin = !empty(array_intersect($userRoles, ['ROLE_SUPERADMIN', 'ROLE_DIR_GENERAL']));
+  $userRoleCode = $userRoles[0] ?? 'ROLE_COMMERCIAL';
+  $isSuperAdmin = !empty(array_intersect($userRoles, ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_DIR_GENERAL']));
 
   // Récupérer les permissions cumulées de tous les rôles de l'utilisateur
   $userPermissions = $_SESSION['permissions'] ?? [];
@@ -52,7 +52,7 @@
       foreach ($requiredPerms as $perm) {
           if (in_array($perm, $userPermissions, true)) return true;
       }
-      return true; // Accès par défaut pour la démo métier Olive Service
+      return false;
   };
 ?>
 <style>
@@ -257,7 +257,7 @@
     <!-- Badges Session / Année Active -->
     <div class="sidebar-academic-badge p-2 mx-2 my-2 rounded bg-light border text-center">
         <div class="full-badge">
-            <div class="text-uppercase text-muted" style="font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">Plateforme Olive</div>
+            <div class="text-uppercase text-muted" style="font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">Profil : <?= htmlspecialchars($userRoleCode) ?></div>
             <div class="fw-bold text-success" style="font-size: 13px;">
                 <?= htmlspecialchars($_SESSION['annee_active_libelle'] ?? 'Session Active') ?>
             </div>
@@ -268,12 +268,13 @@
     </div>
 
     <nav class="sidebar-nav">
-        <!-- ACCUEIL -->
+        <!-- ACCUEIL (Visible pour tous) -->
         <a href="<?= RACINE ?>" class="nav-item <?= ($currentUri === RACINE || $currentUri === RACINE . 'public/' || $currentUri === '/geicg/' || $currentUri === '/geicg/public/') ? 'active' : '' ?>" data-title="Tableau de bord">
             <i data-lucide="layout-dashboard"></i> <span>Tableau de bord</span>
         </a>
 
-        <!-- === MODULE COMMERCIAL === -->
+        <!-- === MODULE COMMERCIAL (ROLE_COMMERCIAL) === -->
+        <?php if ($canAccess(['COMMERCIAL_VIEW_OWN_CLIENTS', 'COMMERCIAL_ADD_CLIENT'], ['ROLE_COMMERCIAL', 'ROLE_ADMIN'])): ?>
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-commercial" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -282,46 +283,46 @@
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
             <div class="nav-section-items" id="sec-commercial">
-                <a href="<?= RACINE ?>client/list" class="nav-item sub <?= strpos($currentUri, '/client/') !== false ? 'active' : '' ?>" data-title="Clients">
-                    <i data-lucide="users"></i> <span>Clients</span>
+                <a href="<?= RACINE ?>client/list" class="nav-item sub <?= strpos($currentUri, '/client/') !== false ? 'active' : '' ?>" data-title="Mes Clients">
+                    <i data-lucide="users"></i> <span>Mes Clients</span>
                 </a>
-                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= strpos($currentUri, '/souscription/') !== false ? 'active' : '' ?>" data-title="Souscriptions">
-                    <i data-lucide="file-text"></i> <span>Souscriptions</span>
+                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= strpos($currentUri, '/souscription/list') !== false ? 'active' : '' ?>" data-title="Mes Souscriptions">
+                    <i data-lucide="file-text"></i> <span>Mes Souscriptions</span>
                 </a>
-                <a href="<?= RACINE ?>cotisation/list" class="nav-item sub <?= strpos($currentUri, '/cotisation/') !== false ? 'active' : '' ?>" data-title="Cotisations">
-                    <i data-lucide="wallet"></i> <span>Cotisations</span>
+                <a href="<?= RACINE ?>souscription/wizard" class="nav-item sub <?= strpos($currentUri, '/souscription/wizard') !== false ? 'active' : '' ?>" data-title="Nouvelle Souscription">
+                    <i data-lucide="file-plus"></i> <span>Nouvelle Souscription</span>
                 </a>
-                 <a href="<?= RACINE ?>cautisation-payment/search-form" class="nav-item sub <?= strpos($currentUri, '/cotisation/') !== false ? 'active' : '' ?>" data-title="Cotisations">
-                    <i data-lucide="wallet"></i> <span>Cotisations</span>
+                <a href="<?= RACINE ?>cautisation-payment/search-form" class="nav-item sub <?= strpos($currentUri, '/cautisation-payment/') !== false ? 'active' : '' ?>" data-title="Collecter Cotisation">
+                    <i data-lucide="wallet"></i> <span>Collecter Cotisation</span>
                 </a>
-                 
-                
             </div>
         </div>
 
-        <!-- === MODULE DÉCHARGER (COMMERCIAL) === -->
+        <!-- MODULE DÉCHARGER / VERSEMENT COMMERCIAL -->
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-decharger" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="arrow-down-circle" style="width: 16px; height: 16px; color: #047857;"></i> <span>Décharger</span>
+                    <i data-lucide="arrow-down-circle" style="width: 16px; height: 16px; color: #047857;"></i> <span>Ma Caisse & Verser</span>
                 </div>
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
             <div class="nav-section-items" id="sec-decharger">
-                <a href="<?= RACINE ?>versement/formulaire" class="nav-item sub <?= strpos($currentUri, '/versement/formulaire') !== false || strpos($currentUri, '/versement/edition') !== false ? 'active' : '' ?>" data-title="Versement">
-                    <i data-lucide="send"></i> <span>Versement</span>
+                <a href="<?= RACINE ?>versement/formulaire" class="nav-item sub <?= strpos($currentUri, '/versement/formulaire') !== false ? 'active' : '' ?>" data-title="Faire un Versement">
+                    <i data-lucide="send"></i> <span>Faire un Versement</span>
                 </a>
-                <a href="<?= RACINE ?>versement/list" class="nav-item sub <?= strpos($currentUri, '/versement/list') !== false ? 'active' : '' ?>" data-title="Historique">
-                    <i data-lucide="history"></i> <span>Historique</span>
+                <a href="<?= RACINE ?>versement/list" class="nav-item sub <?= strpos($currentUri, '/versement/list') !== false ? 'active' : '' ?>" data-title="Mes Versements">
+                    <i data-lucide="history"></i> <span>Mes Versements</span>
                 </a>
             </div>
         </div>
+        <?php endif; ?>
 
-        <!-- === MODULE 1 : CATALOGUE ARTICLES & PACKS === -->
+        <!-- === MODULE GESTIONNAIRE : CATALOGUE ARTICLES & PACKS === -->
+        <?php if ($canAccess(['GESTIONNAIRE_MANAGE_PACKS', 'GESTIONNAIRE_MANAGE_ARTICLES'], ['ROLE_GESTIONNAIRE', 'ROLE_ADMIN'])): ?>
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-catalogue" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="package" style="width: 16px; height: 16px;"></i> <span>Catalogue & Packs</span>
+                    <i data-lucide="package" style="width: 16px; height: 16px; color: #2563EB;"></i> <span>Catalogue & Packs</span>
                 </div>
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
@@ -329,8 +330,11 @@
                 <a href="<?= RACINE ?>article/list" class="nav-item sub <?= strpos($currentUri, '/article/') !== false ? 'active' : '' ?>" data-title="Articles Produits">
                     <i data-lucide="shopping-bag"></i> <span>Articles Produits</span>
                 </a>
+                <a href="<?= RACINE ?>categories_articles/list" class="nav-item sub <?= strpos($currentUri, '/categories_articles/') !== false ? 'active' : '' ?>" data-title="Catégories d'Articles">
+                    <i data-lucide="layers"></i> <span>Catégories Articles</span>
+                </a>
                 <a href="<?= RACINE ?>categorie_pack/list" class="nav-item sub <?= strpos($currentUri, '/categorie_pack/') !== false ? 'active' : '' ?>" data-title="Catégories de Packs">
-                    <i data-lucide="tags"></i> <span>Catégories de Packs</span>
+                    <i data-lucide="tags"></i> <span>Catégories Packs</span>
                 </a>
                 <a href="<?= RACINE ?>pack/list" class="nav-item sub <?= strpos($currentUri, '/pack/') !== false ? 'active' : '' ?>" data-title="Packs d'Articles">
                     <i data-lucide="boxes"></i> <span>Packs d'Articles</span>
@@ -338,38 +342,11 @@
             </div>
         </div>
 
-        <!-- === MODULE 2 : CLIENTS & COMMERCIALISATION === -->
-        <div class="nav-section">
-            <div class="sidebar-accordion-toggle" data-bs-target="#sec-clients" aria-expanded="false">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="users" style="width: 16px; height: 16px;"></i> <span>Clients & Commerciaux</span>
-                </div>
-                <i data-lucide="chevron-down" class="chevron-icon"></i>
-            </div>
-            <div class="nav-section-items" id="sec-clients">
-                <a href="<?= RACINE ?>client/list" class="nav-item sub <?= strpos($currentUri, '/client/') !== false ? 'active' : '' ?>" data-title="Registre des Clients">
-                    <i data-lucide="user-check"></i> <span>Registre des Clients</span>
-                </a>
-                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= strpos($currentUri, '/souscription/') !== false ? 'active' : '' ?>" data-title="Souscriptions Packs">
-                    <i data-lucide="file-text"></i> <span>Souscriptions Packs</span>
-                </a>
-                <a href="<?= RACINE ?>souscription/wizard" class="nav-item sub <?= strpos($currentUri, '/souscription/wizard') !== false ? 'active' : '' ?>" data-title="Nouvelle Souscription">
-                    <i data-lucide="file-input"></i> <span>Nouvelle Souscription</span>
-                </a>
-                <a href="<?= RACINE ?>cotisation/list" class="nav-item sub <?= strpos($currentUri, '/cotisation/') !== false ? 'active' : '' ?>" data-title="Cotisations Terrain">
-                    <i data-lucide="wallet"></i> <span>Cotisations Terrain</span>
-                </a>
-                <a href="<?= RACINE ?>zone_commercial/list" class="nav-item sub <?= strpos($currentUri, '/zone_commercial/') !== false ? 'active' : '' ?>" data-title="Affectations Commerciaux">
-                    <i data-lucide="user-cog"></i> <span>Affectations Commerciaux</span>
-                </a>
-            </div>
-        </div>
-
-        <!-- === MODULE 4 : CLÔTURE SESSION === -->
+        <!-- MODULE GESTIONNAIRE : LOGISTIQUE & DISTRIBUTIONS -->
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-distribution" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="calendar-check" style="width: 16px; height: 16px;"></i> <span>Clôture Session</span>
+                    <i data-lucide="truck" style="width: 16px; height: 16px; color: #D97706;"></i> <span>Logistique & Retraits</span>
                 </div>
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
@@ -377,41 +354,45 @@
                 <a href="<?= RACINE ?>distribution/list" class="nav-item sub <?= strpos($currentUri, '/distribution/') !== false ? 'active' : '' ?>" data-title="Distributions Packs">
                     <i data-lucide="package-check"></i> <span>Distributions Packs</span>
                 </a>
-                <a href="<?= RACINE ?>reconduction/list" class="nav-item sub <?= strpos($currentUri, '/reconduction/') !== false ? 'active' : '' ?>" data-title="Reconductions">
-                    <i data-lucide="rotate-cw"></i> <span>Reconduction</span>
-                </a>
             </div>
         </div>
+        <?php endif; ?>
 
-        <!-- === MODULE 5 : FINANCES & VERSEMENTS === -->
+        <!-- === MODULE FINANCE : FINANCES & CAISSE CENTRALE === -->
+        <?php if ($canAccess(['FINANCE_VIEW_ALL_COTISATIONS', 'FINANCE_VALIDATE_VERSEMENT'], ['ROLE_FINANCE', 'ROLE_ADMIN'])): ?>
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-finance" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="credit-card" style="width: 16px; height: 16px;"></i> <span>Finances & Versements</span>
+                    <i data-lucide="credit-card" style="width: 16px; height: 16px; color: #DC2626;"></i> <span>Finances & Trésorerie</span>
                 </div>
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
             <div class="nav-section-items" id="sec-finance">
-                <a href="<?= RACINE ?>versement/list" class="nav-item sub <?= strpos($currentUri, '/versement/') !== false ? 'active' : '' ?>" data-title="Versements Commerciaux">
+                <a href="<?= RACINE ?>cotisation/list" class="nav-item sub <?= strpos($currentUri, '/cotisation/list') !== false ? 'active' : '' ?>" data-title="Suivi des Cotisations">
+                    <i data-lucide="search"></i> <span>Suivi Cotisations</span>
+                </a>
+                <a href="<?= RACINE ?>versement/list" class="nav-item sub <?= strpos($currentUri, '/versement/') !== false ? 'active' : '' ?>" data-title="Validation Versements">
                     <i data-lucide="arrow-down-left"></i> <span>Versements Commerciaux</span>
                 </a>
                 <a href="<?= RACINE ?>type_depense/list" class="nav-item sub <?= strpos($currentUri, '/type_depense/') !== false ? 'active' : '' ?>" data-title="Types de Dépenses">
                     <i data-lucide="tags"></i> <span>Types de Dépenses</span>
                 </a>
                 <a href="<?= RACINE ?>depense/list" class="nav-item sub <?= strpos($currentUri, '/depense/') !== false ? 'active' : '' ?>" data-title="Dépenses d'Exploitation">
-                    <i data-lucide="arrow-up-right"></i> <span>Dépenses d'Exploitation</span>
+                    <i data-lucide="arrow-up-right"></i> <span>Dépenses Exploitation</span>
                 </a>
-                <a href="<?= RACINE ?>paiement/list" class="nav-item sub <?= strpos($currentUri, '/paiement/') !== false ? 'active' : '' ?>" data-title="Paiements Divers">
-                    <i data-lucide="receipt"></i> <span>Paiements Divers</span>
+                <a href="<?= RACINE ?>cloture_caisse/list" class="nav-item sub <?= strpos($currentUri, '/cloture_caisse/') !== false ? 'active' : '' ?>" data-title="Journal des Caisses">
+                    <i data-lucide="archive"></i> <span>Journal des Caisses</span>
                 </a>
             </div>
         </div>
+        <?php endif; ?>
 
-        <!-- === MODULE 6 : ADMINISTRATION & RBAC === -->
+        <!-- === MODULE ADMINISTRATION & RBAC (ROLE_ADMIN) === -->
+        <?php if ($canAccess(['ADMIN_MANAGE_USERS', 'ADMIN_MANAGE_ROLES'], ['ROLE_ADMIN'])): ?>
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-admin" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i> <span>Administration & Accès</span>
+                    <i data-lucide="shield-check" style="width: 16px; height: 16px; color: #7C3AED;"></i> <span>Administration & Accès</span>
                 </div>
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
@@ -420,7 +401,7 @@
                     <i data-lucide="users"></i> <span>Utilisateurs Système</span>
                 </a>
                 <a href="<?= RACINE ?>role/list" class="nav-item sub <?= strpos($currentUri, '/role/') !== false ? 'active' : '' ?>" data-title="Rôles & Groupes">
-                    <i data-lucide="shield"></i> <span>Rôles & Groupes</span>
+                    <i data-lucide="shield"></i> <span>Rôles & Groupes RBAC</span>
                 </a>
                 <a href="<?= RACINE ?>permission/list" class="nav-item sub <?= strpos($currentUri, '/permission/') !== false ? 'active' : '' ?>" data-title="Permissions Granulaires">
                     <i data-lucide="key"></i> <span>Permissions Granulaires</span>
@@ -428,29 +409,29 @@
             </div>
         </div>
 
-        <!-- === MODULE 7 : CONFIGURATION === -->
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-config" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="settings" style="width: 16px; height: 16px;"></i> <span>Configuration</span>
+                    <i data-lucide="settings" style="width: 16px; height: 16px; color: #64748B;"></i> <span>Configuration Système</span>
                 </div>
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
             <div class="nav-section-items" id="sec-config">
-                <a href="<?= RACINE ?>annee/list" class="nav-item sub <?= strpos($currentUri, '/annee/') !== false ? 'active' : '' ?>" data-title="Année Académique / Exercice">
-                    <i data-lucide="calendar"></i> <span>Année</span>
+                <a href="<?= RACINE ?>annee/list" class="nav-item sub <?= strpos($currentUri, '/annee/') !== false ? 'active' : '' ?>" data-title="Année d'Activité">
+                    <i data-lucide="calendar"></i> <span>Années</span>
                 </a>
-                <a href="<?= RACINE ?>session/list" class="nav-item sub <?= strpos($currentUri, '/session/') !== false ? 'active' : '' ?>" data-title="Session d'Activité">
-                    <i data-lucide="clock"></i> <span>Session</span>
+                <a href="<?= RACINE ?>session/list" class="nav-item sub <?= strpos($currentUri, '/session/') !== false ? 'active' : '' ?>" data-title="Sessions de Cotisation">
+                    <i data-lucide="clock"></i> <span>Sessions</span>
                 </a>
                 <a href="<?= RACINE ?>zone/list" class="nav-item sub <?= strpos($currentUri, '/zone/') !== false && strpos($currentUri, '/zone_commercial/') === false ? 'active' : '' ?>" data-title="Zones Géographiques">
-                    <i data-lucide="map-pin"></i> <span>Zone</span>
+                    <i data-lucide="map-pin"></i> <span>Zones Géographiques</span>
                 </a>
-                <a href="<?= RACINE ?>etablissement/config" class="nav-item sub <?= strpos($currentUri, '/etablissement/') !== false ? 'active' : '' ?>" data-title="Établissements / Structures">
+                <a href="<?= RACINE ?>etablissement/config" class="nav-item sub <?= strpos($currentUri, '/etablissement/') !== false ? 'active' : '' ?>" data-title="Établissements">
                     <i data-lucide="landmark"></i> <span>Établissements</span>
                 </a>
             </div>
         </div>
+        <?php endif; ?>
     </nav>
 </aside>
 

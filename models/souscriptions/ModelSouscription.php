@@ -7,7 +7,7 @@ class ModelSouscription extends BaseModel
     protected ?string $statusField = 'statut_souscription';
     protected ?string $createdAtField = 'created_at_souscription';
 
-    public function getAllWithDetails(): array
+    public function getAllWithDetails(?string $userCode = null, ?string $zoneCode = null, ?string $anneeCode = null): array
     {
         try {
             $sql = "
@@ -28,9 +28,30 @@ class ModelSouscription extends BaseModel
                  LEFT JOIN packs p ON p.code_pack = ps.pack_code
                  LEFT JOIN zones z ON z.code_zone = s.zone_code
                  LEFT JOIN sessions sess ON sess.code_session = s.session_code
-                 ORDER BY s.created_at_souscription DESC
+                 WHERE 1=1
             ";
-            return $this->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $params = [];
+
+            if (!empty($userCode)) {
+                $sql .= " AND s.user_code = ?";
+                $params[] = $userCode;
+            }
+
+            if (!empty($zoneCode)) {
+                $sql .= " AND s.zone_code = ?";
+                $params[] = $zoneCode;
+            }
+
+            if (!empty($anneeCode) && $anneeCode !== '0GklBk07waYoLB6pHwY') {
+                $sql .= " AND s.annee_code = ?";
+                $params[] = $anneeCode;
+            }
+
+            $sql .= " ORDER BY s.created_at_souscription DESC";
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelSouscription::getAllWithDetails error: " . $e->getMessage());
             return [];

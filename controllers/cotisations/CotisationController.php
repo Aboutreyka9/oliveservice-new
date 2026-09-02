@@ -16,7 +16,35 @@ class CotisationController extends BaseController
     public function apiList()
     {
         $this->requireAuth();
-        $items = $this->model->getAllWithDetails();
+        
+        $sql = "
+            SELECT c.*, 
+                   cl.nom_client, cl.telephone_client,
+                   u.nom_user as nom_commercial, u.prenom_user as prenom_commercial
+            FROM cautisation_clients c
+            LEFT JOIN clients cl ON cl.code_client = c.client_code
+            LEFT JOIN users u ON u.code_user = c.commercial_code
+            WHERE 1=1
+        ";
+        $params = [];
+
+        // Application du périmètre de données RBAC
+        if (Context::isCommercial()) {
+            $sql .= " AND (c.commercial_code = ? OR c.user_code = ?)";
+            $params[] = Context::user();
+            $params[] = Context::user();
+        }
+
+        if (Context::annee() && Context::annee() !== '0GklBk07waYoLB6pHwY') {
+            $sql .= " AND c.annee_code = ?";
+            $params[] = Context::annee();
+        }
+
+        $sql .= " ORDER BY c.date_cautisation DESC, c.id_cautisation_client DESC";
+
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $data = [];
 
         foreach ($items as $c) {
@@ -65,7 +93,7 @@ class CotisationController extends BaseController
 
         $userCode = Context::user() ?? '';
         $anneeCode = Context::annee();
-        $etabCode = '5454544456';
+        $etabCode = Context::etablissement();
         $codeCotisation = $this->validator->generateCode('cautisation_clients', 'code_cautisation_client', 'COT-', 8);
 
         $cotisJour = (float)($sous['montant_cotisation_journaliere'] ?: 1000);
@@ -83,6 +111,9 @@ class CotisationController extends BaseController
             move_uploaded_file($_FILES['photo_recu']['tmp_name'], $uploadDir . $filename);
         }
 
+        // RÈGLE STRICTE RBAC : Les cotisations saisies par un commercial restent 'en_attente' jusqu'à validation caisse
+        $statutInitial = Context::isCommercial() ? 'en_attente' : 'valide';
+
         $cotisationData = [
             'code_cautisation_client' => $codeCotisation,
             'souscription_code' => $data['souscription_code'],
@@ -91,11 +122,11 @@ class CotisationController extends BaseController
             'nombre_jour' => $nbJours,
             'mode_paiement' => $data['mode_paiement'] ?? 'espece',
             'date_cautisation' => $data['date_cautisation'] ?: date('Y-m-d'),
-            'commercial_code' => $data['commercial_code'] ?: $userCode,
+            'commercial_code' => $userCode,
             'reference_paiement' => $data['reference_paiement'] ?? '',
             'recu_numero' => $data['recu_numero'] ?? $codeCotisation,
             'photo_recu' => $filename,
-            'statut_cautisation_client' => 'valide',
+            'statut_cautisation_client' => $statutInitial,
             'annee_code' => $anneeCode,
             'etablissement_code' => $etabCode,
             'user_code' => $userCode,
@@ -104,7 +135,10 @@ class CotisationController extends BaseController
         ];
 
         if ($this->model->createCotisation($cotisationData)) {
-            $this->success('Cotisation enregistrée avec succès !', ['code' => $codeCotisation]);
+            $msg = Context::isCommercial() 
+                ? 'Cotisation enregistrée avec succès (En attente de validation de la caisse/comptabilité).' 
+                : 'Cotisation enregistrée et validée avec succès !';
+            $this->success($msg, ['code' => $codeCotisation]);
         } else {
             $this->error('Erreur lors de l\'enregistrement de la cotisation');
         }
@@ -114,6 +148,13 @@ class CotisationController extends BaseController
     {
         $this->requirePost(false);
         $this->requireAuth();
+
+        // RÈGLE STRICTE RBAC : Un commercial ne peut PAS modifier les cotisations
+        if (Context::isCommercial()) {
+            $this->error('Action non autorisée. Les commerciaux ne peuvent pas modifier les cotisations.');
+            return;
+        }
+
         $id = (int)$this->post('id_cautisation_client');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -133,6 +174,12 @@ class CotisationController extends BaseController
     {
         $this->requirePost(false);
         $this->requireAuth();
+
+        if (Context::isCommercial()) {
+            $this->error('Action non autorisée. Les commerciaux ne peuvent pas changer le statut d\'une cotisation.');
+            return;
+        }
+
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
@@ -187,6 +234,11 @@ class CotisationController extends BaseController
     public function edition($details)
     {
         $this->requireAuth();
+        if (Context::isCommercial()) {
+            header('Location: ' . RACINE . 'cotisation/list');
+            exit();
+        }
+
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);

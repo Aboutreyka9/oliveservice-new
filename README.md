@@ -1,6 +1,6 @@
 # 🫒 Olive Service - Guide du Projet & Collaboration
 
-Bienvenue dans le dépôt du projet **Olive Service**. Ce document constitue la référence centrale pour les développeurs et l'assistant IA. Il résume les règles de collaboration, l'architecture du projet, les spécifications métier et l'état des modules.
+Bienvenue dans le dépôt du projet **Olive Service**. Ce document constitue la référence centrale pour les développeurs et l'assistant IA. Il résume les règles de collaboration, l'architecture du projet, les spécifications métier, le système RBAC et l'état des modules.
 
 ---
 
@@ -43,7 +43,20 @@ Bienvenue dans le dépôt du projet **Olive Service**. Ce document constitue la 
 
 ---
 
-## 📂 4. Structure des Modules Actifs
+## 🛡️ 4. Système RBAC & 4 Profils Utilisateurs Officielles
+
+| Profil | Code Rôle | Périmètre (Scope) & Droits Accordés | Restrictions Strictes |
+|---|---|---|---|
+| **Commercial Terrain** | `ROLE_COMMERCIAL` | Enregistrement des clients, création de souscriptions, collecte cotisations (statut `en_attente`), ouverture/clôture de sa propre caisse, versement. Scope limité à son `user_code`. | ❌ **Aucune modification/suppression** sur les clients, souscriptions ou cotisations. |
+| **Gestionnaire Catalogue** | `ROLE_GESTIONNAIRE` | CRUD Catalogue Articles, Catégories, Packs, Sessions, Années. Consultation/édition des fiches clients & souscriptions, validation des distributions. Scope par `zone_code`, `etablissement_code`. | ❌ Pas de validation de versements ni de dépenses comptables. |
+| **Responsable Finance** | `ROLE_FINANCE` | Suivi des cotisations, validation/rejet des versements commerciaux, gestion des dépenses, clôtures de caisse globale. Scope par `etablissement_code`, `annee_code`. | ❌ Pas de création directe de souscriptions terrain. |
+| **Administrateur** | `ROLE_ADMIN` | Configuration système, gestion des utilisateurs, attribution dynamique des rôles/permissions, statistiques & rapports globaux. | 👁️ Accès superviseur complet. |
+
+Le fichier SQL d'initialisation des habilitations est hébergé sous [`database/rbac.sql`](file:///var/www/html/geicg/database/rbac.sql).
+
+---
+
+## 📂 5. Structure des Modules Actifs
 
 ```
 /var/www/html/geicg/
@@ -62,35 +75,36 @@ Bienvenue dans le dépôt du projet **Olive Service**. Ce document constitue la 
 │   ├── clients/             # Fichier clients
 │   ├── zone_commercials/    # Zones commerciales
 │   ├── souscriptions/       # Souscriptions clients
-│   ├── cotisations/         # Paiements cautisations (CautisationPaymentController)
+│   ├── cotisations/         # Paiements cautisations & situation (CautisationPaymentController)
 │   ├── distributions/       # Retraits & livraisons de packs
 │   ├── ouvertures_caisse/   # Ouvertures de caisse
 │   ├── clotures_caisse/     # Clôtures de caisse
 │   ├── type_depenses/       # Catégories de dépenses
 │   ├── depenses/            # Saisie des dépenses
 │   ├── versements/          # Versements des commerciaux
-│   ├── roles/ & permissions/# Habilitations & accès
+│   ├── roles/ & permissions/# Habilitations & accès RBAC
 │   └── notifications/       # Système de notifications
 ├── models/                  # Modèles de données PDO
 ├── views/                   # Interfaces utilisateur PHP / Bootstrap / DataTables / Lucide
 ├── database/
-│   └── olive.sql            # Schéma de référence SQL
+│   ├── olive.sql            # Schéma de référence SQL
+│   └── rbac.sql             # Scripts des 4 rôles et permissions RBAC
 └── public/                  # Point d'entrée principal (index.php, inc/ header/nav/sidebar)
 ```
 
 ---
 
-## 🗄️ 5. Identifiants de Base de Données
+## 🗄️ 6. Identifiants de Base de Données
 
 - **Hôte** : `localhost` / `127.0.0.1`
 - **Nom de la base** : `olive`
-- **Utilisateur** : `root`
-- **Mot de passe** : `root`
+- **Utilisateur** : `admin`
+- **Mot de passe** : `admin`
 - **Charset** : `utf8mb4`
 
 ---
 
-## 📌 6. État d'Avancement des Tâches (Roadmap)
+## 📌 7. État d'Avancement des Tâches (Roadmap)
 
 - [x] Migration de la base de données vers `olive.sql`.
 - [x] Nettoyage et suppression définitive des modules scolaires/pressing obsolètes (`trash/`).
@@ -98,5 +112,6 @@ Bienvenue dans le dépôt du projet **Olive Service**. Ce document constitue la 
 - [x] Mise à jour des calculs financiers dynamiques sur la liste des souscriptions (`views/souscriptions/list.php`).
 - [x] Ajout du bouton d'accès direct "Situation" dans les souscriptions.
 - [x] Colonne Montant Total (`prix_cotisation_pack * nombre_jour_session`) et regroupement par Année/Zone sur les packs (`views/packs/list.php`).
-- [ ] Audit des accès et permissions selon les rôles.
+- [x] Implémentation complète du système RBAC à 4 profils (Commercial, Gestionnaire, Finance, Admin).
+- [x] Isolation et filtrage par Scope (`user_code`, `zone_code`, `etablissement_code`) dans les contrôleurs et la sidebar.
 - [ ] Tableaux de bord de suivi financier et commercial en temps réel.

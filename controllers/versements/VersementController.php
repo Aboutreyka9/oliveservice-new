@@ -16,7 +16,32 @@ class VersementController extends BaseController
     public function apiList()
     {
         $this->requireAuth();
-        $items = $this->model->getAllWithDetails();
+
+        $sql = "
+            SELECT v.*, 
+                   uc.nom_user as nom_commercial, uc.prenom_user as prenom_commercial,
+                   uv.nom_user as nom_validator, uv.prenom_user as prenom_validator,
+                   z.libelle_zone
+            FROM versements_commerciaux v
+            LEFT JOIN users uc ON uc.code_user = v.commercial_code
+            LEFT JOIN users uv ON uv.code_user = v.user_validate
+            LEFT JOIN zones z ON z.code_zone = v.zone_code
+            WHERE 1=1
+        ";
+        $params = [];
+
+        // RÈGLE RBAC : Le commercial ne voit que ses propres versements
+        if (Context::isCommercial()) {
+            $sql .= " AND (v.commercial_code = ? OR v.user_code = ?)";
+            $params[] = Context::user();
+            $params[] = Context::user();
+        }
+
+        $sql .= " ORDER BY v.created_at_versement DESC";
+
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $data = [];
 
         foreach ($items as $v) {
@@ -39,24 +64,25 @@ class VersementController extends BaseController
         $data = $_POST;
         unset($data['csrf_token']);
 
-        if (empty($data['commercial_code']) || empty($data['montant_versement'])) {
-            $this->error('Veuillez sélectionner un commercial et le montant versé !');
+        $userCode = Context::user() ?? '';
+        $etabCode = Context::etablissement();
+        $codeVersement = $this->validator->generateCode('versements_commerciaux', 'code_versement_commercial', 'VRS-', 8);
+
+        $commercialCode = !empty($data['commercial_code']) ? $data['commercial_code'] : $userCode;
+        if (empty($commercialCode) || empty($data['montant_versement'])) {
+            $this->error('Veuillez renseigner le commercial et le montant versé !');
             return;
         }
-
-        $userCode = Context::user() ?? '';
-        $etabCode = '5454544456';
-        $codeVersement = $this->validator->generateCode('versements_commerciaux', 'code_versement_commercial', 'VRS-', 8);
 
         $versementData = [
             'code_versement_commercial' => $codeVersement,
             'reference_versement' => $data['reference_versement'] ?? $codeVersement,
             'montant_versement' => (int)$data['montant_versement'],
-            'commercial_code' => $data['commercial_code'],
+            'commercial_code' => $commercialCode,
             'periode_versement_debut' => !empty($data['periode_versement_debut']) ? $data['periode_versement_debut'] : date('Y-m-d'),
             'periode_versement_fin' => !empty($data['periode_versement_fin']) ? $data['periode_versement_fin'] : date('Y-m-d'),
-            'zone_code' => $data['zone_code'] ?? '',
-            'statut_versement' => $data['statut_versement'] ?? 'En attente',
+            'zone_code' => $data['zone_code'] ?? Context::zone() ?? '',
+            'statut_versement' => 'En attente',
             'etablissement_code' => $etabCode,
             'user_code' => $userCode,
             'created_at_versement' => date('Y-m-d H:i:s'),
@@ -69,7 +95,7 @@ class VersementController extends BaseController
         $filteredData = array_intersect_key($versementData, array_flip($cols));
 
         if ($this->model->create($filteredData)) {
-            $this->success('Versement enregistré avec succès !', ['code' => $codeVersement]);
+            $this->success('Versement de caisse transmis avec succès (En attente de validation finance) !', ['code' => $codeVersement]);
         } else {
             $this->error('Erreur lors de l\'enregistrement du versement');
         }
@@ -79,6 +105,12 @@ class VersementController extends BaseController
     {
         $this->requirePost(false);
         $this->requireAuth();
+
+        if (Context::isCommercial()) {
+            $this->error('Action non autorisée. Les commerciaux ne peuvent pas modifier un versement transmis.');
+            return;
+        }
+
         $id = (int)$this->post('id_versement');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -97,8 +129,16 @@ class VersementController extends BaseController
     {
         $this->requirePost(false);
         $this->requireAuth();
+
+        // RÈGLE RBAC : Seul le profil Finance / Admin peut valider ou rejeter un versement
+        if (!Context::isFinance() && !Context::isAdmin()) {
+            $this->error('Action non autorisée. Seul le service Comptabilité / Finance ou l\'Administration peut valider un versement.');
+            return;
+        }
+
         $id = (int)$this->post('id_versement');
-        $commentaire = $this->post('commentaire_validation') ?? 'Validé par la gestion';
+        $statut = $this->post('statut_versement') ?? 'Valide';
+        $commentaire = $this->post('commentaire_validation') ?? 'Validé par la comptabilité';
         $userValidateCode = Context::user() ?? '';
 
         if (!$id) {
@@ -106,8 +146,23 @@ class VersementController extends BaseController
             return;
         }
 
+        $versement = $this->model->getById($id);
+        if (!$versement) {
+            $this->error('Versement introuvable.');
+            return;
+        }
+
+        // Valider le versement et basculer les cotisations associées du commercial en 'valide'
         if ($this->model->validateVersement($id, $userValidateCode, $commentaire)) {
-            $this->success('Versement validé avec succès !', ['reload' => true]);
+            if (strtolower($statut) === 'valide' || strtolower($statut) === 'validé') {
+                $stmtCotis = $this->model->getCon()->prepare("
+                    UPDATE cautisation_clients 
+                    SET statut_cautisation_client = 'valide', updated_at_cautisation_client = NOW()
+                    WHERE commercial_code = ? AND statut_cautisation_client = 'en_attente'
+                ");
+                $stmtCotis->execute([$versement['commercial_code']]);
+            }
+            $this->success('Versement validé et cotisations du commercial actualisées avec succès !', ['reload' => true]);
         } else {
             $this->error('Erreur lors de la validation du versement');
         }
@@ -117,6 +172,12 @@ class VersementController extends BaseController
     {
         $this->requirePost(false);
         $this->requireAuth();
+
+        if (!Context::isFinance() && !Context::isAdmin()) {
+            $this->error('Action non autorisée. Seul le service Comptabilité / Finance peut modifier le statut d\'un versement.');
+            return;
+        }
+
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
@@ -164,6 +225,11 @@ class VersementController extends BaseController
     public function edition($details)
     {
         $this->requireAuth();
+        if (Context::isCommercial()) {
+            header('Location: ' . RACINE . 'versement/list');
+            exit();
+        }
+
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);

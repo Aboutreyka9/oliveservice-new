@@ -24,24 +24,26 @@ class ClientController extends BaseController
             SELECT DISTINCT c.*, z.libelle_zone
             FROM clients c
             LEFT JOIN zones z ON z.code_zone = c.zone_code
-            INNER JOIN souscriptions s ON s.client_code = c.code_client
+            LEFT JOIN souscriptions s ON s.client_code = c.code_client
             WHERE 1=1
         ";
         $params = [];
 
-        if ($anneeCode !== '0GklBk07waYoLB6pHwY') {
-            $sql .= " AND s.annee_code = ?";
-            $params[] = $anneeCode;
-        }
-
-        if ($zoneCode !== null && $zoneCode !== '') {
-            $sql .= " AND s.zone_code = ?";
+        // Application du filtrage strict selon le rôle RBAC (Context)
+        if (Context::isCommercial()) {
+            // Le commercial ne voit que ses propres clients créés par lui ou rattachés à ses souscriptions
+            $sql .= " AND (c.user_code = ? OR s.user_code = ?)";
+            $params[] = $userCode;
+            $params[] = $userCode;
+        } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
+            $sql .= " AND (c.zone_code = ? OR s.zone_code = ?)";
+            $params[] = $zoneCode;
             $params[] = $zoneCode;
         }
 
-        if ($userCode !== null && $userCode !== '') {
-            $sql .= " AND s.user_code = ?";
-            $params[] = $userCode;
+        if (!empty($anneeCode) && $anneeCode !== '0GklBk07waYoLB6pHwY') {
+            $sql .= " AND s.annee_code = ?";
+            $params[] = $anneeCode;
         }
 
         $sql .= " ORDER BY c.created_at_client DESC";
@@ -88,6 +90,7 @@ class ClientController extends BaseController
         $cols = $this->model->getCon()->query("DESCRIBE clients")->fetchAll(PDO::FETCH_COLUMN);
         if (in_array('user_code', $cols)) $data['user_code'] = $userCode;
         if (in_array('etablissement_code', $cols)) $data['etablissement_code'] = $etabCode;
+        if (in_array('zone_code', $cols) && empty($data['zone_code'])) $data['zone_code'] = $zoneCode;
 
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->create($filteredData)) {
@@ -101,6 +104,13 @@ class ClientController extends BaseController
     {
         $this->requirePost(false);
         $this->requireAuth();
+
+        // RÈGLE STRICTE RBAC : Les commerciaux ne peuvent pas modifier les fiches clients
+        if (Context::isCommercial()) {
+            $this->error('Action non autorisée. Les commerciaux ne peuvent pas modifier les fiches clients.');
+            return;
+        }
+
         $id = (int)$this->post('id_client');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -124,6 +134,12 @@ class ClientController extends BaseController
     {
         $this->requirePost(false);
         $this->requireAuth();
+
+        if (Context::isCommercial()) {
+            $this->error('Action non autorisée. Les commerciaux ne peuvent pas changer le statut d\'un client.');
+            return;
+        }
+
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
@@ -147,17 +163,26 @@ class ClientController extends BaseController
                 return;
             }
 
-            // Récupérer les souscriptions de ce client
-            $stmtSous = $this->model->getCon()->prepare("
+            // Récupérer les souscriptions de ce client avec filtrage par rôle
+            $sql = "
                 SELECT s.*, p.libelle_pack, z.libelle_zone
                 FROM souscriptions s
                 LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code
                 LEFT JOIN zones z ON z.code_zone = s.zone_code
                 WHERE s.client_code = ?
-                ORDER BY s.created_at_souscription DESC
-            ");
-            $stmtSous->execute([$item['code_client']]);
+            ";
+            $params = [$item['code_client']];
+
+            if (Context::isCommercial()) {
+                $sql .= " AND s.user_code = ?";
+                $params[] = Context::user();
+            }
+
+            $sql .= " ORDER BY s.created_at_souscription DESC";
+
+            $stmtSous = $this->model->getCon()->prepare($sql);
+            $stmtSous->execute($params);
             $souscriptions = $stmtSous->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $encryptedId = $this->validator->crypter($id);
@@ -175,6 +200,11 @@ class ClientController extends BaseController
     public function edition($details)
     {
         $this->requireAuth();
+        if (Context::isCommercial()) {
+            header('Location: ' . RACINE . 'client/list');
+            exit();
+        }
+
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
