@@ -403,6 +403,9 @@
                 <a href="<?= RACINE ?>user/list" class="nav-item sub <?= strpos($currentUri, '/user/') !== false ? 'active' : '' ?>" data-title="Utilisateurs Système">
                     <i data-lucide="users"></i> <span>Utilisateurs Système</span>
                 </a>
+                <a href="<?= RACINE ?>fonction/list" class="nav-item sub <?= strpos($currentUri, '/fonction/') !== false ? 'active' : '' ?>" data-title="Fonctions Utilisateurs">
+                    <i data-lucide="briefcase"></i> <span>Fonctions Utilisateurs</span>
+                </a>
                 <a href="<?= RACINE ?>role/list" class="nav-item sub <?= strpos($currentUri, '/role/') !== false ? 'active' : '' ?>" data-title="Rôles & Groupes">
                     <i data-lucide="shield"></i> <span>Rôles & Groupes RBAC</span>
                 </a>

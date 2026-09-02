@@ -74,6 +74,7 @@ $(document).ready(function() {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
       data: {
         id: id,
+        statut: isChecked ? 'actif' : 'inactif',
         csrf_token: '<?= Validator::generateCsrfToken() ?>'
       },
       dataType: 'json',
