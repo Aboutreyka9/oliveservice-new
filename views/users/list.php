@@ -30,6 +30,7 @@
                 <th style="padding: 12px;">Code</th>
                 <th style="padding: 12px;">Nom complet</th>
                 <th style="padding: 12px;">Contact (Email / Tél)</th>
+                <th style="padding: 12px;">Zone</th>
                 <th style="padding: 12px;">Fonction</th>
                 <th style="padding: 12px;">Rôle Attribué</th>
                 <th style="padding: 12px;" class="text-center">Statut</th>
@@ -69,6 +70,13 @@ $(document).ready(function() {
         if (row.telephone) res += '<div style="font-size:12px; color:#64748B;">' + row.telephone + '</div>';
         return res || '-';
       }},
+      { data: 'zone', render: function(d, type, row) {
+        if (type !== 'display') return d || '';
+        if (!d || d === 'Globale') {
+          return '<span class="badge" style="background:#F1F5F9; color:#64748B; padding:4px 8px; border-radius:6px; font-weight:600; border:1px solid #E2E8F0;">Globale</span>';
+        }
+        return '<span class="badge" style="background:#EFF6FF; color:#1E3A5F; padding:4px 8px; border-radius:6px; font-weight:700; border:1px solid #BFDBFE;">' + d + '</span>';
+      }},
       { data: 'fonction', render: function(d, type) {
         if (type !== 'display') return d || '';
         return '<span style="color:#334155; font-weight:500;">' + (d || '-') + '</span>';
@@ -84,7 +92,7 @@ $(document).ready(function() {
         });
         return '<div style="display:flex; flex-wrap:wrap; gap:3px; max-width:260px;">' + badges.join('') + '</div>';
       }},
-      { data: 'statut', width: '100px', className: 'text-center', render: function(d, type, row) {
+      { data: 'statut', width: '120px', className: 'text-center', render: function(d, type, row) {
         var isActif = (d === 'actif');
         var checkedAttr = isActif ? 'checked' : '';
         var isPending = !!row.token_pending;
@@ -95,7 +103,7 @@ $(document).ready(function() {
 
         var containerStyle = (isPending && !IS_SUPER_ADMIN_USER) ? 'opacity: 0.6; cursor: not-allowed;' : 'cursor: pointer;';
 
-        var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center;">';
+        var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;">';
         html += '<label style="position:relative; display:inline-block; width:38px; height:20px; margin:0; ' + containerStyle + '" title="' + tooltipMsg + '">';
         html += '<input type="checkbox" class="toggle-statut-user" data-id="' + (row.id || row.id_user) + '" data-pending="' + (isPending ? '1' : '0') + '" ' + checkedAttr + ' style="opacity:0; width:0; height:0;">';
         html += '<span style="position:absolute; top:0; left:0; right:0; bottom:0; background-color:' + (isActif ? '#15803D' : '#CBD5E1') + '; transition:.3s; border-radius:20px;">';
@@ -104,7 +112,7 @@ $(document).ready(function() {
         html += '</label>';
 
         if (isPending) {
-          html += '<span class="badge" style="background:#FEF3C7; color:#D97706; border:1px solid #FCD34D; font-size:10px; padding:2px 6px; border-radius:4px; margin-top:4px; font-weight:700; display:inline-block;" title="En attente de validation du lien mail">Jeton non activé</span>';
+          html += '<span style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; font-size:10.5px; padding:3px 7px; border-radius:6px; font-weight:700; white-space:nowrap; display:inline-block;" title="En attente de validation du lien mail">Jeton non activé</span>';
         }
 
         html += '</div>';

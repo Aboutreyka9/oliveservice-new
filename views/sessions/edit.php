@@ -3,6 +3,7 @@
 $isEdit = !empty($item['id_session']);
 $title = $isEdit ? 'Éditer la Session' : 'Nouvelle Session d\'Activité';
 $annees = $annees ?? [];
+$zones = $zones ?? [];
 ?>
 <div class="app-layout">
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
@@ -37,7 +38,7 @@ $annees = $annees ?? [];
             <h3 style="font-size: 14px; font-weight: 800; color: #1E3A5F; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px;">
               <i data-lucide="info" style="width: 16px; height: 16px; color: #1E3A5F;"></i> Identification de la session
             </h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;">
               <div class="form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Libellé de la Session <span style="color: #EF4444;">*</span></label>
                 <input type="text" name="libelle_session" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; font-weight: 700; color: #0F172A; outline: none;" value="<?= htmlspecialchars($item['libelle_session'] ?? '') ?>" required placeholder="Ex: Session Noël 2026">
@@ -53,6 +54,19 @@ $annees = $annees ?? [];
                     </option>
                   <?php endforeach; ?>
                 </select>
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Zone Commerciale / Géographique <span style="color: #64748B; font-weight: 500; font-size: 12px;">(Optionnel)</span></label>
+                <select name="zone_code" class="form-control select2" style="width: 100%; box-sizing: border-box;">
+                  <option value="">-- Aucune zone (Session Globale / Super Admin) --</option>
+                  <?php foreach ($zones as $z): ?>
+                    <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ($item['zone_code'] ?? '') === $z['code_zone'] ? 'selected' : '' ?>>
+                      <?= htmlspecialchars($z['libelle_zone']) ?> (Code: <?= htmlspecialchars($z['code_zone']) ?>)
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+                <small style="color: #64748B; font-size: 11px; margin-top: 4px; display: block;">Laissez vide si cette session s'applique à l'ensemble du réseau ou au niveau Super Admin.</small>
               </div>
             </div>
           </div>

@@ -265,11 +265,22 @@ $(document).ready(function() {
     $('#preview-pack-image').attr('src', '');
   });
 
+  if (typeof window.toastr === 'undefined' && typeof showToast === 'function') {
+    window.toastr = {
+      success: function(msg) { showToast(msg, 'success'); },
+      error: function(msg) { showToast(msg, 'error'); },
+      warning: function(msg) { showToast(msg, 'warning'); },
+      info: function(msg) { showToast(msg, 'info'); }
+    };
+  }
+
   function showMessage(type, message) {
-    var $msg = $('#form-messages');
-    $msg.removeClass('alert-success', 'alert-danger', 'alert-warning', 'alert-info')
-        .css({ 'display': 'block', 'background': type === 'success' ? '#DCFCE7' : type === 'danger' ? '#FEE2E2' : type === 'warning' ? '#FEF3C7' : '#EFF6FF', 'color': type === 'success' ? '#15803D' : type === 'danger' ? '#B91C1C' : type === 'warning' ? '#92400E' : '#1E3A5F', 'border': '1px solid ' + (type === 'success' ? '#BBF7D0' : type === 'danger' ? '#FECACA' : type === 'warning' ? '#FDE68A' : '#BFDBFE') })
-        .html('<strong>' + (type === 'success' ? 'Succès' : type === 'danger' ? 'Erreur' : type === 'warning' ? 'Attention' : 'Information') + ' :</strong> ' + message);
+    var toastType = (type === 'danger') ? 'error' : type;
+    if (window.toastr && typeof window.toastr[toastType] === 'function') {
+      window.toastr[toastType](message);
+    } else if (typeof showToast === 'function') {
+      showToast(message, toastType);
+    }
   }
 
   function hideMessage() {
@@ -443,16 +454,13 @@ $(document).ready(function() {
       success: function(res) {
         if (res.status === 1 || res.success) {
           showMessage('success', res.message || 'Opération réussie');
-          if (window.toastr) toastr.success(res.message || 'Opération réussie');
           setTimeout(function() { window.location.href = '<?= RACINE ?>pack/formulaire'; }, 1500);
         } else {
           showMessage('danger', res.message || 'Erreur lors de l\'enregistrement');
-          if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
         }
       },
       error: function() {
         showMessage('danger', 'Erreur réseau ou serveur indisponible');
-        if (window.toastr) toastr.error('Erreur réseau');
       }
     });
   });

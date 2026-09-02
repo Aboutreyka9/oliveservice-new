@@ -17,9 +17,10 @@ class SessionController extends BaseController
     {
         $this->requireAuth();
         $stmt = $this->model->getCon()->query("
-            SELECT s.*, a.libelle_annee 
+            SELECT s.*, a.libelle_annee, z.libelle_zone 
             FROM sessions s 
             LEFT JOIN annees a ON a.code_annee = s.annee_code 
+            LEFT JOIN zones z ON z.code_zone = s.zone_code 
             ORDER BY s.id_session DESC
         ");
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -27,6 +28,19 @@ class SessionController extends BaseController
         foreach ($items as $i) {
             $id = $i['id_session'];
             $idCrypte = $this->validator->crypter($id);
+
+            $days = (int)($i['nombre_jour_session'] ?? 0);
+            if ($days <= 0 && !empty($i['date_debut_session']) && !empty($i['date_fin_session'])) {
+                try {
+                    $d1 = new DateTime($i['date_debut_session']);
+                    $d2 = new DateTime($i['date_fin_session']);
+                    $days = $d1->diff($d2)->days + 1;
+                } catch (\Throwable $e) {
+                    $days = 0;
+                }
+            }
+            $i['nombre_jour_session'] = $days;
+
             $data[] = array_merge($i, [
                 'id' => $id,
                 'editId' => $idCrypte
@@ -177,9 +191,11 @@ class SessionController extends BaseController
         }
 
         $annees = $this->model->getCon()->query("SELECT * FROM annees ORDER BY id_annee DESC")->fetchAll(PDO::FETCH_ASSOC);
+        $zones = $this->model->getCon()->query("SELECT * FROM zones ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
         $this->loadView('../views/sessions/edit.php', [
             'item' => $item, 
             'annees' => $annees,
+            'zones' => $zones,
             'encryptedId' => $encryptedId
         ]);
     }
@@ -188,9 +204,11 @@ class SessionController extends BaseController
     {
         $this->requireAuth();
         $annees = $this->model->getCon()->query("SELECT * FROM annees ORDER BY id_annee DESC")->fetchAll(PDO::FETCH_ASSOC);
+        $zones = $this->model->getCon()->query("SELECT * FROM zones ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
         $this->loadView('../views/sessions/edit.php', [
             'item' => [],
-            'annees' => $annees
+            'annees' => $annees,
+            'zones' => $zones
         ]);
     }
 }

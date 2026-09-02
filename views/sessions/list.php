@@ -28,6 +28,7 @@
                 <th style="padding: 12px;">Réf Code</th>
                 <th style="padding: 12px;">Libellé Session</th>
                 <th style="padding: 12px;">Année Académique</th>
+                <th style="padding: 12px;">Zone Commerciale</th>
                 <th style="padding: 12px; text-align: center;">Durée Jours</th>
                 <th style="padding: 12px;">Période (Début - Fin)</th>
                 <th style="padding: 12px; text-align: center;">Statut</th>
@@ -58,8 +59,19 @@ $(document).ready(function() {
         return '<strong style="color:#0F172A; font-size:14px;">' + (d || '-') + '</strong>';
       }},
       { data: 'libelle_annee', defaultContent: '-' },
-      { data: 'nombre_jour_session', className: 'text-center', render: function(d) {
-        return '<span class="badge" style="background:#EFF6FF; color:#1E3A5F; padding:5px 10px; border-radius:8px; font-weight:800;">' + (d || 0) + ' jours</span>';
+      { data: 'libelle_zone', render: function(d) {
+        if (!d) return '<span style="color:#94A3B8; font-style:italic;">Non spécifiée</span>';
+        return '<span class="badge" style="background:#F1F5F9; color:#1E293B; padding:5px 10px; border-radius:8px; font-weight:700; border: 1px solid #CBD5E1;">' + d + '</span>';
+      }},
+      { data: 'nombre_jour_session', className: 'text-center', render: function(d, type, row) {
+        var days = parseInt(d || 0, 10);
+        if ((!days || days <= 0) && row.date_debut_session && row.date_fin_session) {
+          var d1 = new Date(row.date_debut_session);
+          var d2 = new Date(row.date_fin_session);
+          var diff = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+          if (diff > 0) days = diff;
+        }
+        return '<span class="badge" style="background:#EFF6FF; color:#1E3A5F; padding:5px 10px; border-radius:8px; font-weight:800;">' + (days || 0) + ' jours</span>';
       }},
       { data: null, render: function(d, type, row) {
         var deb = row.date_debut_session ? row.date_debut_session : 'N/A';

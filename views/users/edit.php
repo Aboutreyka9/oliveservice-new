@@ -64,6 +64,19 @@ $fonctions = isset($fonctions) ? $fonctions : (new ModelFonction())->getAll();
               </select>
             </div>
 
+            <div class="form-group" style="width: 100%; box-sizing: border-box;">
+              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Zone d'Affectation / Secteur <span style="color: #64748B; font-weight: 500; font-size: 12px;">(Optionnel)</span></label>
+              <select class="form-control select2" id="sel_zone_user" name="zone_user" style="width: 100%;">
+                <option value="">-- Aucune zone (Super Admin / Global) --</option>
+                <?php if (!empty($zones)): foreach($zones as $z): ?>
+                  <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= (($user['zone_user'] ?? '') == $z['code_zone']) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($z['libelle_zone']) ?>
+                  </option>
+                <?php endforeach; endif; ?>
+              </select>
+              <small style="color: #64748B; font-size: 11px; margin-top: 4px; display: block;">Laissez vide si l'utilisateur est un Super Admin ou n'est pas restreint à une zone.</small>
+            </div>
+
             <?php if (empty($user['id_user'])): ?>
             <div class="form-group" style="width: 100%; box-sizing: border-box; grid-column: 1 / -1; background: #F0FDF4; border: 1.5px dashed #86EFAC; border-radius: 8px; padding: 12px 16px;">
               <div style="font-size: 13px; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 8px;">
@@ -246,6 +259,7 @@ $(document).ready(function() {
   if (window.lucide) lucide.createIcons();
   if ($.fn.select2) {
     $('#sel_fonction_user').select2({ placeholder: "-- Sélectionner un poste --", allowClear: true, width: '100%' });
+    $('#sel_zone_user').select2({ placeholder: "-- Aucune zone (Super Admin / Global) --", allowClear: true, width: '100%' });
     $('#sel_roles_user').select2({ placeholder: "Sélectionnez un ou plusieurs rôles", closeOnSelect: false, width: '100%' });
     $('#sel_roles_user').on('change', renderRolePermissions);
   }

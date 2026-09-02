@@ -16,7 +16,8 @@ class UserController extends BaseController
     public function apiList()
     {
         $this->requireAuth();
-        $sql = "SELECT u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, 
+        $sql = "SELECT u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_user,
+                       z.libelle_zone,
                        GROUP_CONCAT(DISTINCT r.libelle_role ORDER BY r.id SEPARATOR '||') as roles_libelles,
                        GROUP_CONCAT(DISTINCT r.code_role ORDER BY r.id SEPARATOR ',') as roles_codes,
                        f.libelle_fonction
@@ -24,7 +25,8 @@ class UserController extends BaseController
                 LEFT JOIN user_roles ur ON ur.user_code = u.code_user
                 LEFT JOIN roles r ON r.code_role = ur.role_code
                 LEFT JOIN fonctions f ON f.code_fonction = u.fonction_code
-                GROUP BY u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, f.libelle_fonction
+                LEFT JOIN zones z ON z.code_zone = u.zone_user
+                GROUP BY u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_user, z.libelle_zone, f.libelle_fonction
                 ORDER BY u.id_user DESC";
         $users = $this->model->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
@@ -40,6 +42,8 @@ class UserController extends BaseController
                 'email' => $u['email_user'] ?? '',
                 'telephone' => $u['telephone_user'] ?? '',
                 'fonction' => $u['libelle_fonction'] ?? '-',
+                'zone' => !empty($u['libelle_zone']) ? $u['libelle_zone'] : (!empty($u['zone_user']) ? $u['zone_user'] : 'Globale'),
+                'zone_code' => $u['zone_user'] ?? '',
                 'role' => !empty($roleNames) ? implode(', ', $roleNames) : 'Non attribué',
                 'roles_list' => $roleNames,
                 'role_code' => !empty($roleCodes) ? $roleCodes[0] : '',
@@ -123,6 +127,7 @@ class UserController extends BaseController
             'password_user' => $password,
             'token_user' => $activationToken,
             'fonction_code' => $fonctionCode,
+            'zone_user' => !empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null,
             'etablissement_code' => $etabCode,
             'statut_user' => 'inactif',
             'created_at_user' => date('Y-m-d H:i:s')
@@ -254,6 +259,7 @@ class UserController extends BaseController
             'email_user' => $email ?: null,
             'sexe_user' => $_POST['sexe_user'] ?? 'M',
             'fonction_code' => $fonctionCode,
+            'zone_user' => !empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null,
             'statut_user' => $statut,
             'updated_at_user' => date('Y-m-d H:i:s')
         ];
@@ -346,13 +352,15 @@ class UserController extends BaseController
         $this->requireAuth();
         $roles = (new ModelRole())->getAll();
         $fonctions = (new ModelFonction())->getAll();
+        $zones = $this->model->getCon()->query("SELECT * FROM zones WHERE statut_zone = 'actif' ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
         $this->loadView('../views/users/edit.php', [
             'user' => [],
             'role' => [],
             'userRoles' => [],
             'userRoleCodes' => [],
             'roles' => $roles,
-            'fonctions' => $fonctions
+            'fonctions' => $fonctions,
+            'zones' => $zones
         ]);
     }
 
@@ -372,6 +380,7 @@ class UserController extends BaseController
             $primaryRole = !empty($userRoles) ? $userRoles[0] : null;
             $roles = (new ModelRole())->getAll();
             $fonctions = (new ModelFonction())->getAll();
+            $zones = $this->model->getCon()->query("SELECT * FROM zones WHERE statut_zone = 'actif' ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'user/list');
             exit();
@@ -383,7 +392,8 @@ class UserController extends BaseController
             'userRoles' => $userRoles,
             'userRoleCodes' => $userRoleCodes,
             'roles' => $roles,
-            'fonctions' => $fonctions
+            'fonctions' => $fonctions,
+            'zones' => $zones
         ]);
     }
 
