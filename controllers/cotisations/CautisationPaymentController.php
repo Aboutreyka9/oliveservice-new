@@ -275,39 +275,40 @@ class CautisationPaymentController extends BaseController
             WHERE s.statut_souscription = 'valide'
         ";
 
-        // Filtrage strict selon le rôle RBAC (Commercial voit uniquement ses souscriptions)
+        $paramsBase = [];
         if (Context::isCommercial()) {
-            $sql .= " AND s.user_code = '" . addslashes(Context::user() ?? '') . "'";
+            $sql .= " AND s.user_code = ?";
+            $paramsBase[] = Context::user() ?? '';
         }
 
         if ($type === 'phone' || $type === 'all') {
-            $sql_phone = $sql . " AND c.telephone_client LIKE ?";
-            $stmt = $con->prepare($sql_phone);
-            $stmt->execute(['%' . $criteria . '%']);
+            $stmt = $con->prepare($sql . " AND c.telephone_client LIKE ?");
+            $params = array_merge($paramsBase, ['%' . $criteria . '%']);
+            $stmt->execute($params);
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             if (!empty($results)) return $results;
         }
 
         if ($type === 'name' || $type === 'all') {
-            $sql_name = $sql . " AND c.nom_client LIKE ?";
-            $stmt = $con->prepare($sql_name);
-            $stmt->execute(['%' . $criteria . '%']);
+            $stmt = $con->prepare($sql . " AND c.nom_client LIKE ?");
+            $params = array_merge($paramsBase, ['%' . $criteria . '%']);
+            $stmt->execute($params);
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             if (!empty($results)) return $results;
         }
 
         if ($type === 'code' || $type === 'all') {
-            $sql_client_code = $sql . " AND c.code_client LIKE ?";
-            $stmt = $con->prepare($sql_client_code);
-            $stmt->execute(['%' . $criteria . '%']);
+            $stmt = $con->prepare($sql . " AND c.code_client LIKE ?");
+            $params = array_merge($paramsBase, ['%' . $criteria . '%']);
+            $stmt->execute($params);
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             if (!empty($results)) return $results;
         }
 
         if ($type === 'subscription' || $type === 'all') {
-            $sql_sub_code = $sql . " AND s.code_souscription LIKE ?";
-            $stmt = $con->prepare($sql_sub_code);
-            $stmt->execute(['%' . $criteria . '%']);
+            $stmt = $con->prepare($sql . " AND s.code_souscription LIKE ?");
+            $params = array_merge($paramsBase, ['%' . $criteria . '%']);
+            $stmt->execute($params);
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             if (!empty($results)) return $results;
         }

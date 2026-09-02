@@ -28,23 +28,87 @@ class ModelHome extends BaseModel
                 }
             }
 
-            $totalClients = (int)$db->query("SELECT COUNT(*) FROM clients")->fetchColumn();
+            $userCodeFilter = Context::isCommercial() ? Context::user() : ($userCode ?? null);
+
+            // 1. Clients
+            $sqlClients = "SELECT COUNT(*) FROM clients WHERE 1=1";
+            $pClients = [];
+            if ($userCodeFilter) {
+                $sqlClients .= " AND user_code = ?";
+                $pClients[] = $userCodeFilter;
+            }
+            $stmt = $db->prepare($sqlClients);
+            $stmt->execute($pClients);
+            $totalClients = (int)$stmt->fetchColumn();
+
+            // 2. Packs & Articles
             $totalPacks = (int)$db->query("SELECT COUNT(*) FROM packs WHERE statut_pack = 'actif'")->fetchColumn();
-            $totalSouscriptions = (int)$db->query("SELECT COUNT(*) FROM souscriptions WHERE statut_souscription IN ('valide', 'reconduite')")->fetchColumn();
-            $totalSouscriptionsSoldees = (int)$db->query("SELECT COUNT(*) FROM souscriptions WHERE statut_souscription = 'solde'")->fetchColumn();
             $totalArticles = (int)$db->query("SELECT COUNT(*) FROM articles WHERE statut_article = 'actif'")->fetchColumn();
 
-            $totalCotisations = (float)($db->query("SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE statut_cautisation_client != 'ennule'")->fetchColumn() ?: 0);
+            // 3. Souscriptions
+            $sqlSouscr = "SELECT COUNT(*) FROM souscriptions WHERE statut_souscription IN ('valide', 'reconduite')";
+            $pSouscr = [];
+            if ($userCodeFilter) {
+                $sqlSouscr .= " AND user_code = ?";
+                $pSouscr[] = $userCodeFilter;
+            }
+            $stmt = $db->prepare($sqlSouscr);
+            $stmt->execute($pSouscr);
+            $totalSouscriptions = (int)$stmt->fetchColumn();
+
+            $sqlSoldees = "SELECT COUNT(*) FROM souscriptions WHERE statut_souscription = 'solde'";
+            $pSoldees = [];
+            if ($userCodeFilter) {
+                $sqlSoldees .= " AND user_code = ?";
+                $pSoldees[] = $userCodeFilter;
+            }
+            $stmt = $db->prepare($sqlSoldees);
+            $stmt->execute($pSoldees);
+            $totalSouscriptionsSoldees = (int)$stmt->fetchColumn();
+
+            // 4. Cotisations
+            $sqlCotis = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE statut_cautisation_client != 'ennule'";
+            $pCotis = [];
+            if ($userCodeFilter) {
+                $sqlCotis .= " AND (user_code = ? OR commercial_code = ?)";
+                $pCotis[] = $userCodeFilter;
+                $pCotis[] = $userCodeFilter;
+            }
+            $stmt = $db->prepare($sqlCotis);
+            $stmt->execute($pCotis);
+            $totalCotisations = (float)($stmt->fetchColumn() ?: 0);
+
             $totalPaiements = (float)($db->query("SELECT COALESCE(SUM(montant_paiement), 0) FROM paiements WHERE statut_paiement = 'confirme'")->fetchColumn() ?: 0);
             $caEncaisse = $totalCotisations + $totalPaiements;
 
-            $totalVersements = (float)($db->query("SELECT COALESCE(SUM(montant_versement), 0) FROM versements_commerciaux WHERE statut_versement = 'valide'")->fetchColumn() ?: 0);
-            $totalVersementsEnAttente = (float)($db->query("SELECT COALESCE(SUM(montant_versement), 0) FROM versements_commerciaux WHERE statut_versement = 'En attente'")->fetchColumn() ?: 0);
+            // 5. Versements
+            $sqlVersVal = "SELECT COALESCE(SUM(montant_versement), 0) FROM versements_commerciaux WHERE statut_versement = 'valide'";
+            $pVersVal = [];
+            if ($userCodeFilter) {
+                $sqlVersVal .= " AND (user_code = ? OR commercial_code = ?)";
+                $pVersVal[] = $userCodeFilter;
+                $pVersVal[] = $userCodeFilter;
+            }
+            $stmt = $db->prepare($sqlVersVal);
+            $stmt->execute($pVersVal);
+            $totalVersements = (float)($stmt->fetchColumn() ?: 0);
 
+            $sqlVersAtt = "SELECT COALESCE(SUM(montant_versement), 0) FROM versements_commerciaux WHERE statut_versement = 'En attente'";
+            $pVersAtt = [];
+            if ($userCodeFilter) {
+                $sqlVersAtt .= " AND (user_code = ? OR commercial_code = ?)";
+                $pVersAtt[] = $userCodeFilter;
+                $pVersAtt[] = $userCodeFilter;
+            }
+            $stmt = $db->prepare($sqlVersAtt);
+            $stmt->execute($pVersAtt);
+            $totalVersementsEnAttente = (float)($stmt->fetchColumn() ?: 0);
+
+            // 6. Dépenses & Solde Net
             $totalDepenses = (float)($db->query("SELECT COALESCE(SUM(montant_depense), 0) FROM depenses WHERE statut_depense != 'inactif'")->fetchColumn() ?: 0);
-
             $soldeNet = $caEncaisse - $totalDepenses;
 
+            // 7. Distributions
             $totalDistributions = (int)$db->query("SELECT COUNT(*) FROM distributions")->fetchColumn();
             $totalDistributionsValidees = (int)$db->query("SELECT COUNT(*) FROM distributions WHERE statut_distribution = 'valide'")->fetchColumn();
 
@@ -95,9 +159,18 @@ class ModelHome extends BaseModel
                     FROM cautisation_clients c
                     LEFT JOIN souscriptions s ON s.code_souscription = c.souscription_code
                     LEFT JOIN clients cl ON cl.code_client = s.client_code
-                    ORDER BY c.id_cautisation_client DESC
-                    LIMIT $limit";
-            return $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    WHERE 1=1";
+            $params = [];
+            if (Context::isCommercial()) {
+                $sql .= " AND (c.user_code = ? OR c.commercial_code = ?)";
+                $params[] = Context::user();
+                $params[] = Context::user();
+            }
+            $limitInt = max(1, (int)$limit);
+            $sql .= " ORDER BY c.id_cautisation_client DESC LIMIT $limitInt";
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelHome::getRecentCotisations error: " . $e->getMessage());
             return [];
@@ -112,9 +185,18 @@ class ModelHome extends BaseModel
                     FROM versements_commerciaux v
                     LEFT JOIN users u ON u.code_user = v.commercial_code
                     LEFT JOIN zones z ON z.code_zone = v.zone_code
-                    ORDER BY v.id_versement DESC
-                    LIMIT $limit";
-            return $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    WHERE 1=1";
+            $params = [];
+            if (Context::isCommercial()) {
+                $sql .= " AND (v.user_code = ? OR v.commercial_code = ?)";
+                $params[] = Context::user();
+                $params[] = Context::user();
+            }
+            $limitInt = max(1, (int)$limit);
+            $sql .= " ORDER BY v.id_versement DESC LIMIT $limitInt";
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelHome::getRecentVersements error: " . $e->getMessage());
             return [];
