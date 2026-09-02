@@ -334,6 +334,14 @@ class UserController extends BaseController
             $userRoles = $this->model->getUserRoles($userProfile['code_user']);
             $primaryRole = !empty($userRoles) ? $userRoles[0] : null;
             $encryptedId = $this->validator->crypter($userId);
+            
+            $zoneLabel = null;
+            if (!empty($userProfile['zone_user'])) {
+                $stmtZ = $this->model->getCon()->prepare("SELECT libelle_zone FROM zones WHERE code_zone = ?");
+                $stmtZ->execute([$userProfile['zone_user']]);
+                $zoneLabel = $stmtZ->fetchColumn();
+            }
+            $userProfile['libelle_zone'] = $zoneLabel ?: 'Globale';
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'user/list');
             exit();

@@ -30,8 +30,8 @@
                 <th style="padding: 12px;">Code</th>
                 <th style="padding: 12px;">Nom complet</th>
                 <th style="padding: 12px;">Contact (Email / Tél)</th>
-                <th style="padding: 12px;">Zone</th>
                 <th style="padding: 12px;">Fonction</th>
+                <th style="padding: 12px;">Zone</th>
                 <th style="padding: 12px;">Rôle Attribué</th>
                 <th style="padding: 12px;" class="text-center">Statut</th>
                 <th style="padding: 12px; text-align: right;">Actions</th>
@@ -70,16 +70,17 @@ $(document).ready(function() {
         if (row.telephone) res += '<div style="font-size:12px; color:#64748B;">' + row.telephone + '</div>';
         return res || '-';
       }},
-      { data: 'zone', render: function(d, type, row) {
-        if (type !== 'display') return d || '';
-        if (!d || d === 'Globale') {
-          return '<span class="badge" style="background:#F1F5F9; color:#64748B; padding:4px 8px; border-radius:6px; font-weight:600; border:1px solid #E2E8F0;">Globale</span>';
-        }
-        return '<span class="badge" style="background:#EFF6FF; color:#1E3A5F; padding:4px 8px; border-radius:6px; font-weight:700; border:1px solid #BFDBFE;">' + d + '</span>';
-      }},
-      { data: 'fonction', render: function(d, type) {
+      { data: 'fonction', defaultContent: '-', render: function(d, type) {
         if (type !== 'display') return d || '';
         return '<span style="color:#334155; font-weight:500;">' + (d || '-') + '</span>';
+      }},
+      { data: 'zone', defaultContent: 'Globale', render: function(d, type, row) {
+        var zoneVal = d || (row && row.zone ? row.zone : 'Globale');
+        if (type !== 'display') return zoneVal;
+        if (!zoneVal || zoneVal === 'Globale') {
+          return '<span class="badge" style="background:#F1F5F9; color:#64748B; padding:4px 8px; border-radius:6px; font-weight:600; border:1px solid #E2E8F0;">Globale</span>';
+        }
+        return '<span class="badge" style="background:#EFF6FF; color:#1E3A5F; padding:4px 8px; border-radius:6px; font-weight:700; border:1px solid #BFDBFE;">' + zoneVal + '</span>';
       }},
       { data: 'roles_list', render: function(d, type, row) {
         if (type !== 'display') return (row.roles_list && row.roles_list.length) ? row.roles_list.join(', ') : (row.role || '');

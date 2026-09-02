@@ -53,6 +53,10 @@ $role = isset($role) ? $role : [];
               <span style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase;">Téléphone</span>
               <div style="font-size: 14px; font-weight: 600; color: #0F172A;"><?= htmlspecialchars($user['telephone_user'] ?? 'Non renseigné') ?></div>
             </div>
+            <div style="margin-bottom: 12px;">
+              <span style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase;">Zone d'Affectation</span>
+              <div style="font-size: 14px; font-weight: 700; color: #1E3A5F;"><?= htmlspecialchars($user['libelle_zone'] ?? 'Globale') ?></div>
+            </div>
             <div>
               <span style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase;">Dernière Connexion</span>
               <div style="font-size: 13px; color: #64748B;"><?= !empty($user['last_connexion']) ? date('d/m/Y H:i', strtotime($user['last_connexion'])) : 'Jamais connecté' ?></div>
