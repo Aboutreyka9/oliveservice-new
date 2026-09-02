@@ -16,7 +16,7 @@ class UserController extends BaseController
     public function apiList()
     {
         $this->requireAuth();
-        $sql = "SELECT u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, 
+        $sql = "SELECT u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, 
                        GROUP_CONCAT(DISTINCT r.libelle_role ORDER BY r.id SEPARATOR '||') as roles_libelles,
                        GROUP_CONCAT(DISTINCT r.code_role ORDER BY r.id SEPARATOR ',') as roles_codes,
                        f.libelle_fonction
@@ -24,7 +24,7 @@ class UserController extends BaseController
                 LEFT JOIN user_roles ur ON ur.user_code = u.code_user
                 LEFT JOIN roles r ON r.code_role = ur.role_code
                 LEFT JOIN fonctions f ON f.code_fonction = u.fonction_code
-                GROUP BY u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, f.libelle_fonction
+                GROUP BY u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, f.libelle_fonction
                 ORDER BY u.id_user DESC";
         $users = $this->model->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
@@ -45,6 +45,7 @@ class UserController extends BaseController
                 'role_code' => !empty($roleCodes) ? $roleCodes[0] : '',
                 'roles_codes' => $roleCodes,
                 'statut' => $u['statut_user'],
+                'token_pending' => !empty($u['token_user']),
                 'id' => $u['id_user'],
                 'editId' => $idCrypte
             ];
@@ -289,7 +290,21 @@ class UserController extends BaseController
         $this->requirePost(false);
         $this->requireAuth();
         $id = $this->post('id');
-        if (isset($id) && $this->model->getById($id)) {
+
+        $userRoles = $_SESSION[USERS_AUTH]['roles'] ?? [];
+        if (empty($userRoles)) {
+            $singleRole = $_SESSION[USERS_AUTH]['role_code'] ?? ($_SESSION['role_code'] ?? '');
+            $userRoles = !empty($singleRole) ? [$singleRole] : [];
+        }
+        $isSuperAdmin = in_array('ROLE_SUPERADMIN', $userRoles, true);
+
+        $targetUser = $this->model->getById($id);
+        if ($targetUser) {
+            if (!empty($targetUser['token_user']) && !$isSuperAdmin) {
+                $this->error("Action bloquée : Ce compte est en attente d'activation par e-mail via jeton. Seul un Super Admin possède la permission de forcer la modification du statut.");
+                return;
+            }
+
             if ($this->model->toggleStatus($id)) {
                 $this->success('Statut modifié avec succès!', ['id' => $id, 'reload' => true]);
             } else {

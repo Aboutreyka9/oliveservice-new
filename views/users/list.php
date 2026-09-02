@@ -1,4 +1,12 @@
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
+<?php
+  $userRoles = $_SESSION[USERS_AUTH]['roles'] ?? [];
+  if (empty($userRoles)) {
+      $singleRole = $_SESSION[USERS_AUTH]['role_code'] ?? ($_SESSION['role_code'] ?? '');
+      $userRoles = !empty($singleRole) ? [$singleRole] : [];
+  }
+  $isSuperAdminUser = in_array('ROLE_SUPERADMIN', $userRoles, true);
+?>
 <div class="app-layout">
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
   <main class="main-content">
@@ -36,6 +44,8 @@
   </main>
 </div>
 <script>
+var IS_SUPER_ADMIN_USER = <?= $isSuperAdminUser ? 'true' : 'false' ?>;
+
 $(document).ready(function() {
   var table = $('#table-users').DataTable({
     ajax: '<?= RACINE ?>user/apiList',
@@ -74,17 +84,31 @@ $(document).ready(function() {
         });
         return '<div style="display:flex; flex-wrap:wrap; gap:3px; max-width:260px;">' + badges.join('') + '</div>';
       }},
-      { data: 'statut', width: '80px', className: 'text-center', render: function(d, type, row) {
+      { data: 'statut', width: '100px', className: 'text-center', render: function(d, type, row) {
         var isActif = (d === 'actif');
         var checkedAttr = isActif ? 'checked' : '';
-        return '<div style="display:flex; justify-content:center; align-items:center;">' +
-               '<label style="position:relative; display:inline-block; width:38px; height:20px; margin:0; cursor:pointer;" title="' + (isActif ? 'Actif - Cliquez pour désactiver' : 'Inactif - Cliquez pour activer') + '">' +
-               '<input type="checkbox" class="toggle-statut-user" data-id="' + (row.id || row.id_user) + '" ' + checkedAttr + ' style="opacity:0; width:0; height:0;">' +
-               '<span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:' + (isActif ? '#15803D' : '#CBD5E1') + '; transition:.3s; border-radius:20px;">' +
-               '<span style="position:absolute; content:\'\'; height:14px; width:14px; left:' + (isActif ? '20px' : '3px') + '; bottom:3px; background-color:white; transition:.3s; border-radius:50%;"></span>' +
-               '</span>' +
-               '</label>' +
-               '</div>';
+        var isPending = !!row.token_pending;
+        
+        var tooltipMsg = isPending
+          ? (IS_SUPER_ADMIN_USER ? 'Compte non activé par jeton (Dérogation Super Admin active)' : 'Jeton d\'activation non validé - Modification réservée au Super Admin')
+          : (isActif ? 'Actif - Cliquez pour désactiver' : 'Inactif - Cliquez pour activer');
+
+        var containerStyle = (isPending && !IS_SUPER_ADMIN_USER) ? 'opacity: 0.6; cursor: not-allowed;' : 'cursor: pointer;';
+
+        var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center;">';
+        html += '<label style="position:relative; display:inline-block; width:38px; height:20px; margin:0; ' + containerStyle + '" title="' + tooltipMsg + '">';
+        html += '<input type="checkbox" class="toggle-statut-user" data-id="' + (row.id || row.id_user) + '" data-pending="' + (isPending ? '1' : '0') + '" ' + checkedAttr + ' style="opacity:0; width:0; height:0;">';
+        html += '<span style="position:absolute; top:0; left:0; right:0; bottom:0; background-color:' + (isActif ? '#15803D' : '#CBD5E1') + '; transition:.3s; border-radius:20px;">';
+        html += '<span style="position:absolute; content:\'\'; height:14px; width:14px; left:' + (isActif ? '20px' : '3px') + '; bottom:3px; background-color:white; transition:.3s; border-radius:50%;"></span>';
+        html += '</span>';
+        html += '</label>';
+
+        if (isPending) {
+          html += '<span class="badge" style="background:#FEF3C7; color:#D97706; border:1px solid #FCD34D; font-size:10px; padding:2px 6px; border-radius:4px; margin-top:4px; font-weight:700; display:inline-block;" title="En attente de validation du lien mail">Jeton non activé</span>';
+        }
+
+        html += '</div>';
+        return html;
       }},
       { data: null, width: '160px', orderable: false, render: function(d) {
         return '<a href="' + window.RACINE + 'user/edition/' + (d.editId || d.id) + '" class="btn btn-sm btn-secondary" style="margin-right:6px; font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
@@ -96,10 +120,21 @@ $(document).ready(function() {
   });
 
   // Bascule de statut instantanée via Ajax
-  $(document).on('change', '.toggle-statut-user', function() {
+  $(document).on('change', '.toggle-statut-user', function(e) {
     var id = $(this).data('id');
+    var isPending = $(this).data('pending') == '1';
     var isChecked = $(this).is(':checked');
     var $input = $(this);
+
+    if (isPending && !IS_SUPER_ADMIN_USER) {
+      if (window.toastr) {
+        toastr.warning("Action bloquée : Ce compte est en attente d'activation par l'utilisateur via le jeton reçu par email. Seul un Super Admin est autorisé à modifier son statut.");
+      } else {
+        alert("Action bloquée : Seul un Super Admin peut modifier le statut d'un compte avec jeton non activé.");
+      }
+      $input.prop('checked', !isChecked);
+      return false;
+    }
 
     $.ajax({
       url: '<?= RACINE ?>user/changer',

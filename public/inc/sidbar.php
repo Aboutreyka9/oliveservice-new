@@ -333,9 +333,9 @@
                 <a href="<?= RACINE ?>article/list" class="nav-item sub <?= strpos($currentUri, '/article/') !== false ? 'active' : '' ?>" data-title="Articles Produits">
                     <i data-lucide="shopping-bag"></i> <span>Articles Produits</span>
                 </a>
-                <a href="<?= RACINE ?>categories_articles/list" class="nav-item sub <?= strpos($currentUri, '/categories_articles/') !== false ? 'active' : '' ?>" data-title="Catégories d'Articles">
+                <!-- <a href="<?= RACINE ?>categories_articles/list" class="nav-item sub <?= strpos($currentUri, '/categories_articles/') !== false ? 'active' : '' ?>" data-title="Catégories d'Articles">
                     <i data-lucide="layers"></i> <span>Catégories Articles</span>
-                </a>
+                </a> -->
                 <a href="<?= RACINE ?>categorie_pack/list" class="nav-item sub <?= strpos($currentUri, '/categorie_pack/') !== false ? 'active' : '' ?>" data-title="Catégories de Packs">
                     <i data-lucide="tags"></i> <span>Catégories Packs</span>
                 </a>
