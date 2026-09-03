@@ -1,11 +1,18 @@
 <?php
-define('ROOT', $_SERVER['DOCUMENT_ROOT'] ?? 'C:/wamp64/www');
+// Définition portable du répertoire racine absolu du projet
+define('ROOT', dirname(__DIR__));
 
 $httpHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $isLocalEnvironment = (strpos($httpHost, 'localhost') !== false || strpos($httpHost, '127.0.0.1') !== false);
 
+// Gestion dynamique de l'URL racine (priorité à la variable d'environnement APP_URL, sinon détection automatique)
 if (!defined('RACINE')) {
-    define('RACINE', $isLocalEnvironment ? 'http://localhost/geicg/' : 'https://test.oliveservice.net/');
+    $envUrl = $_ENV['APP_URL'] ?? getenv('APP_URL');
+    if (!empty($envUrl)) {
+        define('RACINE', rtrim($envUrl, '/') . '/');
+    } else {
+        define('RACINE', $isLocalEnvironment ? 'http://localhost/geicg/' : 'https://test.oliveservice.net/');
+    }
 }
 
 if (!defined('ONESIGNAL_APP_ID')) {
@@ -15,11 +22,8 @@ if (!defined('ONESIGNAL_REST_API_KEY')) {
     define('ONESIGNAL_REST_API_KEY', $_ENV['ONESIGNAL_REST_API_KEY'] ?? getenv('ONESIGNAL_REST_API_KEY') ?: '');
 }
 
-
 define('LOGO', '<span class="fw-bold fs-4 text-success" style="letter-spacing: 1px;">OLIVE SERVICE</span>');
-
 define('ICON', '<span class="fw-bold fs-4 text-success">O</span>');
-
 define('TITLE', 'Olive Service - Administration & Souscriptions');
 
 const USERS_AUTH = 'users_auth';
@@ -69,6 +73,13 @@ class ROLES
 
 class STATUTS
 {
+    // Constantes de statuts génériques
+    public const ACTIF      = 'actif';
+    public const INACTIF    = 'inactif';
+    public const VALIDE     = 'valide';
+    public const ANNULE     = 'annule';
+    public const EN_ATTENTE = 'En attente';
+
     // PRESSINGS
     public const PRESSINGS           = ['actif','inactif','suspendu'];
 
