@@ -169,6 +169,23 @@ class CautisationPaymentController extends BaseController
     /**
      * API: Traite l'enregistrement d'un paiement
      */
+    public function savepayment()
+    {
+        $this->store();
+    }
+
+    public function history()
+    {
+        $this->requireAuth();
+        $codeSouscription = $this->post('code_souscription') ?? '';
+        if (empty($codeSouscription)) {
+            $this->json(['status' => 0, 'data' => [], 'message' => 'Code souscription manquant']);
+            return;
+        }
+        $list = $this->getHistoriqueCautisations($codeSouscription);
+        $this->json(['status' => 1, 'data' => $list]);
+    }
+
     public function store()
     {
         $this->requireAuth();
@@ -253,6 +270,10 @@ class CautisationPaymentController extends BaseController
         ];
 
         if ($this->model->createCotisation($cautisationData)) {
+            if ($statutInitial === 'valide') {
+                $modelSouscription = new ModelSouscription();
+                $modelSouscription->updateTotals($codeSouscription, $montant, $nombreJours);
+            }
             $dateProchainRdv = CautisationValidator::calculateNextDate($nombreJours);
             $msg = Context::isCommercial()
                 ? 'Cotisation enregistrée avec succès (En attente de validation par la caisse/finance).'
@@ -341,8 +362,9 @@ class CautisationPaymentController extends BaseController
         $params = [$codeSouscription];
 
         if (Context::isCommercial()) {
-            $sql .= " AND s.user_code = ?";
+            $sql .= " AND (s.user_code = ? OR s.zone_code = ?)";
             $params[] = Context::user();
+            $params[] = Context::zone();
         }
 
         $stmt = $con->prepare($sql);
@@ -353,9 +375,15 @@ class CautisationPaymentController extends BaseController
 
         $packs = $this->getPacksSouscrits($codeSouscription);
         $prixCotisationJournaliere = (float) array_sum(array_column($packs, 'prix_cotisation_pack'));
+        if ($prixCotisationJournaliere <= 0) {
+            $prixCotisationJournaliere = (float) ($souscription['montant_cotisation_journaliere'] ?? 0);
+        }
 
-        $nombreJourSession = (int) ($souscription['nombre_jour_session'] ?? 0);
-        $montantTotalPrevu = (float) ($prixCotisationJournaliere * $nombreJourSession);
+        $nombreJourSession = (int) ($souscription['nombre_jour_session'] ?? $souscription['nombre_jour_total'] ?? 0);
+        $montantTotalPrevu = (float) ($souscription['montant_total_prevu'] ?? 0);
+        if ($montantTotalPrevu <= 0) {
+            $montantTotalPrevu = (float) ($prixCotisationJournaliere * $nombreJourSession);
+        }
 
         $totaux = $this->getCautisationsTotaux($codeSouscription);
         $totalCotise = (float) ($totaux['total_cotise'] ?? 0);
@@ -373,9 +401,13 @@ class CautisationPaymentController extends BaseController
             'nom_complet' => trim(($souscription['nom_client'] ?? '')),
             'packs' => $packs,
             'prix_cotisation_journaliere' => $prixCotisationJournaliere,
+            'prix_cotisation_pack' => $prixCotisationJournaliere,
             'montant_total' => $montantTotalPrevu,
+            'montant_total_a_payer' => $montantTotalPrevu,
             'duree_totale_jours' => $nombreJourSession,
+            'nombre_jours_total' => $nombreJourSession,
             'total_cotise' => $totalCotise,
+            'montant_total_paye' => $totalCotise,
             'nombre_jours_payes' => $nombreJoursPayes,
             'solde_restant' => $soldeRestant,
             'jours_restants' => $joursRestants,
@@ -427,9 +459,11 @@ class CautisationPaymentController extends BaseController
 
         $result = [];
         foreach ($rows as $r) {
+            $rawDate = !empty($r['date_cautisation']) ? $r['date_cautisation'] : ($r['created_at_cautisation_client'] ?? 'now');
             $result[] = [
                 'code_cautisation_client' => $r['code_cautisation_client'],
                 'date_cautisation' => $r['date_cautisation'],
+                'date_paiement' => date('d/m/Y à H:i', strtotime($rawDate)),
                 'montant' => (float) $r['montant_cautisation_client'],
                 'nombre_jours' => (int) $r['nombre_jour'],
                 'mode_paiement' => $r['mode_paiement'] ?? 'ESPECES',

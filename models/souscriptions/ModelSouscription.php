@@ -75,6 +75,36 @@ class ModelSouscription extends BaseModel
         }
     }
 
+    public function getByIdWithDetails(int $id): ?array
+    {
+        try {
+            $sql = "
+                SELECT s.*, 
+                       c.nom_client, c.telephone_client, c.sexe_client, c.lieu_residence_client, c.email_client, c.profession_client,
+                       z.libelle_zone,
+                       sess.libelle_session,
+                       sess.nombre_jour_session,
+                       (SELECT GROUP_CONCAT(DISTINCT p2.libelle_pack SEPARATOR ', ') FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as libelle_pack,
+                       (SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as sum_prix_cotisation_pack,
+                       ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) * COALESCE(sess.nombre_jour_session, 0)) as totale_souscription,
+                       (SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND mc.statut_cautisation_client = 'valide') as montant_total_cotise,
+                       (SELECT COALESCE(SUM(mc.nombre_jour), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND mc.statut_cautisation_client = 'valide') as nombre_jour_cotise,
+                       sess.nombre_jour_session as nombre_jour_total
+                 FROM souscriptions s
+                 LEFT JOIN clients c ON c.code_client = s.client_code
+                 LEFT JOIN zones z ON z.code_zone = s.zone_code
+                 LEFT JOIN sessions sess ON sess.code_session = s.session_code
+                 WHERE s.id_souscription = ?
+            ";
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute([$id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (Exception $e) {
+            error_log("ModelSouscription::getByIdWithDetails error: " . $e->getMessage());
+            return null;
+        }
+    }
+
     public function getPacksSouscrits(string $souscriptionCode): array
     {
         try {

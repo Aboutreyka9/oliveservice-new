@@ -228,7 +228,7 @@ class SouscriptionController extends BaseController
         $this->requireAuth();
         try {
             $id = $this->validator->decrypter($details);
-            $item = $this->model->getById($id);
+            $item = $this->model->getByIdWithDetails($id);
             if (!$item) {
                 $this->renderNotFound("La souscription demandée est introuvable.");
                 return;

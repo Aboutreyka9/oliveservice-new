@@ -135,6 +135,10 @@ class CotisationController extends BaseController
         ];
 
         if ($this->model->createCotisation($cotisationData)) {
+            if ($statutInitial === 'valide') {
+                $modelSouscription = new ModelSouscription();
+                $modelSouscription->updateTotals($data['souscription_code'], $montant, $nbJours);
+            }
             $msg = Context::isCommercial() 
                 ? 'Cotisation enregistrée avec succès (En attente de validation de la caisse/comptabilité).' 
                 : 'Cotisation enregistrée et validée avec succès !';

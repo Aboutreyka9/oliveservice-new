@@ -10,15 +10,15 @@ $codeClient = $souscription['code_client'] ?? '-';
 $email = $sousscription['email_client'] ?? '-';
 $profession = $souscription['profession_client'] ?? '-';
 
-$montantTotal = (float)($souscription['montant_total_a_payer'] ?? 0);
-$montantPaye = (float)($souscription['montant_total_paye'] ?? 0);
-$montantRestant = max(0, $montantTotal - $montantPaye);
+$montantTotal = (float)($souscription['montant_total_a_payer'] ?? $souscription['montant_total'] ?? $souscription['totale_souscription'] ?? 0);
+$montantPaye = (float)($souscription['montant_total_paye'] ?? $souscription['total_cotise'] ?? $souscription['montant_total_cotise'] ?? 0);
+$montantRestant = isset($souscription['solde_restant']) ? (float)$souscription['solde_restant'] : max(0, $montantTotal - $montantPaye);
 
-$joursTotal = (int)($souscription['nombre_jours_total'] ?? 0);
-$joursPayes = (int)($souscription['nombre_jours_payes'] ?? 0);
-$joursRestants = max(0, $joursTotal - $joursPayes);
+$joursTotal = (int)($souscription['nombre_jours_total'] ?? $souscription['duree_totale_jours'] ?? $souscription['nombre_jour_session'] ?? $souscription['nombre_jour_total'] ?? 0);
+$joursPayes = (int)($souscription['nombre_jours_payes'] ?? $souscription['nombre_jour_cotise'] ?? 0);
+$joursRestants = isset($souscription['jours_restants']) ? (int)$souscription['jours_restants'] : max(0, $joursTotal - $joursPayes);
 
-$prixCotisationJournaliere = (float)($souscription['prix_cotisation_pack'] ?? 0);
+$prixCotisationJournaliere = (float)($souscription['prix_cotisation_pack'] ?? $souscription['prix_cotisation_journaliere'] ?? $souscription['montant_cotisation_journaliere'] ?? 0);
 
 $codeSouscription = $souscription['code_souscription'] ?? '';
 $libelleSession = $souscription['libelle_session'] ?? '-';
