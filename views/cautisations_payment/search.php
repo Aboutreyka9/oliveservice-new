@@ -10,14 +10,14 @@
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
         <div style="display: flex; align-items: center; gap: 14px;">
           <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(30, 58, 95, 0.25);">
-            <i data-lucide="search" style="width: 24px; height: 24px; color: #FFFFFF;"></i>
+            <i data-lucide="users" style="width: 24px; height: 24px; color: #FFFFFF;"></i>
           </div>
           <div>
             <h1 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0; line-height: 1.2;">
               Recherche & Encaissement Cautisations
             </h1>
             <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0; font-weight: 500;">
-              Consultez et effectuez le suivi des encaissements des souscriptions clients en temps réel
+              Sélectionnez un client dans la liste pour consulter ses souscriptions et effectuer un paiement
             </p>
           </div>
         </div>
@@ -31,37 +31,34 @@
         </div>
       </div>
 
-      <!-- FORMULAIRE DE RECHERCHE DYNAMIQUE -->
+      <!-- FORMULAIRE DE SELECTION CLIENT (SELECT2) -->
       <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 28px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; box-sizing: border-box; margin-bottom: 24px;">
-        <label style="display: block; font-weight: 800; font-size: 14px; color: #0F172A; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
-          Rechercher une souscription
+        <label style="display: block; font-weight: 800; font-size: 14px; color: #0F172A; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="user-check" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Sélectionner un client
         </label>
         
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-          <div style="flex: 1; min-width: 280px; position: relative;">
-            <i data-lucide="search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #94A3B8;"></i>
-            <input type="text" id="searchInput" class="form-control" style="width: 100%; box-sizing: border-box; padding: 14px 16px 14px 48px; font-size: 15px; font-weight: 600; border-radius: 12px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A; transition: all 0.2s ease;" placeholder="Téléphone, nom complet, code client ou code souscription..." autocomplete="off">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+          <div style="flex: 1; min-width: 280px;">
+            <select id="selectClient" class="form-control select2" style="width: 100%;">
+              <option value="">-- Rechercher ou choisir un client dans la liste --</option>
+              <?php if (!empty($clients) && is_array($clients)): ?>
+                <?php foreach ($clients as $client): ?>
+                  <option value="<?= htmlspecialchars($client['code_client']) ?>">
+                    <?= htmlspecialchars($client['nom_client']) ?><?= !empty($client['telephone_client']) ? ' (' . htmlspecialchars($client['telephone_client']) . ')' : '' ?> - [<?= htmlspecialchars($client['code_client']) ?>]
+                  </option>
+                <?php endforeach; ?>
+              <?php endif; ?>
+            </select>
           </div>
           <button type="button" id="searchBtn" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 12px; padding: 14px 28px; font-size: 15px; border: none; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25); min-width: 160px; justify-content: center;">
             <i data-lucide="search" style="width: 18px; height: 18px;"></i> Rechercher
           </button>
         </div>
 
-        <!-- Suggestions / Conseils de recherche -->
+        <!-- Informations d'aide -->
         <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap;">
-          <span style="font-size: 12px; font-weight: 700; color: #64748B;">Recherche par :</span>
-          <span style="background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
-            <i data-lucide="phone" style="width: 12px; height: 12px; color: #2563EB;"></i> Téléphone
-          </span>
-          <span style="background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
-            <i data-lucide="user" style="width: 12px; height: 12px; color: #059669;"></i> Nom Client
-          </span>
-          <span style="background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
-            <i data-lucide="hash" style="width: 12px; height: 12px; color: #D97706;"></i> Code Client
-          </span>
-          <span style="background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
-            <i data-lucide="file-text" style="width: 12px; height: 12px; color: #4F46E5;"></i> Code Souscription
-          </span>
+          <span style="font-size: 12px; font-weight: 700; color: #64748B;">Astuce :</span>
+          <span style="font-size: 12px; color: #64748B;">Vous pouvez saisir le nom, le numéro de téléphone ou le code du client directement dans la liste déroulante Select2.</span>
         </div>
       </div>
 
@@ -74,14 +71,14 @@
             <i data-lucide="search" style="width: 32px; height: 32px; opacity: 0.7;"></i>
           </div>
           <h4 style="font-size: 16px; font-weight: 800; color: #0F172A; margin: 0 0 6px 0;">Effectuez une recherche</h4>
-          <p style="font-size: 13px; margin: 0; color: #64748B;">Saisissez le téléphone, nom ou code pour afficher immédiatement les détails et la situation financière.</p>
+          <p style="font-size: 13px; margin: 0; color: #64748B;">Sélectionnez un client ci-dessus et cliquez sur <strong>Rechercher</strong> pour afficher immédiatement ses souscriptions et sa situation financière.</p>
         </div>
 
         <!-- Conteneur des résultats -->
         <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; display: none;" id="searchResultsContainer">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #F1F5F9;">
             <h3 style="font-size: 15px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 8px;">
-              <i data-lucide="layers" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Souscriptions trouvées
+              <i data-lucide="layers" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Souscriptions disponibles pour ce client
             </h3>
           </div>
 
@@ -111,8 +108,14 @@
 $(document).ready(function() {
   if (window.lucide) lucide.createIcons();
 
+  // Initialisation de Select2
+  $('#selectClient').select2({
+    placeholder: "-- Rechercher ou choisir un client dans la liste --",
+    allowClear: true,
+    width: '100%'
+  });
+
   const searchBtn = document.getElementById('searchBtn');
-  const searchInput = document.getElementById('searchInput');
   const searchResultsContainer = document.getElementById('searchResultsContainer');
   const searchPlaceholder = document.getElementById('searchPlaceholder');
   let dataTable = null;
@@ -142,10 +145,10 @@ $(document).ready(function() {
   }
 
   function performSearch() {
-    const criteria = searchInput.value.trim();
+    const selectedClientCode = $('#selectClient').val();
 
-    if (!criteria) {
-      toastr.error('Veuillez entrer un critère de recherche.');
+    if (!selectedClientCode) {
+      toastr.error('Veuillez sélectionner un client dans la liste.');
       return;
     }
 
@@ -162,7 +165,7 @@ $(document).ready(function() {
         url: '<?= RACINE ?>cautisation-payment/search',
         type: 'POST',
         data: function(d) {
-          d.criteria = criteria;
+          d.criteria = selectedClientCode;
           d.type = 'all';
         },
         dataSrc: function(json) {
@@ -212,24 +215,15 @@ $(document).ready(function() {
   }
 
   searchBtn.addEventListener('click', performSearch);
-  searchInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') performSearch();
-  });
 
-  searchInput.addEventListener('focus', function() {
-    this.style.background = '#FFFFFF';
-    this.style.borderColor = '#1E3A5F';
-    this.style.boxShadow = '0 0 0 3px rgba(30, 58, 95, 0.12)';
-  });
-
-  searchInput.addEventListener('blur', function() {
-    this.style.background = '#F8FAFC';
-    this.style.borderColor = '#CBD5E1';
-    this.style.boxShadow = 'none';
+  $('#selectClient').on('change', function() {
+    if ($(this).val()) {
+      performSearch();
+    }
   });
 
   document.getElementById('btnRefresh').addEventListener('click', function() {
-    searchInput.value = '';
+    $('#selectClient').val('').trigger('change.select2');
     if (dataTable) {
       dataTable.destroy();
       dataTable = null;

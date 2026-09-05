@@ -8,12 +8,46 @@ class CautisationPaymentController extends BaseController
     }
 
     /**
-     * Affiche le formulaire de recherche de souscription
+     * Affiche le formulaire de recherche de souscription avec Select2 des clients
      */
     public function searchForm()
     {
         $this->requireAuth();
-        $this->loadView('../views/cautisations_payment/search.php');
+        $clients = $this->getClientsForSearch();
+        $this->loadView('../views/cautisations_payment/search.php', [
+            'clients' => $clients
+        ]);
+    }
+
+    private function getClientsForSearch(): array
+    {
+        $con = $this->model->getCon();
+        $userCode = Context::user();
+        $zoneCode = Context::zone();
+
+        $sql = "
+            SELECT DISTINCT c.code_client, c.nom_client, c.telephone_client
+            FROM clients c
+            LEFT JOIN souscriptions s ON s.client_code = c.code_client
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if (Context::isCommercial()) {
+            $sql .= " AND (c.user_code = ? OR s.user_code = ?)";
+            $params[] = $userCode;
+            $params[] = $userCode;
+        } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
+            $sql .= " AND (c.zone_code = ? OR s.zone_code = ?)";
+            $params[] = $zoneCode;
+            $params[] = $zoneCode;
+        }
+
+        $sql .= " ORDER BY c.nom_client ASC";
+
+        $stmt = $con->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
@@ -300,7 +334,7 @@ class CautisationPaymentController extends BaseController
              FROM souscriptions s
             LEFT JOIN clients c ON c.code_client = s.client_code
             LEFT JOIN sessions sess ON sess.code_session = s.session_code
-            WHERE s.statut_souscription = 'valide'
+            WHERE s.statut_souscription != 'annule'
         ";
 
         $paramsBase = [];
@@ -308,6 +342,13 @@ class CautisationPaymentController extends BaseController
             $sql .= " AND s.user_code = ?";
             $paramsBase[] = Context::user() ?? '';
         }
+
+        // 1. Recherche directe par code_client ou code_souscription
+        $stmt = $con->prepare($sql . " AND (s.client_code = ? OR c.code_client = ? OR s.code_souscription = ?)");
+        $params = array_merge($paramsBase, [$criteria, $criteria, $criteria]);
+        $stmt->execute($params);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (!empty($results)) return $results;
 
         if ($type === 'phone' || $type === 'all') {
             $stmt = $con->prepare($sql . " AND c.telephone_client LIKE ?");
