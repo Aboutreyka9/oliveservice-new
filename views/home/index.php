@@ -6,6 +6,13 @@ $auth = $auth ?? ($_SESSION[USERS_AUTH] ?? []);
 $recentCotisations = $recentCotisations ?? [];
 $recentVersements = $recentVersements ?? [];
 $recentDepenses = $recentDepenses ?? [];
+$pendingVersements = $pendingVersements ?? [];
+$pendingDistributions = $pendingDistributions ?? [];
+
+$isCommercial = Context::isCommercial();
+$isGestionnaire = Context::isGestionnaire();
+$isFinance = Context::isFinance();
+$isAdmin = Context::isSuperAdmin();
 ?>
 
 <style>
@@ -13,7 +20,6 @@ $recentDepenses = $recentDepenses ?? [];
    DESIGN SYSTEM & ANIMATIONS ULTRA-PREMIUM - OLIVE SERVICE DASHBOARD
    ========================================================================== */
 
-/* Keyframe Animations */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -26,20 +32,9 @@ $recentDepenses = $recentDepenses ?? [];
 }
 
 @keyframes pulseGlow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.2);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
-  }
-}
-
-@keyframes floatIcon {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.2); }
+  70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
 }
 
 /* Base Layout & Wrapper */
@@ -171,7 +166,6 @@ $recentDepenses = $recentDepenses ?? [];
   justify-content: space-between;
 }
 
-/* Stagger Animation Load */
 .kpi-card:nth-child(1) { animation: fadeInUp 0.3s ease-out 0.05s backwards; }
 .kpi-card:nth-child(2) { animation: fadeInUp 0.3s ease-out 0.10s backwards; }
 .kpi-card:nth-child(3) { animation: fadeInUp 0.3s ease-out 0.15s backwards; }
@@ -380,198 +374,406 @@ $recentDepenses = $recentDepenses ?? [];
     <div class="dashboard-content-wrapper">
       
       <!-- ========================================================================= -->
-      <!-- BANNER D'EN-TÊTE ULTRA-MODERNE ANIMÉE                                      -->
+      <!-- BANNER D'EN-TÊTE DYNAMIQUE SELON LE RÔLE                                  -->
       <!-- ========================================================================= -->
       <div class="dashboard-header-card">
         <div class="header-title-box">
           <div class="header-icon-badge">
-            <i data-lucide="layout-dashboard" style="width: 28px; height: 28px;"></i>
+            <i data-lucide="<?= $isCommercial ? 'user-check' : ($isGestionnaire ? 'box' : ($isFinance ? 'wallet' : 'layout-dashboard')) ?>" style="width: 28px; height: 28px;"></i>
           </div>
           <div>
-            <h1 style="font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">
-              Tableau de Bord &bull; Olive Service
-            </h1>
-            <p style="margin: 4px 0 0 0; font-size: 13px; color: #94A3B8; font-weight: 500;">
-              Vue synthétique et pilotage financier en temps réel. Bienvenue, <strong style="color: #FFFFFF;"><?= htmlspecialchars($auth['nom_user'] ?? 'Utilisateur') ?></strong>
-            </p>
-          </div>
-        </div>
-
-        <!-- ACTIONS RAPIDES BOUTONS PILULE -->
-        <div class="header-actions-group">
-          <a href="<?= RACINE ?>souscription/formulaire" class="action-btn-pill btn-pill-primary">
-            <i data-lucide="plus-circle" style="width: 17px; height: 17px;"></i> Nouvelle Souscription
-          </a>
-          <a href="<?= RACINE ?>versement/formulaire" class="action-btn-pill btn-pill-success">
-            <i data-lucide="arrow-down-left" style="width: 17px; height: 17px;"></i> Versement Commercial
-          </a>
-          <a href="<?= RACINE ?>depense/formulaire" class="action-btn-pill btn-pill-danger">
-            <i data-lucide="arrow-up-right" style="width: 17px; height: 17px;"></i> Saisir Dépense
-          </a>
-        </div>
-      </div>
-
-      <!-- ========================================================================= -->
-      <!-- SECTION 1 : GRILLE KPI ANIMÉE AVEC ACCENTS COLORÉS DYNAMIQUES              -->
-      <!-- ========================================================================= -->
-      
-      <div class="kpi-grid">
-        
-        <!-- KPI 1 : Clients -->
-        <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #3B82F6, #1D4ED8); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #2563EB;">
-          <div class="kpi-header">
-            <span class="kpi-title">Clients Enregistrés</span>
-            <div class="kpi-icon-wrapper">
-              <i data-lucide="users" style="width: 22px; height: 22px;"></i>
-            </div>
-          </div>
-          <div class="kpi-value">
-            <?= number_format($stats['total_clients'] ?? 0, 0, ',', ' ') ?>
-          </div>
-          <div class="kpi-footer">
-            <span>Portfolio active</span>
-            <span class="kpi-tag" style="background: #EFF6FF; color: #1D4ED8;">
-              <i data-lucide="file-check" style="width: 12px; height: 12px;"></i> <?= (int)($stats['total_souscriptions'] ?? 0) ?> souscr.
-            </span>
-          </div>
-        </div>
-
-        <!-- KPI 2 : Packs & Articles -->
-        <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #8B5CF6, #6D28D9); --kpi-bg-icon: #FAF5FF; --kpi-color-icon: #7E22CE;">
-          <div class="kpi-header">
-            <span class="kpi-title">Packs & Offres</span>
-            <div class="kpi-icon-wrapper">
-              <i data-lucide="package" style="width: 22px; height: 22px;"></i>
-            </div>
-          </div>
-          <div class="kpi-value" style="color: #7E22CE;">
-            <?= number_format($stats['total_packs'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 14px; font-weight: 600;">Packs</span>
-          </div>
-          <div class="kpi-footer">
-            <span>Articles catalogue</span>
-            <span class="kpi-tag" style="background: #FAF5FF; color: #7E22CE;">
-              <i data-lucide="boxes" style="width: 12px; height: 12px;"></i> <?= (int)($stats['total_articles'] ?? 0) ?> références
-            </span>
-          </div>
-        </div>
-
-        <!-- KPI 3 : Cotisations Encaissées -->
-        <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #10B981, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #047857;">
-          <div class="kpi-header">
-            <span class="kpi-title">Cotisations Terrain</span>
-            <div class="kpi-icon-wrapper">
-              <i data-lucide="coins" style="width: 22px; height: 22px;"></i>
-            </div>
-          </div>
-          <div class="kpi-value" style="color: #047857;">
-            <?= number_format($stats['total_cotisations'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span>
-          </div>
-          <div class="kpi-footer">
-            <span>Encaissement clients</span>
-            <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">
-              <i data-lucide="trending-up" style="width: 12px; height: 12px;"></i> En direct
-            </span>
-          </div>
-        </div>
-
-        <!-- KPI 4 : Versements Validés -->
-        <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #059669, #065F46); --kpi-bg-icon: #F0FDF4; --kpi-color-icon: #16A34A;">
-          <div class="kpi-header">
-            <span class="kpi-title">Versements Validés</span>
-            <div class="kpi-icon-wrapper">
-              <i data-lucide="check-circle-2" style="width: 22px; height: 22px;"></i>
-            </div>
-          </div>
-          <div class="kpi-value" style="color: #16A34A;">
-            <?= number_format($stats['total_versements'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span>
-          </div>
-          <div class="kpi-footer">
-            <?php if (!empty($stats['total_versements_en_attente'])): ?>
-              <span style="color: #D97706; font-weight: 700;">
-                <i data-lucide="clock" style="width: 12px; height: 12px;"></i> <?= number_format($stats['total_versements_en_attente'], 0, ',', ' ') ?> en attente
-              </span>
+            <?php if ($isCommercial): ?>
+              <h1 style="font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">
+                Tableau de Bord &bull; Espace Commercial
+              </h1>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #94A3B8; font-weight: 500;">
+                 Bienvenue, <strong style="color: #FFFFFF;"><?= htmlspecialchars($auth['nom_user'] ?? 'Commercial') ?></strong>
+              </p>
+            <?php elseif ($isGestionnaire): ?>
+              <h1 style="font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">
+                Tableau de Bord &bull; Espace Logistique & Catalogue
+              </h1>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #94A3B8; font-weight: 500;">
+                Pilotage du catalogue de packs et suivi des distributions clients. Bienvenue, <strong style="color: #FFFFFF;"><?= htmlspecialchars($auth['nom_user'] ?? 'Gestionnaire') ?></strong>
+              </p>
+            <?php elseif ($isFinance): ?>
+              <h1 style="font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">
+                Tableau de Bord &bull; Espace Finance & Trésorerie
+              </h1>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #94A3B8; font-weight: 500;">
+                Validation des versements de caisse et ordonnancement des dépenses. Bienvenue, <strong style="color: #FFFFFF;"><?= htmlspecialchars($auth['nom_user'] ?? 'Responsable Finance') ?></strong>
+              </p>
             <?php else: ?>
-              <span>Versements caisse</span>
-              <span class="kpi-tag" style="background: #F0FDF4; color: #16A34A;">100% à jour</span>
+              <h1 style="font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">
+                Tableau de Bord &bull; Supervision Globale
+              </h1>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #94A3B8; font-weight: 500;">
+                Bienvenue, <strong style="color: #FFFFFF;"><?= htmlspecialchars($auth['nom_user'] ?? 'Administrateur') ?></strong>
+              </p>
             <?php endif; ?>
           </div>
         </div>
 
-        <!-- KPI 5 : Souscriptions Soldées -->
-        <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #14B8A6, #0F766E); --kpi-bg-icon: #F0FDFA; --kpi-color-icon: #0D9488;">
-          <div class="kpi-header">
-            <span class="kpi-title">Contrats Soldés</span>
-            <div class="kpi-icon-wrapper">
-              <i data-lucide="circle-check-big" style="width: 22px; height: 22px;"></i>
-            </div>
-          </div>
-          <div class="kpi-value" style="color: #0D9488;">
-            <?= number_format($stats['total_souscriptions_soldees'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 14px; color: #64748B; font-weight: 600;">/ <?= number_format($stats['total_souscriptions'] ?? 0, 0, ',', ' ') ?></span>
-          </div>
-          <div class="kpi-footer">
-            <span>Prêts pour distribution</span>
-            <span class="kpi-tag" style="background: #F0FDFA; color: #0D9488;">
-              <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Finalisés
-            </span>
-          </div>
+        <!-- ACTIONS RAPIDES SELON LE RÔLE -->
+        <div class="header-actions-group">
+          <?php if ($isCommercial): ?>
+            <a href="<?= RACINE ?>client/formulaire" class="action-btn-pill btn-pill-primary">
+              <i data-lucide="user-plus" style="width: 17px; height: 17px;"></i> Nouveau Client
+            </a>
+            <a href="<?= RACINE ?>cotisation/formulaire" class="action-btn-pill btn-pill-success">
+              <i data-lucide="coins" style="width: 17px; height: 17px;"></i> Encasser Cotisation
+            </a>
+            <a href="<?= RACINE ?>versement/formulaire" class="action-btn-pill btn-pill-primary" style="background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);">
+              <i data-lucide="arrow-down-left" style="width: 17px; height: 17px;"></i> Déclarer Versement
+            </a>
+          <?php elseif ($isGestionnaire): ?>
+            <a href="<?= RACINE ?>pack/formulaire" class="action-btn-pill btn-pill-primary">
+              <i data-lucide="package-plus" style="width: 17px; height: 17px;"></i> Nouveau Pack
+            </a>
+            <a href="<?= RACINE ?>distribution/list" class="action-btn-pill btn-pill-success">
+              <i data-lucide="truck" style="width: 17px; height: 17px;"></i> Remettre Livraisons
+            </a>
+          <?php elseif ($isFinance): ?>
+            <a href="<?= RACINE ?>versement/list" class="action-btn-pill btn-pill-success">
+              <i data-lucide="check-circle-2" style="width: 17px; height: 17px;"></i> Valider Versements
+            </a>
+            <a href="<?= RACINE ?>depense/formulaire" class="action-btn-pill btn-pill-danger">
+              <i data-lucide="arrow-up-right" style="width: 17px; height: 17px;"></i> Saisir Dépense
+            </a>
+          <?php else: ?>
+            <a href="<?= RACINE ?>souscription/formulaire" class="action-btn-pill btn-pill-primary">
+              <i data-lucide="plus-circle" style="width: 17px; height: 17px;"></i> Nouvelle Souscription
+            </a>
+            <a href="<?= RACINE ?>versement/formulaire" class="action-btn-pill btn-pill-success">
+              <i data-lucide="arrow-down-left" style="width: 17px; height: 17px;"></i> Versement Commercial
+            </a>
+            <a href="<?= RACINE ?>depense/formulaire" class="action-btn-pill btn-pill-danger">
+              <i data-lucide="arrow-up-right" style="width: 17px; height: 17px;"></i> Saisir Dépense
+            </a>
+          <?php endif; ?>
         </div>
+      </div>
 
-        <!-- KPI 6 : Distributions -->
-        <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #EC4899, #BE185D); --kpi-bg-icon: #FDF2F8; --kpi-color-icon: #DB2777;">
-          <div class="kpi-header">
-            <span class="kpi-title">Distributions Packs</span>
-            <div class="kpi-icon-wrapper">
-              <i data-lucide="package-check" style="width: 22px; height: 22px;"></i>
-            </div>
-          </div>
-          <div class="kpi-value" style="color: #DB2777;">
-            <?= number_format($stats['total_distributions_validees'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 14px; color: #64748B; font-weight: 600;">/ <?= number_format($stats['total_distributions'] ?? 0, 0, ',', ' ') ?></span>
-          </div>
-          <div class="kpi-footer">
-            <span>Livraisons effectuées</span>
-            <span class="kpi-tag" style="background: #FDF2F8; color: #DB2777;">
-              <i data-lucide="truck" style="width: 12px; height: 12px;"></i> Remises
-            </span>
-          </div>
-        </div>
+      <!-- ========================================================================= -->
+      <!-- SECTION 1 : GRILLE KPI PERSONNALISÉE SELON LE RÔLE                        -->
+      <!-- ========================================================================= -->
+      
+      <div class="kpi-grid">
+        
+        <?php if ($isCommercial): ?>
 
-        <!-- KPI 7 : Dépenses Engagées -->
-        <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #EF4444, #B91C1C); --kpi-bg-icon: #FEF2F2; --kpi-color-icon: #DC2626;">
-          <div class="kpi-header">
-            <span class="kpi-title">Dépenses & Charges</span>
-            <div class="kpi-icon-wrapper">
-              <i data-lucide="arrow-up-right" style="width: 22px; height: 22px;"></i>
+          <!-- KPI Commercial 1 : Mes Clients -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #3B82F6, #1D4ED8); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #2563EB;">
+            <div class="kpi-header">
+              <span class="kpi-title">Mes Clients Portefeuille</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="users" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value"><?= number_format($stats['total_clients'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-footer">
+              <span>Clients enregistrés</span>
+              <span class="kpi-tag" style="background: #EFF6FF; color: #1D4ED8;">Mes contacts</span>
             </div>
           </div>
-          <div class="kpi-value" style="color: #DC2626;">
-            <?= number_format($stats['total_depenses'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span>
-          </div>
-          <div class="kpi-footer">
-            <span>Charges d'exploitation</span>
-            <span class="kpi-tag" style="background: #FEF2F2; color: #DC2626;">
-              <i data-lucide="trending-down" style="width: 12px; height: 12px;"></i> Sorties
-            </span>
-          </div>
-        </div>
 
-        <!-- KPI 8 : Solde Net -->
-        <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #6366F1, #4338CA); --kpi-bg-icon: #EEF2FF; --kpi-color-icon: #4F46E5;">
-          <div class="kpi-header">
-            <span class="kpi-title">Solde Nette Trésorerie</span>
-            <div class="kpi-icon-wrapper">
-              <i data-lucide="scale" style="width: 22px; height: 22px;"></i>
+          <!-- KPI Commercial 2 : Mes Souscriptions -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #8B5CF6, #6D28D9); --kpi-bg-icon: #FAF5FF; --kpi-color-icon: #7E22CE;">
+            <div class="kpi-header">
+              <span class="kpi-title">Mes Souscriptions</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="file-text" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #7E22CE;"><?= number_format($stats['total_souscriptions'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-footer">
+              <span>Contrats souscrits</span>
+              <span class="kpi-tag" style="background: #FAF5FF; color: #7E22CE;">En cours</span>
             </div>
           </div>
-          <div class="kpi-value" style="color: <?= ($stats['solde_net'] ?? 0) >= 0 ? '#15803D' : '#DC2626' ?>;">
-            <?= number_format($stats['solde_net'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span>
+
+          <!-- KPI Commercial 3 : Encaissements Terrain -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #10B981, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #047857;">
+            <div class="kpi-header">
+              <span class="kpi-title">Mes Cotisations Encaissées</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="coins" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #047857;"><?= number_format($stats['total_cotisations'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Fonds collectés sur le terrain</span>
+              <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">En direct</span>
+            </div>
           </div>
-          <div class="kpi-footer">
-            <span>Recettes &minus; Décaissements</span>
-            <span class="kpi-tag" style="background: #EEF2FF; color: #4F46E5;">
-              <i data-lucide="wallet" style="width: 12px; height: 12px;"></i> Bilan
-            </span>
+
+          <!-- KPI Commercial 4 : Versements Caisse Validés -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #059669, #065F46); --kpi-bg-icon: #F0FDF4; --kpi-color-icon: #16A34A;">
+            <div class="kpi-header">
+              <span class="kpi-title">Versements Validés</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="check-circle-2" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #16A34A;"><?= number_format($stats['total_versements'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Versés en banque / caisse</span>
+              <span class="kpi-tag" style="background: #F0FDF4; color: #16A34A;">Approuvés</span>
+            </div>
           </div>
-        </div>
+
+          <!-- KPI Commercial 5 : Versements En Attente -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #F59E0B, #D97706); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;">
+            <div class="kpi-header">
+              <span class="kpi-title">Versements En Attente</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="clock" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #D97706;"><?= number_format($stats['total_versements_en_attente'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>En cours de validation finance</span>
+              <span class="kpi-tag" style="background: #FFFBEB; color: #D97706;">À valider</span>
+            </div>
+          </div>
+
+          <!-- KPI Commercial 6 : Souscriptions Soldées -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #14B8A6, #0F766E); --kpi-bg-icon: #F0FDFA; --kpi-color-icon: #0D9488;">
+            <div class="kpi-header">
+              <span class="kpi-title">Mes Contrats Soldés</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="sparkles" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #0D9488;"><?= number_format($stats['total_souscriptions_soldees'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-footer">
+              <span>Prêts pour distribution pack</span>
+              <span class="kpi-tag" style="background: #F0FDFA; color: #0D9488;">Objectif</span>
+            </div>
+          </div>
+
+        <?php elseif ($isGestionnaire): ?>
+
+          <!-- KPI Gestionnaire 1 : Packs Actifs -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #8B5CF6, #6D28D9); --kpi-bg-icon: #FAF5FF; --kpi-color-icon: #7E22CE;">
+            <div class="kpi-header">
+              <span class="kpi-title">Catalogue Packs</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="package" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #7E22CE;"><?= number_format($stats['total_packs'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 14px; font-weight: 600;">Packs</span></div>
+            <div class="kpi-footer">
+              <span>Offres au catalogue</span>
+              <span class="kpi-tag" style="background: #FAF5FF; color: #7E22CE;"><?= (int)($stats['total_articles'] ?? 0) ?> articles</span>
+            </div>
+          </div>
+
+          <!-- KPI Gestionnaire 2 : Souscriptions Solidaires -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #3B82F6, #1D4ED8); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #2563EB;">
+            <div class="kpi-header">
+              <span class="kpi-title">Total Souscriptions</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="file-check" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value"><?= number_format($stats['total_souscriptions'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-footer">
+              <span>Engagements souscrits</span>
+              <span class="kpi-tag" style="background: #EFF6FF; color: #1D4ED8;">Global</span>
+            </div>
+          </div>
+
+          <!-- KPI Gestionnaire 3 : Contrats Soldés Prêts à Livrer -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #14B8A6, #0F766E); --kpi-bg-icon: #F0FDFA; --kpi-color-icon: #0D9488;">
+            <div class="kpi-header">
+              <span class="kpi-title">Contrats Fully Soldés</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="circle-check-big" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #0D9488;"><?= number_format($stats['total_souscriptions_soldees'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-footer">
+              <span>Prêts pour distribution</span>
+              <span class="kpi-tag" style="background: #F0FDFA; color: #0D9488;">Éligibles remise</span>
+            </div>
+          </div>
+
+          <!-- KPI Gestionnaire 4 : Distributions Livrées -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #EC4899, #BE185D); --kpi-bg-icon: #FDF2F8; --kpi-color-icon: #DB2777;">
+            <div class="kpi-header">
+              <span class="kpi-title">Packs Remis (Livrés)</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="truck" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #DB2777;"><?= number_format($stats['total_distributions_validees'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-footer">
+              <span>Sur <?= number_format($stats['total_distributions'] ?? 0, 0, ',', ' ') ?> demandes</span>
+              <span class="kpi-tag" style="background: #FDF2F8; color: #DB2777;">Effectués</span>
+            </div>
+          </div>
+
+        <?php elseif ($isFinance): ?>
+
+          <!-- KPI Finance 1 : CA Encaisse -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #10B981, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #047857;">
+            <div class="kpi-header">
+              <span class="kpi-title">Chiffre d'Affaires Encaissé</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="coins" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #047857;"><?= number_format($stats['ca_encaisse'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Recettes globales terrain</span>
+              <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">Recettes</span>
+            </div>
+          </div>
+
+          <!-- KPI Finance 2 : Versements Validés -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #059669, #065F46); --kpi-bg-icon: #F0FDF4; --kpi-color-icon: #16A34A;">
+            <div class="kpi-header">
+              <span class="kpi-title">Versements Validés</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="check-circle-2" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #16A34A;"><?= number_format($stats['total_versements'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Fonds en banque</span>
+              <span class="kpi-tag" style="background: #F0FDF4; color: #16A34A;">Confirmés</span>
+            </div>
+          </div>
+
+          <!-- KPI Finance 3 : Versements En Attente -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #F59E0B, #D97706); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;">
+            <div class="kpi-header">
+              <span class="kpi-title">Versements À Valider</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="clock" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #D97706;"><?= number_format($stats['total_versements_en_attente'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Attente de contrôle</span>
+              <span class="kpi-tag" style="background: #FFFBEB; color: #D97706;">Action requise</span>
+            </div>
+          </div>
+
+          <!-- KPI Finance 4 : Dépenses Engagées -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #EF4444, #B91C1C); --kpi-bg-icon: #FEF2F2; --kpi-color-icon: #DC2626;">
+            <div class="kpi-header">
+              <span class="kpi-title">Dépenses & Charges</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="arrow-up-right" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #DC2626;"><?= number_format($stats['total_depenses'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Charges d'exploitation</span>
+              <span class="kpi-tag" style="background: #FEF2F2; color: #DC2626;">Décaissements</span>
+            </div>
+          </div>
+
+          <!-- KPI Finance 5 : Solde Net Trésorerie -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #6366F1, #4338CA); --kpi-bg-icon: #EEF2FF; --kpi-color-icon: #4F46E5;">
+            <div class="kpi-header">
+              <span class="kpi-title">Solde Net Trésorerie</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="scale" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: <?= ($stats['solde_net'] ?? 0) >= 0 ? '#15803D' : '#DC2626' ?>;"><?= number_format($stats['solde_net'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Recettes &minus; Charges</span>
+              <span class="kpi-tag" style="background: #EEF2FF; color: #4F46E5;">Bilan Trésorerie</span>
+            </div>
+          </div>
+
+        <?php else: ?>
+
+          <!-- FULL 8 KPIS POUR ADMIN / DIR GENERAL -->
+
+          <!-- KPI 1 : Clients -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #3B82F6, #1D4ED8); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #2563EB;">
+            <div class="kpi-header">
+              <span class="kpi-title">Clients Enregistrés</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="users" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value"><?= number_format($stats['total_clients'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-footer">
+              <span>Portfolio actif</span>
+              <span class="kpi-tag" style="background: #EFF6FF; color: #1D4ED8;"><?= (int)($stats['total_souscriptions'] ?? 0) ?> souscr.</span>
+            </div>
+          </div>
+
+          <!-- KPI 2 : Packs & Articles -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #8B5CF6, #6D28D9); --kpi-bg-icon: #FAF5FF; --kpi-color-icon: #7E22CE;">
+            <div class="kpi-header">
+              <span class="kpi-title">Packs & Offres</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="package" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #7E22CE;"><?= number_format($stats['total_packs'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 14px; font-weight: 600;">Packs</span></div>
+            <div class="kpi-footer">
+              <span>Articles catalogue</span>
+              <span class="kpi-tag" style="background: #FAF5FF; color: #7E22CE;"><?= (int)($stats['total_articles'] ?? 0) ?> réfs</span>
+            </div>
+          </div>
+
+          <!-- KPI 3 : Cotisations Encaissées -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #10B981, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #047857;">
+            <div class="kpi-header">
+              <span class="kpi-title">Cotisations Terrain</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="coins" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #047857;"><?= number_format($stats['total_cotisations'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Encaissement clients</span>
+              <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">En direct</span>
+            </div>
+          </div>
+
+          <!-- KPI 4 : Versements Validés -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #059669, #065F46); --kpi-bg-icon: #F0FDF4; --kpi-color-icon: #16A34A;">
+            <div class="kpi-header">
+              <span class="kpi-title">Versements Validés</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="check-circle-2" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #16A34A;"><?= number_format($stats['total_versements'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <?php if (!empty($stats['total_versements_en_attente'])): ?>
+                <span style="color: #D97706; font-weight: 700;"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <?= number_format($stats['total_versements_en_attente'], 0, ',', ' ') ?> en attente</span>
+              <?php else: ?>
+                <span>Versements caisse</span>
+                <span class="kpi-tag" style="background: #F0FDF4; color: #16A34A;">100% à jour</span>
+              <?php endif; ?>
+            </div>
+          </div>
+
+          <!-- KPI 5 : Souscriptions Soldées -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #14B8A6, #0F766E); --kpi-bg-icon: #F0FDFA; --kpi-color-icon: #0D9488;">
+            <div class="kpi-header">
+              <span class="kpi-title">Contrats Soldés</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="circle-check-big" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #0D9488;"><?= number_format($stats['total_souscriptions_soldees'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 14px; color: #64748B; font-weight: 600;">/ <?= number_format($stats['total_souscriptions'] ?? 0, 0, ',', ' ') ?></span></div>
+            <div class="kpi-footer">
+              <span>Prêts pour distribution</span>
+              <span class="kpi-tag" style="background: #F0FDFA; color: #0D9488;">Finalisés</span>
+            </div>
+          </div>
+
+          <!-- KPI 6 : Distributions -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #EC4899, #BE185D); --kpi-bg-icon: #FDF2F8; --kpi-color-icon: #DB2777;">
+            <div class="kpi-header">
+              <span class="kpi-title">Distributions Packs</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="package-check" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #DB2777;"><?= number_format($stats['total_distributions_validees'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 14px; color: #64748B; font-weight: 600;">/ <?= number_format($stats['total_distributions'] ?? 0, 0, ',', ' ') ?></span></div>
+            <div class="kpi-footer">
+              <span>Livraisons effectuées</span>
+              <span class="kpi-tag" style="background: #FDF2F8; color: #DB2777;">Remises</span>
+            </div>
+          </div>
+
+          <!-- KPI 7 : Dépenses Engagées -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #EF4444, #B91C1C); --kpi-bg-icon: #FEF2F2; --kpi-color-icon: #DC2626;">
+            <div class="kpi-header">
+              <span class="kpi-title">Dépenses & Charges</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="arrow-up-right" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #DC2626;"><?= number_format($stats['total_depenses'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Charges d'exploitation</span>
+              <span class="kpi-tag" style="background: #FEF2F2; color: #DC2626;">Sorties</span>
+            </div>
+          </div>
+
+          <!-- KPI 8 : Solde Net -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #6366F1, #4338CA); --kpi-bg-icon: #EEF2FF; --kpi-color-icon: #4F46E5;">
+            <div class="kpi-header">
+              <span class="kpi-title">Solde Net Trésorerie</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="scale" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: <?= ($stats['solde_net'] ?? 0) >= 0 ? '#15803D' : '#DC2626' ?>;"><?= number_format($stats['solde_net'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Recettes &minus; Décaissements</span>
+              <span class="kpi-tag" style="background: #EEF2FF; color: #4F46E5;">Bilan</span>
+            </div>
+          </div>
+
+        <?php endif; ?>
 
       </div>
 
@@ -585,209 +787,398 @@ $recentDepenses = $recentDepenses ?? [];
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
           
-          <a href="<?= RACINE ?>client/list" class="quick-action-card">
-            <div class="quick-action-content">
-              <div class="quick-action-icon" style="background: #EFF6FF; color: #2563EB;">
-                <i data-lucide="users" style="width: 22px; height: 22px;"></i>
+          <?php if ($isCommercial || $isAdmin): ?>
+            <a href="<?= RACINE ?>client/list" class="quick-action-card">
+              <div class="quick-action-content">
+                <div class="quick-action-icon" style="background: #EFF6FF; color: #2563EB;"><i data-lucide="users" style="width: 22px; height: 22px;"></i></div>
+                <div><strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Gestion Clients</strong><small style="color: #64748B;">Répertoire clients</small></div>
               </div>
-              <div>
-                <strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Gestion Clients</strong>
-                <small style="color: #64748B;">Répertoire & souscriptions</small>
-              </div>
-            </div>
-            <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
-          </a>
+              <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
+            </a>
 
-          <a href="<?= RACINE ?>souscription/list" class="quick-action-card">
-            <div class="quick-action-content">
-              <div class="quick-action-icon" style="background: #ECFDF5; color: #047857;">
-                <i data-lucide="file-text" style="width: 22px; height: 22px;"></i>
+            <a href="<?= RACINE ?>souscription/list" class="quick-action-card">
+              <div class="quick-action-content">
+                <div class="quick-action-icon" style="background: #ECFDF5; color: #047857;"><i data-lucide="file-text" style="width: 22px; height: 22px;"></i></div>
+                <div><strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Souscriptions</strong><small style="color: #64748B;">Suivi souscriptions</small></div>
               </div>
-              <div>
-                <strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Souscriptions</strong>
-                <small style="color: #64748B;">Suivi des engagements</small>
-              </div>
-            </div>
-            <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
-          </a>
+              <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
+            </a>
 
-          <a href="<?= RACINE ?>cotisation/list" class="quick-action-card">
-            <div class="quick-action-content">
-              <div class="quick-action-icon" style="background: #FFFBEB; color: #D97706;">
-                <i data-lucide="coins" style="width: 22px; height: 22px;"></i>
+            <a href="<?= RACINE ?>cotisation/list" class="quick-action-card">
+              <div class="quick-action-content">
+                <div class="quick-action-icon" style="background: #FFFBEB; color: #D97706;"><i data-lucide="coins" style="width: 22px; height: 22px;"></i></div>
+                <div><strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Cotisations Terrain</strong><small style="color: #64748B;">Encaissements</small></div>
               </div>
-              <div>
-                <strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Cotisations Terrain</strong>
-                <small style="color: #64748B;">Paiements quotidiens</small>
-              </div>
-            </div>
-            <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
-          </a>
+              <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
+            </a>
+          <?php endif; ?>
 
-          <a href="<?= RACINE ?>versement/list" class="quick-action-card">
-            <div class="quick-action-content">
-              <div class="quick-action-icon" style="background: #F0FDF4; color: #16A34A;">
-                <i data-lucide="arrow-down-left" style="width: 22px; height: 22px;"></i>
+          <?php if ($isCommercial || $isFinance || $isAdmin): ?>
+            <a href="<?= RACINE ?>versement/list" class="quick-action-card">
+              <div class="quick-action-content">
+                <div class="quick-action-icon" style="background: #F0FDF4; color: #16A34A;"><i data-lucide="arrow-down-left" style="width: 22px; height: 22px;"></i></div>
+                <div><strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Versements Caisse</strong><small style="color: #64748B;">Validations caisse</small></div>
               </div>
-              <div>
-                <strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Versements</strong>
-                <small style="color: #64748B;">Validations de caisse</small>
-              </div>
-            </div>
-            <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
-          </a>
+              <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
+            </a>
+          <?php endif; ?>
 
-          <a href="<?= RACINE ?>depense/list" class="quick-action-card">
-            <div class="quick-action-content">
-              <div class="quick-action-icon" style="background: #FEF2F2; color: #DC2626;">
-                <i data-lucide="arrow-up-right" style="width: 22px; height: 22px;"></i>
+          <?php if ($isFinance || $isAdmin): ?>
+            <a href="<?= RACINE ?>depense/list" class="quick-action-card">
+              <div class="quick-action-content">
+                <div class="quick-action-icon" style="background: #FEF2F2; color: #DC2626;"><i data-lucide="arrow-up-right" style="width: 22px; height: 22px;"></i></div>
+                <div><strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Dépenses & Charges</strong><small style="color: #64748B;">Décaissements</small></div>
               </div>
-              <div>
-                <strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Dépenses</strong>
-                <small style="color: #64748B;">Charges & décaissements</small>
-              </div>
-            </div>
-            <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
-          </a>
+              <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
+            </a>
+          <?php endif; ?>
 
-          <a href="<?= RACINE ?>distribution/list" class="quick-action-card">
-            <div class="quick-action-content">
-              <div class="quick-action-icon" style="background: #FAF5FF; color: #7E22CE;">
-                <i data-lucide="truck" style="width: 22px; height: 22px;"></i>
+          <?php if ($isGestionnaire || $isAdmin): ?>
+            <a href="<?= RACINE ?>pack/list" class="quick-action-card">
+              <div class="quick-action-content">
+                <div class="quick-action-icon" style="background: #FAF5FF; color: #7E22CE;"><i data-lucide="package" style="width: 22px; height: 22px;"></i></div>
+                <div><strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Catalogue Packs</strong><small style="color: #64748B;">Offres & articles</small></div>
               </div>
-              <div>
-                <strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Distributions</strong>
-                <small style="color: #64748B;">Remises des packs clients</small>
+              <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
+            </a>
+
+            <a href="<?= RACINE ?>distribution/list" class="quick-action-card">
+              <div class="quick-action-content">
+                <div class="quick-action-icon" style="background: #FDF2F8; color: #DB2777;"><i data-lucide="truck" style="width: 22px; height: 22px;"></i></div>
+                <div><strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Distributions Packs</strong><small style="color: #64748B;">Livraisons clients</small></div>
               </div>
-            </div>
-            <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
-          </a>
+              <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
+            </a>
+          <?php endif; ?>
 
         </div>
       </div>
 
       <!-- ========================================================================= -->
-      <!-- SECTION 3 : TABLEAUX RÉCAPITULATIFS RÉCENTS                               -->
+      <!-- SECTION 3 : TABLEAUX RÉCAPITULATIFS PERSONNALISÉS SELON LE RÔLE            -->
       <!-- ========================================================================= -->
       
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px;">
         
-        <!-- TABLEAU 1 : Dernières Cotisations Clients -->
-        <div class="table-card">
-          <div class="table-card-header">
-            <h3 class="table-card-title">
-              <i data-lucide="coins" style="width: 20px; height: 20px; color: #D97706;"></i> Dernières Cotisations Clients
-            </h3>
-            <a href="<?= RACINE ?>cotisation/list" style="font-size: 12px; font-weight: 700; color: #D97706; text-decoration: none;">Voir tout &rarr;</a>
-          </div>
+        <?php if ($isFinance): ?>
 
-          <div style="overflow-x: auto;">
-            <table class="custom-table">
-              <thead>
-                <tr>
-                  <th>Code Cotisation</th>
-                  <th>Client</th>
-                  <th style="text-align: right;">Montant</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php if (empty($recentCotisations)): ?>
+          <!-- VUE FINANCE : Table 1 - Versements En Attente de Validation -->
+          <div class="table-card" style="grid-column: span 2;">
+            <div class="table-card-header">
+              <h3 class="table-card-title">
+                <i data-lucide="clock" style="width: 20px; height: 20px; color: #D97706;"></i> Versements Commerciaux En Attente de Validation
+              </h3>
+              <a href="<?= RACINE ?>versement/list" style="font-size: 12px; font-weight: 700; color: #D97706; text-decoration: none;">Accéder aux validations &rarr;</a>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-table">
+                <thead>
                   <tr>
-                    <td colspan="3" style="padding: 20px; text-align: center; color: #94A3B8;">Aucune cotisation récente enregistrée</td>
+                    <th>Commercial</th>
+                    <th>Zone</th>
+                    <th>Date Versement</th>
+                    <th style="text-align: right;">Montant</th>
+                    <th style="text-align: center;">Action</th>
                   </tr>
-                <?php else: ?>
-                  <?php foreach ($recentCotisations as $c): ?>
+                </thead>
+                <tbody>
+                  <?php if (empty($pendingVersements)): ?>
                     <tr>
-                      <td style="font-weight: 700; color: #D97706; font-family: monospace;">
-                        <?= htmlspecialchars($c['code_cautisation_client'] ?? '-') ?>
-                      </td>
-                      <td style="font-weight: 600; color: #0F172A;"><?= htmlspecialchars($c['nom_client'] ?? '-') ?></td>
-                      <td style="text-align: right; font-weight: 800; color: #059669;"><?= number_format((float)($c['montant_cautisation_client'] ?? 0), 0, ',', ' ') ?> FCFA</td>
+                      <td colspan="5" style="padding: 20px; text-align: center; color: #94A3B8;">Aucun versement commercial en attente de validation</td>
                     </tr>
-                  <?php endforeach; ?>
-                <?php endif; ?>
-              </tbody>
-            </table>
+                  <?php else: ?>
+                    <?php foreach ($pendingVersements as $pv): ?>
+                      <tr>
+                        <td style="font-weight: 700; color: #0F172A;">
+                          <?= htmlspecialchars(trim(($pv['nom_commercial'] ?? '') . ' ' . ($pv['prenom_commercial'] ?? ''))) ?>
+                        </td>
+                        <td style="color: #64748B;"><?= htmlspecialchars($pv['libelle_zone'] ?? 'N/A') ?></td>
+                        <td style="color: #64748B;"><?= date('d/m/Y H:i', strtotime($pv['created_at_versement'] ?? 'now')) ?></td>
+                        <td style="text-align: right; font-weight: 800; color: #D97706;"><?= number_format((float)($pv['montant_versement'] ?? 0), 0, ',', ' ') ?> FCFA</td>
+                        <td style="text-align: center;">
+                          <a href="<?= RACINE ?>versement/list" class="btn-pill-success" style="padding: 4px 10px; font-size: 11px; border-radius: 6px;">Valider</a>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
-        <!-- TABLEAU 2 : Derniers Versements Commerciaux -->
-        <div class="table-card">
-          <div class="table-card-header">
-            <h3 class="table-card-title">
-              <i data-lucide="arrow-down-left" style="width: 20px; height: 20px; color: #059669;"></i> Derniers Versements Commerciaux
-            </h3>
-            <a href="<?= RACINE ?>versement/list" style="font-size: 12px; font-weight: 700; color: #059669; text-decoration: none;">Voir tout &rarr;</a>
-          </div>
+          <!-- VUE FINANCE : Table 2 - Dernières Dépenses Saisies -->
+          <div class="table-card">
+            <div class="table-card-header">
+              <h3 class="table-card-title">
+                <i data-lucide="arrow-up-right" style="width: 20px; height: 20px; color: #DC2626;"></i> Dernières Dépenses Saisies
+              </h3>
+              <a href="<?= RACINE ?>depense/list" style="font-size: 12px; font-weight: 700; color: #DC2626; text-decoration: none;">Voir tout &rarr;</a>
+            </div>
 
-          <div style="overflow-x: auto;">
-            <table class="custom-table">
-              <thead>
-                <tr>
-                  <th>Commercial</th>
-                  <th>Zone</th>
-                  <th style="text-align: right;">Montant</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php if (empty($recentVersements)): ?>
+            <div style="overflow-x: auto;">
+              <table class="custom-table">
+                <thead>
                   <tr>
-                    <td colspan="3" style="padding: 20px; text-align: center; color: #94A3B8;">Aucun versement commercial enregistré</td>
+                    <th>Motif / Libellé</th>
+                    <th style="text-align: right;">Montant</th>
                   </tr>
-                <?php else: ?>
-                  <?php foreach ($recentVersements as $v): ?>
+                </thead>
+                <tbody>
+                  <?php if (empty($recentDepenses)): ?>
                     <tr>
-                      <td style="font-weight: 600; color: #0F172A;">
-                        <?= htmlspecialchars(trim(($v['nom_commercial'] ?? '') . ' ' . ($v['prenom_commercial'] ?? ''))) ?>
-                      </td>
-                      <td style="color: #64748B;"><?= htmlspecialchars($v['libelle_zone'] ?? 'Non spécifiée') ?></td>
-                      <td style="text-align: right; font-weight: 800; color: #047857;"><?= number_format((float)($v['montant_versement'] ?? 0), 0, ',', ' ') ?> FCFA</td>
+                      <td colspan="2" style="padding: 20px; text-align: center; color: #94A3B8;">Aucune dépense récente enregistrée</td>
                     </tr>
-                  <?php endforeach; ?>
-                <?php endif; ?>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- TABLEAU 3 : Dernières Dépenses Engagées -->
-        <div class="table-card">
-          <div class="table-card-header">
-            <h3 class="table-card-title">
-              <i data-lucide="arrow-up-right" style="width: 20px; height: 20px; color: #DC2626;"></i> Dernières Dépenses Engagées
-            </h3>
-            <a href="<?= RACINE ?>depense/list" style="font-size: 12px; font-weight: 700; color: #DC2626; text-decoration: none;">Voir tout &rarr;</a>
+                  <?php else: ?>
+                    <?php foreach ($recentDepenses as $dep): ?>
+                      <tr>
+                        <td style="font-weight: 600; color: #0F172A;"><?= htmlspecialchars($dep['libelle_type_depense'] ?? ($dep['description_depense'] ?? 'Dépense')) ?></td>
+                        <td style="text-align: right; font-weight: 800; color: #DC2626;"><?= number_format((float)($dep['montant_depense'] ?? 0), 0, ',', ' ') ?> FCFA</td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div style="overflow-x: auto;">
-            <table class="custom-table">
-              <thead>
-                <tr>
-                  <th>Code Dépense</th>
-                  <th>Type / Motif</th>
-                  <th style="text-align: right;">Montant</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php if (empty($recentDepenses)): ?>
+        <?php elseif ($isGestionnaire): ?>
+
+          <!-- VUE GESTIONNAIRE : Table 1 - Distributions de Packs à Effectuer -->
+          <div class="table-card" style="grid-column: span 2;">
+            <div class="table-card-header">
+              <h3 class="table-card-title">
+                <i data-lucide="truck" style="width: 20px; height: 20px; color: #7E22CE;"></i> Suivi des Remises & Distributions de Packs
+              </h3>
+              <a href="<?= RACINE ?>distribution/list" style="font-size: 12px; font-weight: 700; color: #7E22CE; text-decoration: none;">Gérer les livraisons &rarr;</a>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-table">
+                <thead>
                   <tr>
-                    <td colspan="3" style="padding: 20px; text-align: center; color: #94A3B8;">Aucune dépense enregistrée</td>
+                    <th>Code Client / Nom</th>
+                    <th>Téléphone</th>
+                    <th>Pack Éligible</th>
+                    <th style="text-align: center;">Statut Remise</th>
                   </tr>
-                <?php else: ?>
-                  <?php foreach ($recentDepenses as $dep): ?>
+                </thead>
+                <tbody>
+                  <?php if (empty($pendingDistributions)): ?>
                     <tr>
-                      <td style="font-weight: 700; color: #DC2626; font-family: monospace;">
-                        <?= htmlspecialchars($dep['code_depense'] ?? '-') ?>
-                      </td>
-                      <td style="font-weight: 600; color: #0F172A;"><?= htmlspecialchars($dep['libelle_type_depense'] ?? ($dep['description_depense'] ?? 'Charge générale')) ?></td>
-                      <td style="text-align: right; font-weight: 800; color: #DC2626;"><?= number_format((float)($dep['montant_depense'] ?? 0), 0, ',', ' ') ?> FCFA</td>
+                      <td colspan="4" style="padding: 20px; text-align: center; color: #94A3B8;">Aucune distribution en attente pour le moment</td>
                     </tr>
-                  <?php endforeach; ?>
-                <?php endif; ?>
-              </tbody>
-            </table>
+                  <?php else: ?>
+                    <?php foreach ($pendingDistributions as $pd): ?>
+                      <tr>
+                        <td style="font-weight: 700; color: #0F172A;"><?= htmlspecialchars($pd['nom_client'] ?? 'Client') ?></td>
+                        <td style="color: #64748B;"><?= htmlspecialchars($pd['telephone_client'] ?? '-') ?></td>
+                        <td style="font-weight: 600; color: #7E22CE;"><?= htmlspecialchars($pd['libelle_pack'] ?? 'Pack') ?></td>
+                        <td style="text-align: center;">
+                          <span style="background: #FEF3C7; color: #B45309; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">Prêt à livrer</span>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+        <?php elseif ($isCommercial): ?>
+
+          <!-- VUE COMMERCIAL : Table 1 - Mes Dernières Cotisations Encaissées -->
+          <div class="table-card">
+            <div class="table-card-header">
+              <h3 class="table-card-title">
+                <i data-lucide="coins" style="width: 20px; height: 20px; color: #D97706;"></i> Mes Dernières Cotisations Encaissées
+              </h3>
+              <a href="<?= RACINE ?>cotisation/list" style="font-size: 12px; font-weight: 700; color: #D97706; text-decoration: none;">Voir tout &rarr;</a>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Client</th>
+                    <th style="text-align: right;">Montant</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php if (empty($recentCotisations)): ?>
+                    <tr>
+                      <td colspan="2" style="padding: 20px; text-align: center; color: #94A3B8;">Aucune cotisation récente enregistrée</td>
+                    </tr>
+                  <?php else: ?>
+                    <?php foreach ($recentCotisations as $c): ?>
+                      <tr>
+                        <td style="font-weight: 600; color: #0F172A;"><?= htmlspecialchars($c['nom_client'] ?? '-') ?></td>
+                        <td style="text-align: right; font-weight: 800; color: #059669;"><?= number_format((float)($c['montant_cautisation_client'] ?? 0), 0, ',', ' ') ?> FCFA</td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- VUE COMMERCIAL : Table 2 - Mes Derniers Versements Déclarés -->
+          <div class="table-card">
+            <div class="table-card-header">
+              <h3 class="table-card-title">
+                <i data-lucide="arrow-down-left" style="width: 20px; height: 20px; color: #059669;"></i> Mes Derniers Versements Caisse
+              </h3>
+              <a href="<?= RACINE ?>versement/list" style="font-size: 12px; font-weight: 700; color: #059669; text-decoration: none;">Voir tout &rarr;</a>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Date Versement</th>
+                    <th style="text-align: right;">Montant</th>
+                    <th style="text-align: center;">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php if (empty($recentVersements)): ?>
+                    <tr>
+                      <td colspan="3" style="padding: 20px; text-align: center; color: #94A3B8;">Aucun versement déclaré</td>
+                    </tr>
+                  <?php else: ?>
+                    <?php foreach ($recentVersements as $v): ?>
+                      <tr>
+                        <td style="color: #64748B;"><?= date('d/m/Y', strtotime($v['created_at_versement'] ?? 'now')) ?></td>
+                        <td style="text-align: right; font-weight: 800; color: #047857;"><?= number_format((float)($v['montant_versement'] ?? 0), 0, ',', ' ') ?> FCFA</td>
+                        <td style="text-align: center;">
+                          <?php if (($v['statut_versement'] ?? '') === 'valide'): ?>
+                            <span style="background: #DCFCE7; color: #15803D; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">Validé</span>
+                          <?php else: ?>
+                            <span style="background: #FEF3C7; color: #B45309; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">En attente</span>
+                          <?php endif; ?>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        <?php else: ?>
+
+          <!-- VUE SUPERVISION GLOBALE (ADMIN) : 3 TABLEAUX COMPLETS -->
+          
+          <!-- TABLEAU 1 : Dernières Cotisations Clients -->
+          <div class="table-card">
+            <div class="table-card-header">
+              <h3 class="table-card-title">
+                <i data-lucide="coins" style="width: 20px; height: 20px; color: #D97706;"></i> Dernières Cotisations Clients
+              </h3>
+              <a href="<?= RACINE ?>cotisation/list" style="font-size: 12px; font-weight: 700; color: #D97706; text-decoration: none;">Voir tout &rarr;</a>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Client</th>
+                    <th style="text-align: right;">Montant</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php if (empty($recentCotisations)): ?>
+                    <tr>
+                      <td colspan="3" style="padding: 20px; text-align: center; color: #94A3B8;">Aucune cotisation récente</td>
+                    </tr>
+                  <?php else: ?>
+                    <?php foreach ($recentCotisations as $c): ?>
+                      <tr>
+                        <td style="font-weight: 700; color: #D97706; font-family: monospace;"><?= htmlspecialchars($c['code_cautisation_client'] ?? '-') ?></td>
+                        <td style="font-weight: 600; color: #0F172A;"><?= htmlspecialchars($c['nom_client'] ?? '-') ?></td>
+                        <td style="text-align: right; font-weight: 800; color: #059669;"><?= number_format((float)($c['montant_cautisation_client'] ?? 0), 0, ',', ' ') ?> FCFA</td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TABLEAU 2 : Derniers Versements Commerciaux -->
+          <div class="table-card">
+            <div class="table-card-header">
+              <h3 class="table-card-title">
+                <i data-lucide="arrow-down-left" style="width: 20px; height: 20px; color: #059669;"></i> Derniers Versements Commerciaux
+              </h3>
+              <a href="<?= RACINE ?>versement/list" style="font-size: 12px; font-weight: 700; color: #059669; text-decoration: none;">Voir tout &rarr;</a>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Commercial</th>
+                    <th>Zone</th>
+                    <th style="text-align: right;">Montant</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php if (empty($recentVersements)): ?>
+                    <tr>
+                      <td colspan="3" style="padding: 20px; text-align: center; color: #94A3B8;">Aucun versement enregistré</td>
+                    </tr>
+                  <?php else: ?>
+                    <?php foreach ($recentVersements as $v): ?>
+                      <tr>
+                        <td style="font-weight: 600; color: #0F172A;"><?= htmlspecialchars(trim(($v['nom_commercial'] ?? '') . ' ' . ($v['prenom_commercial'] ?? ''))) ?></td>
+                        <td style="color: #64748B;"><?= htmlspecialchars($v['libelle_zone'] ?? 'N/A') ?></td>
+                        <td style="text-align: right; font-weight: 800; color: #047857;"><?= number_format((float)($v['montant_versement'] ?? 0), 0, ',', ' ') ?> FCFA</td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TABLEAU 3 : Dernières Dépenses Engagées -->
+          <div class="table-card">
+            <div class="table-card-header">
+              <h3 class="table-card-title">
+                <i data-lucide="arrow-up-right" style="width: 20px; height: 20px; color: #DC2626;"></i> Dernières Dépenses Engagées
+              </h3>
+              <a href="<?= RACINE ?>depense/list" style="font-size: 12px; font-weight: 700; color: #DC2626; text-decoration: none;">Voir tout &rarr;</a>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Type / Motif</th>
+                    <th style="text-align: right;">Montant</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php if (empty($recentDepenses)): ?>
+                    <tr>
+                      <td colspan="2" style="padding: 20px; text-align: center; color: #94A3B8;">Aucune dépense enregistrée</td>
+                    </tr>
+                  <?php else: ?>
+                    <?php foreach ($recentDepenses as $dep): ?>
+                      <tr>
+                        <td style="font-weight: 600; color: #0F172A;"><?= htmlspecialchars($dep['libelle_type_depense'] ?? ($dep['description_depense'] ?? 'Charge')) ?></td>
+                        <td style="text-align: right; font-weight: 800; color: #DC2626;"><?= number_format((float)($dep['montant_depense'] ?? 0), 0, ',', ' ') ?> FCFA</td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        <?php endif; ?>
 
       </div>
 
@@ -802,5 +1193,3 @@ $(document).ready(function() {
   }
 });
 </script>
-
-<?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

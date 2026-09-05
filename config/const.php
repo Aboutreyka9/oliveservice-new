@@ -35,7 +35,6 @@ class TABLES
     public const ANNEES                 = 'annees';
     public const SESSIONS               = 'sessions';
     public const ZONES                  = 'zones';
-    public const ZONE_COMMERCIALS       = 'zone_commercials';
     public const FONCTIONS              = 'fonctions';
     public const USERS                  = 'users';
     public const ROLES                  = 'roles';
@@ -114,7 +113,6 @@ class STATUTS
     public const CAUTISATIONS        = ['En attente','valide','ennule'];
     public const DISTRIBUTIONS       = ['En attente','valide','ennule'];
     public const ZONES               = ['actif','inactif'];
-    public const ZONE_COMMERCIALS    = ['actif','inactif'];
 
     // FINANCES
     public const PAIEMENTS           = ['valide','annule','en_attente'];

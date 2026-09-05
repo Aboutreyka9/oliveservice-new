@@ -218,4 +218,38 @@ class ModelHome extends BaseModel
             return [];
         }
     }
+
+    public function getPendingVersements(int $limit = 5): array
+    {
+        try {
+            $db = $this->pdo->getCon();
+            $sql = "SELECT v.*, u.nom_user as nom_commercial, u.prenom_user as prenom_commercial, z.libelle_zone
+                    FROM versements_commerciaux v
+                    LEFT JOIN users u ON u.code_user = v.commercial_code
+                    LEFT JOIN zones z ON z.code_zone = v.zone_code
+                    WHERE v.statut_versement = 'En attente'
+                    ORDER BY v.id_versement DESC LIMIT " . (int)$limit;
+            return $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            error_log("ModelHome::getPendingVersements error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getPendingDistributions(int $limit = 5): array
+    {
+        try {
+            $db = $this->pdo->getCon();
+            $sql = "SELECT d.*, cl.nom_client, cl.telephone_client, p.libelle_pack
+                    FROM distributions d
+                    LEFT JOIN souscriptions s ON s.code_souscription = d.souscription_code
+                    LEFT JOIN clients cl ON cl.code_client = s.client_code
+                    LEFT JOIN packs p ON p.code_pack = s.pack_code
+                    ORDER BY d.id_distribution DESC LIMIT " . (int)$limit;
+            return $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            error_log("ModelHome::getPendingDistributions error: " . $e->getMessage());
+            return [];
+        }
+    }
 }
