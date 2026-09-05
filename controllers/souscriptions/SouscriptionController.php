@@ -235,6 +235,7 @@ class SouscriptionController extends BaseController
             }
 
             $packSouscrit = $this->model->getPackSouscrit($item['code_souscription']);
+            $allPacks = $this->model->getPacksSouscrits($item['code_souscription']);
             $soldeRestant = $this->model->getSoldeRestant($item['code_souscription']);
             $joursRestants = $this->model->getJoursRestants($item['code_souscription']);
 
@@ -261,10 +262,49 @@ class SouscriptionController extends BaseController
             'item' => $item,
             'client' => $client,
             'packSouscrit' => $packSouscrit,
+            'allPacks' => $allPacks,
             'soldeRestant' => $soldeRestant,
             'joursRestants' => $joursRestants,
             'cotisations' => $cotisations,
             'encryptedId' => $encryptedId
+        ]);
+    }
+
+    public function edition($edition)
+    {
+        $this->requireAuth();
+
+        if (Context::isCommercial()) {
+            $this->renderNotFound("Action non autorisée. Les commerciaux ne peuvent pas modifier les souscriptions.");
+            return;
+        }
+
+        try {
+            $id = $this->validator->decrypter($edition);
+            $item = $this->model->getById($id);
+            if (!$item) {
+                $this->renderNotFound("La souscription demandée est introuvable.");
+                return;
+            }
+
+            $modelClient = new ModelClient();
+            $modelPack = new ModelPack();
+            $modelSession = new ModelSession();
+
+            $clients = $modelClient->getAll();
+            $packs = $modelPack->getAll();
+            $sessions = $modelSession->getAll();
+
+        } catch (Exception $e) {
+            $this->renderNotFound("La souscription demandée est introuvable.");
+            return;
+        }
+
+        $this->loadView('../views/souscriptions/edit.php', [
+            'item' => $item,
+            'clients' => $clients,
+            'packs' => $packs,
+            'sessions' => $sessions
         ]);
     }
 

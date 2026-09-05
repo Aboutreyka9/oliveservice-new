@@ -75,6 +75,26 @@ class ModelSouscription extends BaseModel
         }
     }
 
+    public function getPacksSouscrits(string $souscriptionCode): array
+    {
+        try {
+            $sql = "
+                SELECT p.code_pack, p.libelle_pack, p.prix_cotisation_pack, p.nombre_articles, cp.libelle_categorie_pack, sess.nombre_jour_session
+                FROM pack_souscriptions ps
+                JOIN packs p ON p.code_pack = ps.pack_code
+                LEFT JOIN categorie_packs cp ON cp.code_categorie_pack = p.categorie_pack_code
+                LEFT JOIN sessions sess ON sess.code_session = p.session_code
+                WHERE ps.souscription_code = ?
+            ";
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute([$souscriptionCode]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            error_log("ModelSouscription::getPacksSouscrits error: " . $e->getMessage());
+            return [];
+        }
+    }
+
     public function getByCode(string $code): ?array
     {
         $row = $this->getByElement('code_souscription', $code);

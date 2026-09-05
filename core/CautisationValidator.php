@@ -184,4 +184,36 @@ class CautisationValidator
     {
         return $prefix . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 10));
     }
+
+    /**
+     * Calcule le nombre de jours à partir du montant et du prix par jour
+     */
+    public static function calculateDaysFromAmount(float $montant, float $prixCotisation): int
+    {
+        if ($prixCotisation <= 0) return 0;
+        return (int) floor($montant / $prixCotisation);
+    }
+
+    /**
+     * Calcule le pourcentage de progression
+     */
+    public static function calculateProgressPercentage(float $totalCotise, float $totalPrevu): float
+    {
+        if ($totalPrevu <= 0) return 0;
+        return min(100, round(($totalCotise / $totalPrevu) * 100, 1));
+    }
+
+    /**
+     * Valide le paiement par rapport au solde restant
+     */
+    public static function validatePayment(float $montant, float $soldeRestant): array
+    {
+        if ($montant <= 0) {
+            return ['valid' => false, 'message' => 'Le montant doit être supérieur à 0 FCFA.'];
+        }
+        if ($montant > $soldeRestant && $soldeRestant > 0) {
+            return ['valid' => false, 'message' => 'Le montant de la cotisation dépasse le solde restant dû (' . number_format($soldeRestant, 0, ',', ' ') . ' FCFA).'];
+        }
+        return ['valid' => true, 'message' => 'OK'];
+    }
 }
