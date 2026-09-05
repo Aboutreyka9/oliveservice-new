@@ -1,5 +1,5 @@
 /**
- * Module Caisse Commercial - Olive Service
+ * Module Caisse Commercial - Administration Olive Service / GEICG
  * Registre des caisses journalières pour commerciaux et validation comptable
  */
 
@@ -16,65 +16,88 @@ $(function() {
       processing: true,
       autoWidth: false,
       columns: [
-        { data: 'id_cloture', defaultContent: '-' },
+        { data: 'id_cloture', defaultContent: '-', width: '50px' },
         { 
           data: 'code_cloture', 
-          render: (d) => `<code style="font-weight:700; color:#475569;">${d || '-'}</code>` 
+          width: '140px',
+          render: (d, type) => {
+            if (type !== 'display') return d || '';
+            return `<code style="font-weight:700; color:#1E3A5F; background:#F1F5F9; padding:4px 8px; border-radius:6px; font-size:12px; border:1px solid #CBD5E1;">${d || '-'}</code>`;
+          } 
         },
-        { data: 'date_cloture', defaultContent: '-' },
-        { data: 'nom_auteur_complet', defaultContent: '-' },
+        { data: 'date_cloture', defaultContent: '-', render: (d, type) => {
+          if (type !== 'display') return d || '';
+          return `<span style="color:#334155; font-weight:600;">${d || '-'}</span>`;
+        }},
+        { data: 'nom_auteur_complet', defaultContent: '-', render: (d, type) => {
+          if (type !== 'display') return d || '';
+          return `<strong style="color:#0F172A; font-weight:800;">${d || '-'}</strong>`;
+        }},
         { 
           data: 'total_especes', 
-          render: (d) => d ? Number(d).toLocaleString('fr-FR') + ' F' : '0 F' 
+          render: (d, type) => {
+            if (type !== 'display') return d || 0;
+            return `<span style="color:#1E3A5F; font-weight:700;">${d ? Number(d).toLocaleString('fr-FR') + ' F' : '0 F'}</span>`;
+          } 
         },
         { 
           data: 'total_mobile_money', 
-          render: (d) => d ? Number(d).toLocaleString('fr-FR') + ' F' : '0 F' 
+          render: (d, type) => {
+            if (type !== 'display') return d || 0;
+            return `<span style="color:#7E22CE; font-weight:700;">${d ? Number(d).toLocaleString('fr-FR') + ' F' : '0 F'}</span>`;
+          } 
         },
         { 
           data: 'total_cheque_virement', 
-          render: (d) => d ? Number(d).toLocaleString('fr-FR') + ' F' : '0 F' 
+          render: (d, type) => {
+            if (type !== 'display') return d || 0;
+            return `<span style="color:#0284C7; font-weight:700;">${d ? Number(d).toLocaleString('fr-FR') + ' F' : '0 F'}</span>`;
+          } 
         },
         { 
           data: 'total_general', 
-          render: (d) => `<strong style="color:#0F172A;">${d ? Number(d).toLocaleString('fr-FR') + ' FCFA' : '0 FCFA'}</strong>` 
+          render: (d, type) => {
+            if (type !== 'display') return d || 0;
+            return `<strong style="color:#059669; font-size:14px; font-weight:800;">${d ? Number(d).toLocaleString('fr-FR') + ' FCFA' : '0 FCFA'}</strong>`;
+          } 
         },
         { 
           data: 'statut_cloture', 
-          width: '130px', 
+          width: '140px', 
           className: 'text-center', 
           render: function(d, type, row) {
+            if (type !== 'display') return d || 'attente';
             const val = d || 'attente';
-            const bgColors = { 'valide': '#DCFCE7', 'attente': '#FEF3C7', 'rejete': '#FEE2E2' };
-            const textColors = { 'valide': '#15803D', 'attente': '#B45309', 'rejete': '#B91C1C' };
-            const borderColors = { 'valide': '#86EFAC', 'attente': '#FCD34D', 'rejete': '#FCA5A5' };
+            const bgColors = { 'valide': '#ECFDF5', 'attente': '#FEF3C7', 'rejete': '#FEE2E2' };
+            const textColors = { 'valide': '#059669', 'attente': '#D97706', 'rejete': '#DC2626' };
+            const borderColors = { 'valide': '#A7F3D0', 'attente': '#FDE68A', 'rejete': '#FECACA' };
             const currentBg = bgColors[val] || '#F1F5F9';
             const currentText = textColors[val] || '#334155';
             const currentBorder = borderColors[val] || '#CBD5E1';
 
             if (isCommercial) {
               const labels = { 'valide': 'Validée', 'attente': 'En attente', 'rejete': 'Rejetée' };
-              return `<span class="badge" style="background:${currentBg}; color:${currentText}; border:1px solid ${currentBorder}; padding:6px 10px; font-weight:700;">${labels[val] || val}</span>`;
+              return `<span class="badge" style="background:${currentBg}; color:${currentText}; border:1px solid ${currentBorder}; padding:6px 12px; font-weight:800; border-radius:20px; font-size:11px;">${labels[val] || val}</span>`;
             }
 
             return `
-              <select class="select-statut-cloture" data-id="${row.id_cloture}" style="background:${currentBg}; color:${currentText}; border:1px solid ${currentBorder}; font-weight:700; font-size:12px; border-radius:8px; padding:4px 8px; cursor:pointer; outline:none;">
-                <option value="attente" ${val === 'attente' ? 'selected' : ''} style="background:#fff; color:#B45309;">En attente</option>
-                <option value="valide" ${val === 'valide' ? 'selected' : ''} style="background:#fff; color:#15803D;">Validée</option>
-                <option value="rejete" ${val === 'rejete' ? 'selected' : ''} style="background:#fff; color:#B91C1C;">Rejetée</option>
+              <select class="select-statut-cloture" data-id="${row.id_cloture}" style="background:${currentBg}; color:${currentText}; border:1px solid ${currentBorder}; font-weight:800; font-size:12px; border-radius:10px; padding:6px 10px; cursor:pointer; outline:none;">
+                <option value="attente" ${val === 'attente' ? 'selected' : ''} style="background:#fff; color:#D97706;">En attente</option>
+                <option value="valide" ${val === 'valide' ? 'selected' : ''} style="background:#fff; color:#059669;">Validée</option>
+                <option value="rejete" ${val === 'rejete' ? 'selected' : ''} style="background:#fff; color:#DC2626;">Rejetée</option>
               </select>`;
           } 
         },
         { 
           data: null, 
+          width: '100px', 
           orderable: false, 
           className: 'text-end',
           render: function(d) {
             const editId = d.editId || d.id_cloture;
             return `
-              <a href="${racine}caisse_commercial/details/${editId}" class="btn btn-sm btn-info me-1">
-                <i data-lucide="eye" style="width:14px;height:14px;"></i> Détails
-              </a>`;
+              <a href="${racine}caisse_commercial/details/${editId}" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir détails"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>
+            `;
           } 
         }
       ],
@@ -166,11 +189,11 @@ $(function() {
 
                 let badgeStatut = '';
                 if (l.statut_cloture === 'valide') {
-                  badgeStatut = '<span style="background: #DCFCE7; color: #15803D; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 12px;">Validée par Finance</span>';
+                  badgeStatut = '<span style="background: #ECFDF5; color: #059669; font-weight: 800; font-size: 12px; padding: 6px 14px; border-radius: 20px; border: 1px solid #A7F3D0;">Validée par Finance</span>';
                 } else if (l.statut_cloture === 'rejete') {
-                  badgeStatut = '<span style="background: #FEE2E2; color: #B91C1C; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 12px;">Rejetée</span>';
+                  badgeStatut = '<span style="background: #FEE2E2; color: #DC2626; font-weight: 800; font-size: 12px; padding: 6px 14px; border-radius: 20px; border: 1px solid #FECACA;">Rejetée</span>';
                 } else {
-                  badgeStatut = '<span style="background: #FEF3C7; color: #B45309; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 12px;">En attente de validation</span>';
+                  badgeStatut = '<span style="background: #FEF3C7; color: #D97706; font-weight: 800; font-size: 12px; padding: 6px 14px; border-radius: 20px; border: 1px solid #FDE68A;">En attente de validation</span>';
                 }
                 $('#last_statut_lbl').html(badgeStatut);
 
@@ -203,18 +226,18 @@ $(function() {
       list.forEach(function(item) {
         const isValide = (item.statut === 'valide');
         const badge = isValide 
-          ? '<span style="background: #DCFCE7; color: #166534; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 12px; border: 1px solid #86EFAC;">Validée</span>'
-          : '<span style="background: #FEF3C7; color: #B45309; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 12px; border: 1px solid #FCD34D;">En attente</span>';
+          ? '<span style="background: #ECFDF5; color: #059669; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid #A7F3D0;">Validée</span>'
+          : '<span style="background: #FEF3C7; color: #D97706; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid #FDE68A;">En attente</span>';
 
-        const modeBadge = `<span style="background: #F1F5F9; color: #334155; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1;">${item.mode_paiement || 'ESPECES'}</span>`;
+        const modeBadge = `<span style="background: #F1F5F9; color: #1E3A5F; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1;">${item.mode_paiement || 'ESPECES'}</span>`;
 
         $tbody.append(`
           <tr style="border-bottom: 1px solid #F1F5F9;">
-            <td style="padding: 12px 14px;"><code style="font-weight:700; color:#1E3A5F; font-size: 12px;">${item.code_souscription || '-'}</code></td>
-            <td style="padding: 12px 14px;"><strong style="color: #0F172A; font-size: 13px;">${item.nom_client || 'Client'}</strong><br><small style="color:#64748B;">${item.telephone_client || '-'}</small></td>
-            <td style="padding: 12px 14px;"><strong style="color:#15803D; font-size: 13px;">${item.montant_fmt || '0 FCFA'}</strong></td>
+            <td style="padding: 12px 14px;"><code style="font-weight:700; color:#1E3A5F; font-size: 12px; background:#F1F5F9; padding:2px 6px; border-radius:4px;">${item.code_souscription || '-'}</code></td>
+            <td style="padding: 12px 14px;"><strong style="color: #0F172A; font-size: 13px; font-weight:800;">${item.nom_client || 'Client'}</strong><br><small style="color:#64748B;">${item.telephone_client || '-'}</small></td>
+            <td style="padding: 12px 14px;"><strong style="color:#059669; font-size: 13px; font-weight:800;">${item.montant_fmt || '0 FCFA'}</strong></td>
             <td style="padding: 12px 14px;">${modeBadge}</td>
-            <td style="padding: 12px 14px; color: #475569;">${item.date_cautisation || '-'}</td>
+            <td style="padding: 12px 14px; color: #475569; font-weight:600;">${item.date_cautisation || '-'}</td>
             <td style="padding: 12px 14px;"><strong style="color:#0F172A;">${item.date_prochain_rdv || '-'}</strong></td>
             <td style="padding: 12px 14px;">${badge}</td>
           </tr>
