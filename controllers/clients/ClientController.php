@@ -230,6 +230,27 @@ class ClientController extends BaseController
             $stmtSous->execute($params);
             $souscriptions = $stmtSous->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+            // Récupérer la liste des cotisations (versements) effectuées par ce client
+            $sqlCot = "
+                SELECT cc.*, s.code_souscription
+                FROM cautisation_clients cc
+                LEFT JOIN souscriptions s ON s.code_souscription = cc.souscription_code
+                WHERE (cc.client_code = ? OR s.client_code = ?)
+            ";
+            $paramsCot = [$item['code_client'], $item['code_client']];
+
+            if (Context::isCommercial()) {
+                $sqlCot .= " AND (cc.user_code = ? OR cc.commercial_code = ?)";
+                $paramsCot[] = Context::user();
+                $paramsCot[] = Context::user();
+            }
+
+            $sqlCot .= " ORDER BY cc.created_at_cautisation_client DESC";
+
+            $stmtCot = $this->model->getCon()->prepare($sqlCot);
+            $stmtCot->execute($paramsCot);
+            $cotisations = $stmtCot->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             $this->renderNotFound("Le client demandé est introuvable.");
@@ -238,6 +259,7 @@ class ClientController extends BaseController
         $this->loadView('../views/clients/details.php', [
             'item' => $item,
             'souscriptions' => $souscriptions,
+            'cotisations' => $cotisations,
             'encryptedId' => $encryptedId
         ]);
     }
