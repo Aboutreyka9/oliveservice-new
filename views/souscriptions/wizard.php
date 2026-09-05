@@ -96,9 +96,11 @@
                   <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Session d'activité <span style="color: #EF4444;">*</span></label>
                   <select id="filter-session" class="form-control select2" style="width: 100%; box-sizing: border-box;" required>
                     <option value="">-- Choisir une session --</option>
-                    <?php foreach ($sessions as $s): ?>
-                      <option value="<?= $s['code_session'] ?>"><?= htmlspecialchars($s['libelle_session']) ?></option>
-                    <?php endforeach; ?>
+                    <?php if (!empty($sessions) && is_array($sessions)): ?>
+                      <?php foreach ($sessions as $s): ?>
+                        <option value="<?= $s['code_session'] ?>"><?= htmlspecialchars($s['libelle_session']) ?></option>
+                      <?php endforeach; ?>
+                    <?php endif; ?>
                   </select>
                 </div>
 
@@ -106,9 +108,11 @@
                   <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Catégorie</label>
                   <select id="filter-categorie" class="form-control select2" style="width: 100%; box-sizing: border-box;">
                     <option value="">Toutes les catégories</option>
-                    <?php foreach ($categories as $cat): ?>
-                      <option value="<?= $cat['code_categorie_pack'] ?>"><?= htmlspecialchars($cat['libelle_categorie_pack']) ?></option>
-                    <?php endforeach; ?>
+                    <?php if (!empty($categories) && is_array($categories)): ?>
+                      <?php foreach ($categories as $cat): ?>
+                        <option value="<?= $cat['code_categorie_pack'] ?>"><?= htmlspecialchars($cat['libelle_categorie_pack']) ?></option>
+                      <?php endforeach; ?>
+                    <?php endif; ?>
                   </select>
                 </div>
               </div>
@@ -135,19 +139,63 @@
                 <i data-lucide="check-circle-2" style="width: 16px; height: 16px; color: #1E3A5F;"></i> Étape 3 : Récapitulatif et validation
               </h3>
 
-              <!-- CARD CLIENT -->
-              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-bottom: 24px;">
-                <h4 style="font-size: 14px; font-weight: 800; color: #1E3A5F; margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
-                  <i data-lucide="user" style="width: 16px; height: 16px; color: #1E3A5F;"></i> Informations du client
-                </h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 14px; color: #334155;">
-                  <div><strong>Nom :</strong> <span id="recap-nom"></span></div>
-                  <div><strong>Prénom :</strong> <span id="recap-prenom"></span></div>
-                  <div><strong>Téléphone :</strong> <span id="recap-telephone"></span></div>
-                  <div><strong>Email :</strong> <span id="recap-email"></span></div>
-                  <div><strong>Genre :</strong> <span id="recap-sexe"></span></div>
-                  <div><strong>Lieu de résidence :</strong> <span id="recap-lieu"></span></div>
-                  <div><strong>Profession :</strong> <span id="recap-profession"></span></div>
+              <!-- CARD CLIENT PREMIUM -->
+              <div style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); border-radius: 12px; padding: 20px; color: #FFFFFF; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.15); flex-wrap: wrap;">
+                  <div style="display: flex; align-items: center; gap: 14px;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+                      <i data-lucide="user" style="width: 24px; height: 24px; color: #38BDF8;"></i>
+                    </div>
+                    <div>
+                      <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #93C5FD; font-weight: 700; display: block;">Client souscripteur</span>
+                      <h4 id="recap-nom" style="font-size: 18px; font-weight: 800; margin: 2px 0 0 0; color: #FFFFFF;">-</h4>
+                    </div>
+                  </div>
+                  <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38BDF8; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.3);">
+                    <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i> Profil Client
+                  </span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="phone" style="width: 18px; height: 18px; color: #38BDF8; flex-shrink: 0;"></i>
+                    <div>
+                      <span style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 700;">Téléphone</span>
+                      <span id="recap-telephone" style="font-size: 13px; font-weight: 700; color: #F8FAFC;">-</span>
+                    </div>
+                  </div>
+
+                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="user-check" style="width: 18px; height: 18px; color: #38BDF8; flex-shrink: 0;"></i>
+                    <div>
+                      <span style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 700;">Genre</span>
+                      <span id="recap-sexe" style="font-size: 13px; font-weight: 700; color: #F8FAFC;">-</span>
+                    </div>
+                  </div>
+
+                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="map-pin" style="width: 18px; height: 18px; color: #38BDF8; flex-shrink: 0;"></i>
+                    <div>
+                      <span style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 700;">Résidence</span>
+                      <span id="recap-lieu" style="font-size: 13px; font-weight: 700; color: #F8FAFC;">-</span>
+                    </div>
+                  </div>
+
+                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="mail" style="width: 18px; height: 18px; color: #38BDF8; flex-shrink: 0;"></i>
+                    <div>
+                      <span style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 700;">Email</span>
+                      <span id="recap-email" style="font-size: 13px; font-weight: 700; color: #F8FAFC;">-</span>
+                    </div>
+                  </div>
+
+                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="briefcase" style="width: 18px; height: 18px; color: #38BDF8; flex-shrink: 0;"></i>
+                    <div>
+                      <span style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 700;">Profession</span>
+                      <span id="recap-profession" style="font-size: 13px; font-weight: 700; color: #F8FAFC;">-</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -161,18 +209,21 @@
                     <tr style="background: #F8FAFC; text-align: left; color: #64748B;">
                       <th style="padding: 10px 12px;">Pack</th>
                       <th style="padding: 10px 12px;">Catégorie</th>
-                      <th style="padding: 10px 12px; text-align: right;">Montant (FCFA)</th>
+                      <th style="padding: 10px 12px; text-align: right;">Montant/Jour</th>
                       <th style="padding: 10px 12px; text-align: center;">Articles</th>
                       <th style="padding: 10px 12px; text-align: center;">Durée (jours)</th>
+                      <th style="padding: 10px 12px; text-align: right;">Cotisation Pack (Total)</th>
                       <th style="padding: 10px 12px; text-align: center;">Action</th>
                     </tr>
                   </thead>
                   <tbody id="recap-packs-body"></tbody>
                   <tfoot>
                     <tr style="background: #F1F5F9; font-weight: 800; color: #1E3A5F;">
-                      <td colspan="2" style="padding: 12px; text-align: right;">Montant total :</td>
+                      <td colspan="2" style="padding: 12px; text-align: right;">Total Cotisation / Jour :</td>
+                      <td id="recap-cotis-jour-total" style="padding: 12px; text-align: right; color: #2563EB; font-size: 15px;">0 FCFA</td>
+                      <td colspan="2" style="padding: 12px; text-align: right;">Total Prévu Souscription :</td>
                       <td id="recap-montant-total" style="padding: 12px; text-align: right; color: #15803D; font-size: 16px;">0 FCFA</td>
-                      <td colspan="3"></td>
+                      <td></td>
                     </tr>
                   </tfoot>
                 </table>
@@ -293,42 +344,68 @@ function loadPacks() {
 }
 
 function renderRecap() {
+  // 1. Remplissage dynamique des informations client
+  $('#recap-nom').text($('#nom_client').val().trim() || '-');
+  $('#recap-telephone').text($('#telephone_client').val().trim() || '-');
+  var sexeVal = $('#sexe_client').val();
+  var sexeTxt = sexeVal === 'M' ? 'Masculin' : (sexeVal === 'F' ? 'Féminin' : '-');
+  $('#recap-sexe').text(sexeTxt);
+  $('#recap-lieu').text($('#lieu_residence_client').val().trim() || '-');
+  $('#recap-email').text($('#email_client').val().trim() || '-');
+  $('#recap-profession').text($('#profession_client').val().trim() || '-');
+
+  // 2. Remplissage dynamique des packs sélectionnés
   var tbody = $('#recap-packs-body');
   tbody.empty();
-  var montantTotal = 0;
+  var totalCotisJour = 0;
+  var totalPrévuGlobal = 0;
+  var sessionCode = $('#filter-session').val();
 
-  selectedPacks.forEach(function(code) {
-    $.ajax({
-      url: '<?= RACINE ?>souscription/wizardData',
-      data: { session_code: $('#hidden-session_code').val(), categorie_code: '' },
-      dataType: 'json',
-      async: false,
-      success: function(res) {
-        if (res.status === 1) {
+  if (!sessionCode || selectedPacks.length === 0) {
+    tbody.html('<tr><td colspan="7" style="padding: 20px; text-align: center; color: #94A3B8;">Aucun pack sélectionné.</td></tr>');
+    $('#recap-cotis-jour-total').text('0 FCFA');
+    $('#recap-montant-total').text('0 FCFA');
+    return;
+  }
+
+  $.ajax({
+    url: '<?= RACINE ?>souscription/wizardData',
+    data: { session_code: sessionCode, categorie_code: '' },
+    dataType: 'json',
+    success: function(res) {
+      if (res.status === 1 && res.data && res.data.length) {
+        selectedPacks.forEach(function(code) {
           var pack = res.data.find(function(p) { return p.code_pack === code; });
           if (pack) {
-            montantTotal += parseFloat(pack.prix_cotisation_pack || 0);
+            var cotisJour = parseFloat(pack.prix_cotisation_pack || 0);
+            var dureeJours = parseInt(pack.nombre_jour_session || 0);
+            var totalCotisationPack = cotisJour * dureeJours;
+
+            totalCotisJour += cotisJour;
+            totalPrévuGlobal += totalCotisationPack;
+
             var row = '<tr data-code="' + pack.code_pack + '" style="border-bottom: 1px solid #E2E8F0;">' +
               '<td style="padding: 10px 12px; font-weight: 700; color: #0F172A;">' + (pack.libelle_pack || 'Pack') + '</td>' +
               '<td style="padding: 10px 12px;"><span style="display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: #1E3A5F; color: #FFF;">' + (pack.libelle_categorie_pack || '') + '</span></td>' +
-              '<td style="padding: 10px 12px; text-align: right; font-weight: 700; color: #15803D;">' + Number(pack.prix_cotisation_pack || 0).toLocaleString('fr-FR') + ' FCFA</td>' +
+              '<td style="padding: 10px 12px; text-align: right; font-weight: 700; color: #2563EB;">' + cotisJour.toLocaleString('fr-FR') + ' FCFA</td>' +
               '<td style="padding: 10px 12px; text-align: center;">' + (pack.nombre_articles || 0) + '</td>' +
-              '<td style="padding: 10px 12px; text-align: center;">' + (pack.nombre_jour_session || 0) + '</td>' +
+              '<td style="padding: 10px 12px; text-align: center;">' + dureeJours + ' j</td>' +
+              '<td style="padding: 10px 12px; text-align: right; font-weight: 800; color: #15803D;">' + totalCotisationPack.toLocaleString('fr-FR') + ' FCFA</td>' +
               '<td style="padding: 10px 12px; text-align: center;">' +
-                '<button type="button" class="btn btn-sm remove-pack-row" style="border-radius: 6px; font-weight: 600; background: #DC2626; border-color: #DC2626; color: #FFF;">' +
-                  '<i data-lucide="trash" style="width: 14px; height: 14px;"></i>' +
+                '<button type="button" class="btn btn-sm remove-pack-row" style="border-radius: 6px; font-weight: 600; background: #DC2626; border-color: #DC2626; color: #FFF; padding: 4px 8px;">' +
+                  '<i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>' +
                 '</button>' +
               '</td>' +
             '</tr>';
             tbody.append(row);
           }
-        }
+        });
+        $('#recap-cotis-jour-total').text(totalCotisJour.toLocaleString('fr-FR') + ' FCFA');
+        $('#recap-montant-total').text(totalPrévuGlobal.toLocaleString('fr-FR') + ' FCFA');
+        if (window.lucide) lucide.createIcons();
       }
-    });
+    }
   });
-
-  $('#recap-montant-total').text(montantTotal.toLocaleString('fr-FR') + ' FCFA');
-  if (window.lucide) lucide.createIcons();
 }
 
 $(document).ready(function() {

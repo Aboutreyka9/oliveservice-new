@@ -10,7 +10,51 @@ class SouscriptionController extends BaseController
     public function list()
     {
         $this->requireAuth();
-        $this->loadView('../views/souscriptions/list.php');
+
+        $userScopeFilter = Context::isCommercial() ? Context::user() : null;
+        $zoneScopeFilter = Context::isGestionnaire() ? Context::zone() : null;
+        $anneeScopeFilter = Context::annee();
+
+        $items = $this->model->getAllWithDetails($userScopeFilter, $zoneScopeFilter, $anneeScopeFilter);
+
+        $totalSouscriptions = count($items);
+        $totalEngage = 0;
+        $totalCotise = 0;
+        $totalSoldeCount = 0;
+        $totalEnCoursCount = 0;
+
+        foreach ($items as $s) {
+            $sumPrixCotisation = (float)($s['sum_prix_cotisation_pack'] ?? 0);
+            $nombreJourSession = (int)($s['nombre_jour_session'] ?? 0);
+            $totaleSouscription = (float)($s['totale_souscription'] ?? ($sumPrixCotisation * $nombreJourSession));
+            $montantCotise = (float)($s['montant_total_cotise'] ?? 0);
+
+            $totalEngage += $totaleSouscription;
+            $totalCotise += $montantCotise;
+
+            if (($s['statut_souscription'] ?? '') === 'solde') {
+                $totalSoldeCount++;
+            } else {
+                $totalEnCoursCount++;
+            }
+        }
+
+        $resteARecouvrer = max(0, $totalEngage - $totalCotise);
+        $tauxRecouvrement = $totalEngage > 0 ? round(($totalCotise / $totalEngage) * 100, 1) : 0;
+
+        $stats = [
+            'total_souscriptions' => $totalSouscriptions,
+            'total_engage' => $totalEngage,
+            'total_cotise' => $totalCotise,
+            'reste_a_recouvrer' => $resteARecouvrer,
+            'taux_recouvrement' => $tauxRecouvrement,
+            'total_encours_count' => $totalEnCoursCount,
+            'total_solde_count' => $totalSoldeCount,
+        ];
+
+        $this->loadView('../views/souscriptions/list.php', [
+            'stats' => $stats
+        ]);
     }
 
     public function apiList()
@@ -227,7 +271,53 @@ class SouscriptionController extends BaseController
     public function wizard()
     {
         $this->requireAuth();
-        $this->loadView('../views/souscriptions/wizard.php');
+        $modelSession = new ModelSession();
+        $modelCat = new ModelCategoriePack();
+
+        $sessions = $modelSession->getAll();
+        $categories = $modelCat->getAll();
+
+        $this->loadView('../views/souscriptions/wizard.php', [
+            'sessions' => $sessions,
+            'categories' => $categories
+        ]);
+    }
+
+    public function wizardData()
+    {
+        $this->requireAuth();
+        $sessionCode = $_GET['session_code'] ?? '';
+        $categorieCode = $_GET['categorie_code'] ?? '';
+
+        if (empty($sessionCode)) {
+            $this->json(['status' => 0, 'data' => []]);
+            return;
+        }
+
+        $sql = "
+            SELECT p.*, c.libelle_categorie_pack, s.nombre_jour_session,
+                   (SELECT COUNT(*) FROM pack_articles pa WHERE pa.pack_code = p.code_pack) as nombre_articles,
+                   (SELECT COUNT(*) FROM pack_souscriptions ps WHERE ps.pack_code = p.code_pack) as nombre_souscriptions
+            FROM packs p
+            LEFT JOIN categorie_packs c ON c.code_categorie_pack = p.categorie_pack_code
+            LEFT JOIN sessions s ON s.code_session = p.session_code
+            WHERE p.session_code = ? AND p.statut_pack = 'actif'
+        ";
+        $params = [$sessionCode];
+
+        if (!empty($categorieCode)) {
+            $sql .= " AND p.categorie_pack_code = ?";
+            $params[] = $categorieCode;
+        }
+
+        $sql .= " ORDER BY p.libelle_pack ASC";
+
+        $db = $this->model->getCon();
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $packs = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $this->json(['status' => 1, 'data' => $packs]);
     }
 
     public function createWizard()
