@@ -8,70 +8,99 @@
 
       <!-- EN-TÊTE DE PAGE -->
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
-        <div>
-          <h1 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 10px;">
-            <i data-lucide="search" style="color: #1E3A5F; width: 26px; height: 26px;"></i>
-            <span>Recherche de Souscription pour Paiement</span>
-          </h1>
-          <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Consultation et paiement des cautisations clients</p>
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(30, 58, 95, 0.25);">
+            <i data-lucide="search" style="width: 24px; height: 24px; color: #FFFFFF;"></i>
+          </div>
+          <div>
+            <h1 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0; line-height: 1.2;">
+              Recherche & Encaissement Cautisations
+            </h1>
+            <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0; font-weight: 500;">
+              Consultez et effectuez le suivi des encaissements des souscriptions clients en temps réel
+            </p>
+          </div>
         </div>
-        <div style="display: flex; gap: 10px;">
-          <button type="button" id="btnRefresh" class="btn btn-secondary" style="background: #F1F5F9; border-color: #CBD5E1; color: #334155; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px;">
-            <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Actualiser
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="button" id="btnRefresh" class="btn" style="background: #FFFFFF; border: 1px solid #E2E8F0; color: #334155; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+            <i data-lucide="refresh-cw" style="width: 16px; height: 16px; color: #64748B;"></i> Réinitialiser
           </button>
-          <a href="<?= RACINE ?>souscription/wizard" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px;">
-            <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Nouvelle souscription
+          <a href="<?= RACINE ?>souscription/wizard" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 20px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); text-decoration: none; transition: all 0.2s ease;">
+            <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Nouvelle souscription
           </a>
         </div>
       </div>
 
-      <!-- FORMULAIRE DE RECHERCHE -->
-      <div class="card" style="background: #FFFFFF; border-radius: 12px; padding: 24px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box; margin-bottom: 24px;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; align-items: end;">
-          <div>
-            <label style="display: block; font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 6px;">Critère de recherche</label>
-            <input type="text" id="searchInput" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" placeholder="Téléphone, nom, code client ou code souscription" autocomplete="off">
+      <!-- FORMULAIRE DE RECHERCHE DYNAMIQUE -->
+      <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 28px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; box-sizing: border-box; margin-bottom: 24px;">
+        <label style="display: block; font-weight: 800; font-size: 14px; color: #0F172A; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+          Rechercher une souscription
+        </label>
+        
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 280px; position: relative;">
+            <i data-lucide="search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #94A3B8;"></i>
+            <input type="text" id="searchInput" class="form-control" style="width: 100%; box-sizing: border-box; padding: 14px 16px 14px 48px; font-size: 15px; font-weight: 600; border-radius: 12px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A; transition: all 0.2s ease;" placeholder="Téléphone, nom complet, code client ou code souscription..." autocomplete="off">
           </div>
-          <div>
-            <label style="display: block; font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 6px;">Type de recherche</label>
-            <select id="searchType" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none; background: white;">
-              <option value="all">Tous les critères</option>
-              <option value="phone">Téléphone</option>
-              <option value="name">Nom du client</option>
-              <option value="code">Code client</option>
-              <option value="subscription">Code souscription</option>
-            </select>
-          </div>
-          <div>
-            <button type="button" id="searchBtn" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; color: white; width: 100%; font-weight: 700; border-radius: 8px; padding: 11px 14px; font-size: 14px;">
-              <i data-lucide="search" style="width: 16px; height: 16px;"></i> Rechercher
-            </button>
-          </div>
+          <button type="button" id="searchBtn" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 12px; padding: 14px 28px; font-size: 15px; border: none; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25); min-width: 160px; justify-content: center;">
+            <i data-lucide="search" style="width: 18px; height: 18px;"></i> Rechercher
+          </button>
+        </div>
+
+        <!-- Suggestions / Conseils de recherche -->
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap;">
+          <span style="font-size: 12px; font-weight: 700; color: #64748B;">Recherche par :</span>
+          <span style="background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+            <i data-lucide="phone" style="width: 12px; height: 12px; color: #2563EB;"></i> Téléphone
+          </span>
+          <span style="background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+            <i data-lucide="user" style="width: 12px; height: 12px; color: #059669;"></i> Nom Client
+          </span>
+          <span style="background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+            <i data-lucide="hash" style="width: 12px; height: 12px; color: #D97706;"></i> Code Client
+          </span>
+          <span style="background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+            <i data-lucide="file-text" style="width: 12px; height: 12px; color: #4F46E5;"></i> Code Souscription
+          </span>
         </div>
       </div>
 
       <!-- RÉSULTATS DE RECHERCHE -->
-      <div class="card" style="background: #FFFFFF; border-radius: 12px; padding: 24px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box;">
-        <div id="searchPlaceholder" style="text-align: center; padding: 40px 20px; color: #94A3B8;">
-          <i data-lucide="search" style="width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
-          <p style="font-size: 14px; margin: 0;">Entrez un critère de recherche et cliquez sur <strong>Rechercher</strong> pour afficher les souscriptions.</p>
+      <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 24px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; box-sizing: border-box;">
+        
+        <!-- Placeholder initial -->
+        <div id="searchPlaceholder" style="text-align: center; padding: 60px 20px; color: #94A3B8;">
+          <div style="width: 64px; height: 64px; border-radius: 20px; background: #F8FAFC; color: #94A3B8; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; border: 1px solid #E2E8F0;">
+            <i data-lucide="search" style="width: 32px; height: 32px; opacity: 0.7;"></i>
+          </div>
+          <h4 style="font-size: 16px; font-weight: 800; color: #0F172A; margin: 0 0 6px 0;">Effectuez une recherche</h4>
+          <p style="font-size: 13px; margin: 0; color: #64748B;">Saisissez le téléphone, nom ou code pour afficher immédiatement les détails et la situation financière.</p>
         </div>
+
+        <!-- Conteneur des résultats -->
         <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; display: none;" id="searchResultsContainer">
-          <table id="table-search-results" class="table display nowrap" style="width:100%; max-width:100%; border-collapse: collapse;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #F1F5F9;">
+            <h3 style="font-size: 15px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="layers" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Souscriptions trouvées
+            </h3>
+          </div>
+
+          <table id="table-search-results" class="table display nowrap" style="width:100%; max-width:100%; border-collapse: collapse; font-size: 13px;">
             <thead>
-              <tr style="background: #F8FAFC; text-align: left; color: #64748B;">
-                <th style="padding: 12px;">Client</th>
-                <th style="padding: 12px;">Téléphone</th>
-                <th style="padding: 12px;">Code Souscription</th>
-                <th style="padding: 12px;">Session</th>
-                <th style="padding: 12px; text-align: right;">Montant Total</th>
-                <th style="padding: 12px; text-align: center;">Statut</th>
-                <th style="padding: 12px; text-align: right;">Actions</th>
+              <tr style="background: #F8FAFC; border-bottom: 2px solid #E2E8F0;">
+                <th style="padding: 12px 14px; text-align: left; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Client</th>
+                <th style="padding: 12px 14px; text-align: left; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Téléphone</th>
+                <th style="padding: 12px 14px; text-align: left; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Code Souscription</th>
+                <th style="padding: 12px 14px; text-align: left; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Session</th>
+                <th style="padding: 12px 14px; text-align: right; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Montant Total</th>
+                <th style="padding: 12px 14px; text-align: center; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Statut</th>
+                <th style="padding: 12px 14px; text-align: right; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Action</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
+
       </div>
 
     </div>
@@ -84,7 +113,6 @@ $(document).ready(function() {
 
   const searchBtn = document.getElementById('searchBtn');
   const searchInput = document.getElementById('searchInput');
-  const searchType = document.getElementById('searchType');
   const searchResultsContainer = document.getElementById('searchResultsContainer');
   const searchPlaceholder = document.getElementById('searchPlaceholder');
   let dataTable = null;
@@ -100,19 +128,21 @@ $(document).ready(function() {
   }
 
   function renderStatut(statut) {
-    const map = {
-      'valide':   { badge: 'bg-success', label: 'Validée' },
-      'solde':    { badge: 'bg-info', label: 'Soldée' },
-      'annule':   { badge: 'bg-danger', label: 'Annulée' },
-      'reconduite': { badge: 'bg-warning text-dark', label: 'Reconduite' }
-    };
-    const m = map[statut] || { badge: 'bg-secondary', label: statut || '-' };
-    return '<span class="badge ' + m.badge + '" style="font-size:11px; padding:4px 10px; border-radius:6px;">' + m.label + '</span>';
+    const s = String(statut || '').toLowerCase();
+    if (s === 'valide' || s === 'validé') {
+      return '<span style="background: #ECFDF5; color: #047857; padding: 5px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; border: 1px solid #A7F3D0; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="check-circle" style="width:12px; height:12px;"></i> Validée</span>';
+    } else if (s === 'solde' || s === 'soldé') {
+      return '<span style="background: #EFF6FF; color: #1D4ED8; padding: 5px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; border: 1px solid #BFDBFE; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="shield-check" style="width:12px; height:12px;"></i> Soldée</span>';
+    } else if (s === 'annule' || s === 'annulé') {
+      return '<span style="background: #FEE2E2; color: #B91C1C; padding: 5px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; border: 1px solid #FCA5A5; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="x-circle" style="width:12px; height:12px;"></i> Annulée</span>';
+    } else if (s === 'reconduite') {
+      return '<span style="background: #FEF3C7; color: #B45309; padding: 5px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; border: 1px solid #FDE68A; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="rotate-cw" style="width:12px; height:12px;"></i> Reconduite</span>';
+    }
+    return '<span style="background: #F1F5F9; color: #475569; padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 11px;">' + escapeHtml(statut || '-') + '</span>';
   }
 
   function performSearch() {
     const criteria = searchInput.value.trim();
-    const type = searchType.value;
 
     if (!criteria) {
       toastr.error('Veuillez entrer un critère de recherche.');
@@ -133,7 +163,7 @@ $(document).ready(function() {
         type: 'POST',
         data: function(d) {
           d.criteria = criteria;
-          d.type = type;
+          d.type = 'all';
         },
         dataSrc: function(json) {
           if (json.error) {
@@ -155,21 +185,24 @@ $(document).ready(function() {
       autoWidth: false,
       columns: [
         { data: 'nom_complet', render: function(d) {
-            return '<strong style="color:#0F172A;">' + escapeHtml(d || '-') + '</strong>';
+            return '<div style="font-weight:800; color:#0F172A; font-size:14px;">' + escapeHtml(d || '-') + '</div>';
         }},
-        { data: 'telephone', defaultContent: '-' },
+        { data: 'telephone', render: function(d) {
+            return d ? '<a href="tel:' + escapeHtml(d) + '" style="font-weight:700; color:#1E3A5F; text-decoration:none;"><i data-lucide="phone" style="width:12px; height:12px; vertical-align:middle; display:inline-block;"></i> ' + escapeHtml(d) + '</a>' : '-';
+        }},
         { data: 'code_souscription', render: function(d) {
-            return d ? '<code style="font-weight:700; color:#334155; background:#F1F5F9; padding:2px 6px; border-radius:4px;">' + escapeHtml(d) + '</code>' : '-';
+            return d ? '<code style="font-weight:800; color:#1E3A5F; background:#F1F5F9; padding:4px 8px; border-radius:6px; font-family:monospace;"><i data-lucide="hash" style="width:12px; height:12px; vertical-align:middle; display:inline-block;"></i> ' + escapeHtml(d) + '</code>' : '-';
         }},
         { data: 'libelle_session', defaultContent: '-' },
         { data: 'montant_total', render: function(d) {
-            return '<strong style="color:#15803D;">' + formatCurrency(d) + '</strong>';
+            return '<strong style="color:#059669; font-size:14px; font-weight:800;">' + formatCurrency(d) + '</strong>';
         }},
         { data: 'statut', className: 'text-center', render: function(d) {
             return renderStatut(d);
         }},
-        { data: null, width: '120px', orderable: false, className: 'text-end', render: function(d) {
-            return '<a href="<?= RACINE ?>cautisation-payment/situation?code=' + escapeHtml(d.code_sousscription || d.code_souscription || '') + '" class="btn btn-sm" style="background: #1E3A5F; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="eye" style="width:14px; height:14px;"></i> Voir</a>';
+        { data: null, width: '130px', orderable: false, className: 'text-end', render: function(d) {
+            const code = escapeHtml(d.code_sousscription || d.code_souscription || '');
+            return '<a href="<?= RACINE ?>cautisation-payment/situation?code=' + code + '" class="btn btn-sm" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; border: none; border-radius: 8px; padding: 7px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2); text-decoration: none;"><i data-lucide="eye" style="width:14px; height:14px;"></i> Situation</a>';
         }}
       ],
       language: { url: '<?= RACINE ?>json/datatables-i18n-fr-FR.json' },
@@ -181,6 +214,18 @@ $(document).ready(function() {
   searchBtn.addEventListener('click', performSearch);
   searchInput.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') performSearch();
+  });
+
+  searchInput.addEventListener('focus', function() {
+    this.style.background = '#FFFFFF';
+    this.style.borderColor = '#1E3A5F';
+    this.style.boxShadow = '0 0 0 3px rgba(30, 58, 95, 0.12)';
+  });
+
+  searchInput.addEventListener('blur', function() {
+    this.style.background = '#F8FAFC';
+    this.style.borderColor = '#CBD5E1';
+    this.style.boxShadow = 'none';
   });
 
   document.getElementById('btnRefresh').addEventListener('click', function() {
