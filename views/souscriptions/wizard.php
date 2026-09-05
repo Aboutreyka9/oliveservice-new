@@ -3,57 +3,78 @@
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
   <main class="main-content">
     <?php require_once __DIR__ . '/../../public/inc/nav.php'; ?>
-    <div class="content-wrapper" style="padding: 24px; width: 100%; box-sizing: border-box;">
+    <div class="content-wrapper" style="padding: 24px; width: 100%; max-width: 100%; box-sizing: border-box;">
 
       <!-- EN-TÊTE DE PAGE -->
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
-        <div>
-          <h1 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 10px;">
-            <i data-lucide="file-text" style="color: #1E3A5F; width: 26px; height: 26px;"></i>
-            <span>Nouvelle Souscription Client</span>
-          </h1>
-          <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Processus de souscription en 3 étapes</p>
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(30, 58, 95, 0.25);">
+            <i data-lucide="file-text" style="width: 24px; height: 24px; color: #FFFFFF;"></i>
+          </div>
+          <div>
+            <h1 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0; line-height: 1.2;">
+              Nouvelle Souscription Client
+            </h1>
+            <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0; font-weight: 500;">
+              Saisie des informations du client, choix des packs et validation du sous-dossier
+            </p>
+          </div>
         </div>
-        <a href="<?= RACINE ?>souscription/list" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; text-decoration: none;">
-          <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> Retour aux souscriptions
+
+        <a href="<?= RACINE ?>souscription/list" class="btn" style="background: #FFFFFF; border: 1px solid #E2E8F0; color: #334155; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+          <i data-lucide="arrow-left" style="width: 16px; height: 16px; color: #64748B;"></i> Retour aux souscriptions
         </a>
       </div>
 
-      <!-- INDICATEUR D'ÉTAPES -->
-      <div style="display: flex; gap: 8px; margin-bottom: 24px; align-items: center;">
-        <div id="step-indicator-1" class="step-indicator active" style="flex: 1; padding: 12px; text-align: center; background: #1E3A5F; color: #FFF; border-radius: 8px; font-weight: 700; font-size: 13px;">Étape 1 : Informations Client</div>
-        <div style="color: #94A3B8; font-size: 18px;">→</div>
-        <div id="step-indicator-2" class="step-indicator" style="flex: 1; padding: 12px; text-align: center; background: #F1F5F9; color: #64748B; border-radius: 8px; font-weight: 700; font-size: 13px;">Étape 2 : Sélection des Packs</div>
-        <div style="color: #94A3B8; font-size: 18px;">→</div>
-        <div id="step-indicator-3" class="step-indicator" style="flex: 1; padding: 12px; text-align: center; background: #F1F5F9; color: #64748B; border-radius: 8px; font-weight: 700; font-size: 13px;">Étape 3 : Récapitulatif</div>
+      <!-- INDICATEURS DE PROGRESSION (ONGLETS SANS ÉTAPE NUMÉROTÉE) -->
+      <div style="display: flex; gap: 12px; margin-bottom: 24px; align-items: center; flex-wrap: wrap;">
+        <div id="step-indicator-1" class="step-indicator active" style="flex: 1; min-width: 200px; padding: 14px 18px; text-align: center; background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; border-radius: 12px; font-weight: 800; font-size: 13px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <i data-lucide="user" style="width: 16px; height: 16px;"></i> Informations Client
+        </div>
+        <div style="color: #CBD5E1; font-size: 18px; display: none;" class="step-arrow">→</div>
+        <div id="step-indicator-2" class="step-indicator" style="flex: 1; min-width: 200px; padding: 14px 18px; text-align: center; background: #FFFFFF; color: #64748B; border: 1px solid #E2E8F0; border-radius: 12px; font-weight: 800; font-size: 13px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <i data-lucide="shopping-bag" style="width: 16px; height: 16px;"></i> Sélection des Packs
+        </div>
+        <div style="color: #CBD5E1; font-size: 18px; display: none;" class="step-arrow">→</div>
+        <div id="step-indicator-3" class="step-indicator" style="flex: 1; min-width: 200px; padding: 14px 18px; text-align: center; background: #FFFFFF; color: #64748B; border: 1px solid #E2E8F0; border-radius: 12px; font-weight: 800; font-size: 13px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Récapitulatif & Validation
+        </div>
       </div>
 
       <!-- CARTE FORMULAIRE PRINCIPALE -->
-      <div class="card" style="background: #FFFFFF; border-radius: 12px; padding: 28px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box;">
-        <div id="form-messages" style="display: none; margin-bottom: 20px; padding: 12px 16px; border-radius: 8px; font-weight: 600; font-size: 14px;"></div>
+      <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 32px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; box-sizing: border-box;">
+        <div id="form-messages" style="display: none; margin-bottom: 20px; padding: 14px 18px; border-radius: 10px; font-weight: 700; font-size: 14px;"></div>
+        
         <form id="form-souscription-wizard" action="<?= RACINE ?>souscription/wizardSubmit" method="POST" style="width: 100%;">
           <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
 
-          <!-- ÉTAPE 1 : INFORMATIONS CLIENT -->
+          <!-- BLOC 1 : INFORMATIONS CLIENT -->
           <div id="step-1" class="form-step">
             <div style="margin-bottom: 24px;">
-              <h3 style="font-size: 14px; font-weight: 800; color: #1E3A5F; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px;">
-                <i data-lucide="user" style="width: 16px; height: 16px; color: #1E3A5F;"></i> Étape 1 : Informations personnelles du client
+              <h3 style="font-size: 14px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 18px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 10px;">
+                <i data-lucide="user" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Informations personnelles du client
               </h3>
+              
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Nom complet <span style="color: #EF4444;">*</span></label>
-                  <input type="text" name="nom_client" id="nom_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" required placeholder="Ex: KOUASSI Jean">
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    Nom complet <span style="color: #EF4444;">*</span>
+                  </label>
+                  <input type="text" name="nom_client" id="nom_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" required placeholder="Ex: KOUASSI Jean">
                 </div>
 
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Téléphone <span style="color: #EF4444;">*</span></label>
-                  <input type="text" name="telephone_client" id="telephone_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" required placeholder="Ex: 0708091011">
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    Téléphone <span style="color: #EF4444;">*</span>
+                  </label>
+                  <input type="text" name="telephone_client" id="telephone_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" required placeholder="Ex: 0708091011">
                 </div>
 
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Genre <span style="color: #EF4444;">*</span></label>
-                  <select name="sexe_client" id="sexe_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" required>
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    Genre <span style="color: #EF4444;">*</span>
+                  </label>
+                  <select name="sexe_client" id="sexe_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" required>
                     <option value="">-- Sélectionner --</option>
                     <option value="M">Masculin</option>
                     <option value="F">Féminin</option>
@@ -61,39 +82,47 @@
                 </div>
 
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Lieu de résidence <span style="color: #EF4444;">*</span></label>
-                  <input type="text" name="lieu_residence_client" id="lieu_residence_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" required placeholder="Ex: Cocody">
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    Lieu de résidence <span style="color: #EF4444;">*</span>
+                  </label>
+                  <input type="text" name="lieu_residence_client" id="lieu_residence_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" required placeholder="Ex: Cocody">
                 </div>
 
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Email <small>(optionnel)</small></label>
-                  <input type="email" name="email_client" id="email_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" placeholder="Ex: client@email.com">
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    Email <small style="color: #64748B;">(optionnel)</small>
+                  </label>
+                  <input type="email" name="email_client" id="email_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" placeholder="Ex: client@email.com">
                 </div>
 
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Profession <small>(optionnel)</small></label>
-                  <input type="text" name="profession_client" id="profession_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" placeholder="Ex: Commerçant">
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    Profession <small style="color: #64748B;">(optionnel)</small>
+                  </label>
+                  <input type="text" name="profession_client" id="profession_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" placeholder="Ex: Commerçant">
                 </div>
               </div>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #E2E8F0;">
-              <button type="button" id="btn-step-1-next" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; font-weight: 700; border-radius: 8px; padding: 10px 24px; display: inline-flex; align-items: center; gap: 8px;">
+              <button type="button" id="btn-step-1-next" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
                 Continuer <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
               </button>
             </div>
           </div>
 
-          <!-- ÉTAPE 2 : SÉLECTION DES PACKS -->
+          <!-- BLOC 2 : SÉLECTION DES PACKS -->
           <div id="step-2" class="form-step" style="display: none;">
             <div style="margin-bottom: 24px;">
-              <h3 style="font-size: 14px; font-weight: 800; color: #1E3A5F; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px;">
-                <i data-lucide="shopping-bag" style="width: 16px; height: 16px; color: #1E3A5F;"></i> Étape 2 : Sélection des packs
+              <h3 style="font-size: 14px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 18px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 10px;">
+                <i data-lucide="shopping-bag" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Sélection des packs
               </h3>
 
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 20px;">
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Session d'activité <span style="color: #EF4444;">*</span></label>
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    Session d'activité <span style="color: #EF4444;">*</span>
+                  </label>
                   <select id="filter-session" class="form-control select2" style="width: 100%; box-sizing: border-box;" required>
                     <option value="">-- Choisir une session --</option>
                     <?php if (!empty($sessions) && is_array($sessions)): ?>
@@ -105,7 +134,9 @@
                 </div>
 
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Catégorie</label>
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    Catégorie
+                  </label>
                   <select id="filter-categorie" class="form-control select2" style="width: 100%; box-sizing: border-box;">
                     <option value="">Toutes les catégories</option>
                     <?php if (!empty($categories) && is_array($categories)): ?>
@@ -123,27 +154,27 @@
             </div>
 
             <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #E2E8F0;">
-              <button type="button" id="btn-step-2-prev" class="btn btn-secondary" style="font-weight: 600; border-radius: 8px; padding: 10px 24px; display: inline-flex; align-items: center; gap: 8px;">
+              <button type="button" id="btn-step-2-prev" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 10px; padding: 12px 24px; text-decoration: none; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 8px;">
                 <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> Précédent
               </button>
-              <button type="button" id="btn-step-2-next" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; font-weight: 700; border-radius: 8px; padding: 10px 24px; display: inline-flex; align-items: center; gap: 8px;">
+              <button type="button" id="btn-step-2-next" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
                 Continuer <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
               </button>
             </div>
           </div>
 
-          <!-- ÉTAPE 3 : RÉCAPITULATIF -->
+          <!-- BLOC 3 : RÉCAPITULATIF & VALIDATION -->
           <div id="step-3" class="form-step" style="display: none;">
             <div style="margin-bottom: 24px;">
-              <h3 style="font-size: 14px; font-weight: 800; color: #1E3A5F; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px;">
-                <i data-lucide="check-circle-2" style="width: 16px; height: 16px; color: #1E3A5F;"></i> Étape 3 : Récapitulatif et validation
+              <h3 style="font-size: 14px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 18px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 10px;">
+                <i data-lucide="check-circle" style="width: 18px; height: 18px; color: #059669;"></i> Récapitulatif et validation
               </h3>
 
               <!-- CARD CLIENT PREMIUM -->
-              <div style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); border-radius: 12px; padding: 20px; color: #FFFFFF; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);">
+              <div style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); border-radius: 14px; padding: 22px; color: #FFFFFF; margin-bottom: 24px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.15); flex-wrap: wrap;">
                   <div style="display: flex; align-items: center; gap: 14px;">
-                    <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+                    <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
                       <i data-lucide="user" style="width: 24px; height: 24px; color: #38BDF8;"></i>
                     </div>
                     <div>
@@ -151,13 +182,13 @@
                       <h4 id="recap-nom" style="font-size: 18px; font-weight: 800; margin: 2px 0 0 0; color: #FFFFFF;">-</h4>
                     </div>
                   </div>
-                  <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38BDF8; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.3);">
-                    <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i> Profil Client
+                  <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38BDF8; padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.3);">
+                    <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i> Profil Client Validé
                   </span>
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
-                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
                     <i data-lucide="phone" style="width: 18px; height: 18px; color: #38BDF8; flex-shrink: 0;"></i>
                     <div>
                       <span style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 700;">Téléphone</span>
@@ -165,7 +196,7 @@
                     </div>
                   </div>
 
-                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
                     <i data-lucide="user-check" style="width: 18px; height: 18px; color: #38BDF8; flex-shrink: 0;"></i>
                     <div>
                       <span style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 700;">Genre</span>
@@ -173,7 +204,7 @@
                     </div>
                   </div>
 
-                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
                     <i data-lucide="map-pin" style="width: 18px; height: 18px; color: #38BDF8; flex-shrink: 0;"></i>
                     <div>
                       <span style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 700;">Résidence</span>
@@ -181,7 +212,7 @@
                     </div>
                   </div>
 
-                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
                     <i data-lucide="mail" style="width: 18px; height: 18px; color: #38BDF8; flex-shrink: 0;"></i>
                     <div>
                       <span style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 700;">Email</span>
@@ -189,7 +220,7 @@
                     </div>
                   </div>
 
-                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                  <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
                     <i data-lucide="briefcase" style="width: 18px; height: 18px; color: #38BDF8; flex-shrink: 0;"></i>
                     <div>
                       <span style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 700;">Profession</span>
@@ -200,20 +231,20 @@
               </div>
 
               <!-- TABLEAU RÉCAPITULATIF DES PACKS -->
-              <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-bottom: 24px; overflow-x: auto;">
-                <h4 style="font-size: 14px; font-weight: 800; color: #1E3A5F; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+              <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 24px; overflow-x: auto;">
+                <h4 style="font-size: 14px; font-weight: 800; color: #0F172A; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
                   <i data-lucide="package" style="width: 16px; height: 16px; color: #1E3A5F;"></i> Packs sélectionnés
                 </h4>
-                <table id="table-recap-packs" class="table display nowrap" style="width:100%; border-collapse: collapse; font-size: 14px;">
+                <table id="table-recap-packs" class="table display nowrap" style="width:100%; border-collapse: collapse; font-size: 13px;">
                   <thead>
-                    <tr style="background: #F8FAFC; text-align: left; color: #64748B;">
-                      <th style="padding: 10px 12px;">Pack</th>
-                      <th style="padding: 10px 12px;">Catégorie</th>
-                      <th style="padding: 10px 12px; text-align: right;">Montant/Jour</th>
-                      <th style="padding: 10px 12px; text-align: center;">Articles</th>
-                      <th style="padding: 10px 12px; text-align: center;">Durée (jours)</th>
-                      <th style="padding: 10px 12px; text-align: right;">Cotisation Pack (Total)</th>
-                      <th style="padding: 10px 12px; text-align: center;">Action</th>
+                    <tr style="background: #F8FAFC; text-align: left; color: #64748B; border-bottom: 2px solid #E2E8F0;">
+                      <th style="padding: 10px 12px; text-transform: uppercase; font-size: 11px; font-weight: 800;">Pack</th>
+                      <th style="padding: 10px 12px; text-transform: uppercase; font-size: 11px; font-weight: 800;">Catégorie</th>
+                      <th style="padding: 10px 12px; text-align: right; text-transform: uppercase; font-size: 11px; font-weight: 800;">Montant/Jour</th>
+                      <th style="padding: 10px 12px; text-align: center; text-transform: uppercase; font-size: 11px; font-weight: 800;">Articles</th>
+                      <th style="padding: 10px 12px; text-align: center; text-transform: uppercase; font-size: 11px; font-weight: 800;">Durée (jours)</th>
+                      <th style="padding: 10px 12px; text-align: right; text-transform: uppercase; font-size: 11px; font-weight: 800;">Cotisation Pack (Total)</th>
+                      <th style="padding: 10px 12px; text-align: center; text-transform: uppercase; font-size: 11px; font-weight: 800;">Action</th>
                     </tr>
                   </thead>
                   <tbody id="recap-packs-body"></tbody>
@@ -222,7 +253,7 @@
                       <td colspan="2" style="padding: 12px; text-align: right;">Total Cotisation / Jour :</td>
                       <td id="recap-cotis-jour-total" style="padding: 12px; text-align: right; color: #2563EB; font-size: 15px;">0 FCFA</td>
                       <td colspan="2" style="padding: 12px; text-align: right;">Total Prévu Souscription :</td>
-                      <td id="recap-montant-total" style="padding: 12px; text-align: right; color: #15803D; font-size: 16px;">0 FCFA</td>
+                      <td id="recap-montant-total" style="padding: 12px; text-align: right; color: #059669; font-size: 16px;">0 FCFA</td>
                       <td></td>
                     </tr>
                   </tfoot>
@@ -241,11 +272,11 @@
             <input type="hidden" name="packs" id="hidden-packs" value="">
 
             <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #E2E8F0;">
-              <button type="button" id="btn-step-3-prev" class="btn btn-secondary" style="font-weight: 600; border-radius: 8px; padding: 10px 24px; display: inline-flex; align-items: center; gap: 8px;">
+              <button type="button" id="btn-step-3-prev" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 10px; padding: 12px 24px; text-decoration: none; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 8px;">
                 <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> Précédent
               </button>
-              <button type="submit" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; font-weight: 700; border-radius: 8px; padding: 10px 24px; display: inline-flex; align-items: center; gap: 8px;">
-                <i data-lucide="check" style="width: 18px; height: 18px;"></i> Valider la Souscription
+              <button type="submit" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 15px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3); cursor: pointer;">
+                <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> Valider la Souscription
               </button>
             </div>
           </div>
@@ -262,8 +293,13 @@ var selectedPacks = [];
 
 function showMessage(type, message) {
   var $msg = $('#form-messages');
-  $msg.removeClass('alert-success', 'alert-danger', 'alert-warning', 'alert-info')
-      .css({ 'display': 'block', 'background': type === 'success' ? '#DCFCE7' : type === 'danger' ? '#FEE2E2' : type === 'warning' ? '#FEF3C7' : '#EFF6FF', 'color': type === 'success' ? '#15803D' : type === 'danger' ? '#B91C1C' : type === 'warning' ? '#92400E' : '#1E3A5F', 'border': '1px solid ' + (type === 'success' ? '#BBF7D0' : type === 'danger' ? '#FECACA' : type === 'warning' ? '#FDE68A' : '#BFDBFE') })
+  $msg.removeClass('alert-success alert-danger alert-warning alert-info')
+      .css({ 
+        'display': 'block', 
+        'background': type === 'success' ? '#ECFDF5' : type === 'danger' ? '#FEE2E2' : type === 'warning' ? '#FEF3C7' : '#EFF6FF', 
+        'color': type === 'success' ? '#047857' : type === 'danger' ? '#B91C1C' : type === 'warning' ? '#92400E' : '#1E3A5F', 
+        'border': '1px solid ' + (type === 'success' ? '#A7F3D0' : type === 'danger' ? '#FCA5A5' : type === 'warning' ? '#FDE68A' : '#BFDBFE') 
+      })
       .html('<strong>' + (type === 'success' ? 'Succès' : type === 'danger' ? 'Erreur' : type === 'warning' ? 'Attention' : 'Information') + ' :</strong> ' + message);
 }
 
@@ -276,11 +312,21 @@ function showStep(step) {
   $('#step-' + step).show();
 
   $('.step-indicator').each(function() {
-    var idx = $(this).attr('id').split('-')[2];
-    if (parseInt(idx) === step) {
-      $(this).css({ 'background': '#1E3A5F', 'color': '#FFF' });
+    var idx = parseInt($(this).attr('id').split('-')[2]);
+    if (idx === step) {
+      $(this).css({
+        'background': 'linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%)',
+        'color': '#FFFFFF',
+        'border-color': '#1E3A5F',
+        'box-shadow': '0 4px 12px rgba(15, 23, 42, 0.2)'
+      });
     } else {
-      $(this).css({ 'background': '#F1F5F9', 'color': '#64748B' });
+      $(this).css({
+        'background': '#FFFFFF',
+        'color': '#64748B',
+        'border-color': '#E2E8F0',
+        'box-shadow': 'none'
+      });
     }
   });
 
@@ -314,17 +360,18 @@ function loadPacks() {
         res.data.forEach(function(pack) {
           var isSelected = selectedPacks.indexOf(pack.code_pack) !== -1;
           var borderColor = isSelected ? '#1E3A5F' : '#E2E8F0';
-          var bgColor = isSelected ? '#EFF6FF' : '#FFFFFF';
-          html += '<div class="pack-card" data-code="' + pack.code_pack + '" style="background: ' + bgColor + '; border: 2px solid ' + borderColor + '; border-radius: 12px; padding: 16px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">' +
+          var bgColor = isSelected ? '#F0F9FF' : '#FFFFFF';
+          var shadow = isSelected ? '0 4px 14px rgba(30, 58, 95, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)';
+          html += '<div class="pack-card" data-code="' + pack.code_pack + '" style="background: ' + bgColor + '; border: 2px solid ' + borderColor + '; border-radius: 14px; padding: 18px; cursor: pointer; box-shadow: ' + shadow + '; transition: all 0.2s;">' +
             '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">' +
               '<div>' +
                 '<strong style="font-size: 15px; color: #0F172A; display: block; margin-bottom: 6px;">' + (pack.libelle_pack || 'Pack') + '</strong>' +
                 '<span style="display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: #1E3A5F; color: #FFF;">' + (pack.libelle_categorie_pack || '') + '</span>' +
               '</div>' +
-              (pack.image_pack ? '<img src="<?= RACINE ?>public/assets/images/packs/' + pack.image_pack + '" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #E2E8F0;">' : '<div style="width: 60px; height: 60px; background: #F1F5F9; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748B; font-size: 11px; font-weight: 700;">Sans image</div>') +
+              (pack.image_pack ? '<img src="<?= RACINE ?>public/assets/images/packs/' + pack.image_pack + '" style="width: 54px; height: 54px; object-fit: cover; border-radius: 10px; border: 1px solid #E2E8F0;">' : '<div style="width: 54px; height: 54px; background: #F1F5F9; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #64748B; font-size: 11px; font-weight: 700;">Pack</div>') +
             '</div>' +
             '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #475569;">' +
-              '<div><strong>Montant :</strong> <span style="color: #15803D; font-weight: 700;">' + Number(pack.prix_cotisation_pack || 0).toLocaleString('fr-FR') + ' FCFA</span></div>' +
+              '<div><strong>Montant :</strong> <span style="color: #059669; font-weight: 800;">' + Number(pack.prix_cotisation_pack || 0).toLocaleString('fr-FR') + ' FCFA</span></div>' +
               '<div><strong>Durée :</strong> ' + (pack.nombre_jour_session || 0) + ' jours</div>' +
               '<div><strong>Articles :</strong> ' + (pack.nombre_articles || 0) + ' article(s)</div>' +
               '<div><strong>Souscriptions :</strong> ' + (pack.nombre_souscriptions || 0) + '</div>' +
@@ -344,7 +391,6 @@ function loadPacks() {
 }
 
 function renderRecap() {
-  // 1. Remplissage dynamique des informations client
   $('#recap-nom').text($('#nom_client').val().trim() || '-');
   $('#recap-telephone').text($('#telephone_client').val().trim() || '-');
   var sexeVal = $('#sexe_client').val();
@@ -354,7 +400,6 @@ function renderRecap() {
   $('#recap-email').text($('#email_client').val().trim() || '-');
   $('#recap-profession').text($('#profession_client').val().trim() || '-');
 
-  // 2. Remplissage dynamique des packs sélectionnés
   var tbody = $('#recap-packs-body');
   tbody.empty();
   var totalCotisJour = 0;
@@ -390,9 +435,9 @@ function renderRecap() {
               '<td style="padding: 10px 12px; text-align: right; font-weight: 700; color: #2563EB;">' + cotisJour.toLocaleString('fr-FR') + ' FCFA</td>' +
               '<td style="padding: 10px 12px; text-align: center;">' + (pack.nombre_articles || 0) + '</td>' +
               '<td style="padding: 10px 12px; text-align: center;">' + dureeJours + ' j</td>' +
-              '<td style="padding: 10px 12px; text-align: right; font-weight: 800; color: #15803D;">' + totalCotisationPack.toLocaleString('fr-FR') + ' FCFA</td>' +
+              '<td style="padding: 10px 12px; text-align: right; font-weight: 800; color: #059669;">' + totalCotisationPack.toLocaleString('fr-FR') + ' FCFA</td>' +
               '<td style="padding: 10px 12px; text-align: center;">' +
-                '<button type="button" class="btn btn-sm remove-pack-row" style="border-radius: 6px; font-weight: 600; background: #DC2626; border-color: #DC2626; color: #FFF; padding: 4px 8px;">' +
+                '<button type="button" class="btn btn-sm remove-pack-row" style="border-radius: 8px; font-weight: 600; background: #DC2626; border: none; color: #FFF; padding: 5px 10px; cursor: pointer;">' +
                   '<i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>' +
                 '</button>' +
               '</td>' +
