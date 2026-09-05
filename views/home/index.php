@@ -394,14 +394,14 @@ $isAdmin = Context::isSuperAdmin();
                 Tableau de Bord &bull; Espace Logistique & Catalogue
               </h1>
               <p style="margin: 4px 0 0 0; font-size: 13px; color: #94A3B8; font-weight: 500;">
-                Pilotage du catalogue de packs et suivi des distributions clients. Bienvenue, <strong style="color: #FFFFFF;"><?= htmlspecialchars($auth['nom_user'] ?? 'Gestionnaire') ?></strong>
+                Bienvenue, <strong style="color: #FFFFFF;"><?= htmlspecialchars($auth['nom_user'] ?? 'Gestionnaire') ?></strong>
               </p>
             <?php elseif ($isFinance): ?>
               <h1 style="font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">
                 Tableau de Bord &bull; Espace Finance & Trésorerie
               </h1>
               <p style="margin: 4px 0 0 0; font-size: 13px; color: #94A3B8; font-weight: 500;">
-                Validation des versements de caisse et ordonnancement des dépenses. Bienvenue, <strong style="color: #FFFFFF;"><?= htmlspecialchars($auth['nom_user'] ?? 'Responsable Finance') ?></strong>
+                Bienvenue, <strong style="color: #FFFFFF;"><?= htmlspecialchars($auth['nom_user'] ?? 'Responsable Finance') ?></strong>
               </p>
             <?php else: ?>
               <h1 style="font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">
