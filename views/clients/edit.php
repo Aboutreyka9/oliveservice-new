@@ -68,21 +68,21 @@ $title = $isEdit ? 'Éditer le Profil Client' : 'Nouveau Client';
             </h3>
             
             <div class="row g-3">
-              <div class="col-md-3 form-group">
+              <div class="col-md-4 form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Téléphone Principal <span style="color: #EF4444;">*</span>
                 </label>
                 <input type="text" name="telephone_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A; transition: all 0.2s ease;" value="<?= htmlspecialchars($item['telephone_client'] ?? '') ?>" required placeholder="Ex: 0701020304">
               </div>
 
-              <div class="col-md-3 form-group">
+              <div class="col-md-4 form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Adresse Email
                 </label>
                 <input type="email" name="email_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A; transition: all 0.2s ease;" value="<?= htmlspecialchars($item['email_client'] ?? '') ?>" placeholder="Ex: client@gmail.com">
               </div>
 
-              <div class="col-md-3 form-group">
+              <div class="col-md-4 form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Quartier / Repère de Résidence
                 </label>
@@ -112,6 +112,16 @@ $title = $isEdit ? 'Éditer le Profil Client' : 'Nouveau Client';
 $(document).ready(function() {
   if (window.lucide) lucide.createIcons();
 
+  function notifyUser(msg, type) {
+    if (typeof showToast === 'function') {
+      showToast(msg, type);
+    } else if (window.toastr && typeof window.toastr[type] === 'function') {
+      window.toastr[type](msg);
+    } else {
+      alert(msg);
+    }
+  }
+
   $('.form-control').on('focus', function() {
     $(this).css({
       'background': '#FFFFFF',
@@ -128,21 +138,36 @@ $(document).ready(function() {
 
   $('#form-client').on('submit', function(e) {
     e.preventDefault();
+    const $btn = $(this).find('button[type="submit"]');
+    $btn.prop('disabled', true);
+
     $.ajax({
       url: $(this).attr('action'),
       type: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
       data: $(this).serialize(),
       dataType: 'json',
       success: function(res) {
+        $btn.prop('disabled', false);
         if (res.status === 1 || res.success) {
-          if (window.toastr) toastr.success(res.message || 'Opération réussie');
-          setTimeout(function() { window.location.href = '<?= RACINE ?>client/list'; }, 1000);
+          notifyUser(res.message || 'Opération réussie', 'success');
+          setTimeout(function() { window.location.href = '<?= RACINE ?>client/list'; }, 1200);
         } else {
-          if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
+          notifyUser(res.message || 'Erreur lors de l\'enregistrement', 'error');
         }
       },
-      error: function() {
-        if (window.toastr) toastr.error('Erreur réseau lors de l\'enregistrement');
+      error: function(xhr) {
+        $btn.prop('disabled', false);
+        let msg = 'Erreur serveur lors de l\'enregistrement';
+        if (xhr.responseJSON && xhr.responseJSON.message) {
+          msg = xhr.responseJSON.message;
+        } else if (xhr.responseText) {
+          try {
+            const parsed = JSON.parse(xhr.responseText);
+            if (parsed && parsed.message) msg = parsed.message;
+          } catch(e) {}
+        }
+        notifyUser(msg, 'error');
       }
     });
   });

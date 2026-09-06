@@ -40,8 +40,14 @@ class CategoriePackController extends BaseController
             if (!$this->checkUnique('categorie_packs', 'libelle_categorie_pack', $data['libelle_categorie_pack'], 'Catégorie de pack')) return;
         }
 
-        $userCode = Context::user() ?? '';
-        $etabCode = '5454544456';
+        $userCode = Context::user();
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
 
         if (empty($data['code_categorie_pack'])) {
             $data['code_categorie_pack'] = $this->validator->generateCode('categorie_packs', 'code_categorie_pack', 'CPK-', 8);
@@ -52,6 +58,7 @@ class CategoriePackController extends BaseController
         $cols = $this->model->getCon()->query("DESCRIBE categorie_packs")->fetchAll(PDO::FETCH_COLUMN);
         if (in_array('user_code', $cols)) $data['user_code'] = $userCode;
         if (in_array('etablissement_code', $cols)) $data['etablissement_code'] = $etabCode;
+        if (in_array('zone_code', $cols)) $data['zone_code'] = $zoneCode;
 
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->create($filteredData)) {

@@ -42,9 +42,14 @@ class PermissionController extends BaseController
             if (!$this->checkUnique('permissions', 'code_permission', $data['code_permission'], 'Code permission')) return;
         }
 
-        $userCode = Context::user() ?? '';
+        $userCode = Context::user();
         $anneeCode = Context::annee();
-        $etabCode = '5454544456';
+        $etabCode = Context::etablissement();
+
+        if (empty($userCode) || empty($etabCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
         if (empty($data['code_permission'])) {
             $data['code_permission'] = $this->validator->generateCode('permissions', 'code_permission', 'PER-', 8);
         }

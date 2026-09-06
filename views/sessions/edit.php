@@ -109,7 +109,7 @@ $zones = $zones ?? [];
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Nombre Total de Jours <span style="color: #EF4444;">*</span>
                 </label>
-                <input type="number" name="nombre_jour_session" id="nombre-jour-session" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 800; color: #1E3A5F; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" value="<?= htmlspecialchars($item['nombre_jour_session'] ?? '170') ?>" required min="1" placeholder="Ex: 170">
+                <input type="number" name="nombre_jour_session" id="nombre-jour-session" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 800; color: #1E3A5F; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" value="<?= htmlspecialchars($item['nombre_jour_session'] ?? '') ?>" required min="1" placeholder="Ex: 170">
               </div>
             </div>
           </div>

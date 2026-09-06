@@ -39,9 +39,15 @@ class AnneeController extends BaseController
             if (!$this->checkUnique('annees', 'libelle_annee', $data['libelle_annee'], 'Annee academique')) return;
         }
 
-        $userCode = Context::user() ?? '';
-        $anneeCode = Context::annee();
-        $etabCode = '5454544456';
+        $userCode = Context::user();
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
+
         if (empty($data['code_annee'])) {
             $data['code_annee'] = $this->validator->generateCode('annees', 'code_annee', 'ANN-', 8);
         }
@@ -50,7 +56,7 @@ class AnneeController extends BaseController
         $cols = $this->model->getCon()->query("DESCRIBE annees")->fetchAll(PDO::FETCH_COLUMN);
         if (in_array('user_code', $cols)) $data['user_code'] = $userCode;
         if (in_array('etablissement_code', $cols)) $data['etablissement_code'] = $etabCode;
-        if (in_array('annee_code', $cols)) $data['annee_code'] = $anneeCode;
+        if (in_array('zone_code', $cols)) $data['zone_code'] = $zoneCode;
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->create($filteredData)) {
             $this->success('Item créé avec succès!');

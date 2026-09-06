@@ -43,7 +43,11 @@ class ZoneCommercialController extends BaseController
             return;
         }
 
-        $etabCode = '5454544456';
+        $etabCode = Context::etablissement();
+        if (empty($etabCode)) {
+            $this->error("Erreur d'insertion : L'établissement actif est obligatoire et ne peut pas être null.");
+            return;
+        }
         $data['statut_zone_commercial'] = $data['statut_zone_commercial'] ?? 'actif';
         $data['created_at_zone_commercial'] = date('Y-m-d H:i:s');
 

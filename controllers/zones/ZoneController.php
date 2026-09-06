@@ -41,10 +41,10 @@ class ZoneController extends BaseController
         }
 
         $userCode = Context::user();
-        $etabCode = Context::etablissement() ?: '5454544456';
+        $etabCode = Context::etablissement();
 
         if (empty($userCode) || empty($etabCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté ou l'établissement est obligatoire et ne peut pas être null.");
+            $this->error("Erreur d'insertion : L'utilisateur connecté et l'établissement sont obligatoires et ne peuvent pas être null.");
             return;
         }
 

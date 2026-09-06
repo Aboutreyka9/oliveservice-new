@@ -96,7 +96,11 @@ class CotisationController extends BaseController
 
         $codeCotisation = $this->validator->generateCode('cautisation_clients', 'code_cautisation_client', 'COT-', 8);
 
-        $cotisJour = (float)($sous['montant_cotisation_journaliere'] ?: 1000);
+        $cotisJour = (float)($sous['montant_cotisation_journaliere'] ?? 0);
+        if ($cotisJour <= 0) {
+            $this->error("Erreur d'insertion : La cotisation journalière configurée sur cette souscription est invalide ou égale à 0.");
+            return;
+        }
         $montant = (float)$data['montant_cautisation'];
         $nbJours = (int)($data['nombre_jour_paye'] ?: ($cotisJour > 0 ? ceil($montant / $cotisJour) : 1));
 

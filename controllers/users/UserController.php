@@ -113,7 +113,11 @@ class UserController extends BaseController
         $maxId = (int)($this->model->getCon()->query("SELECT MAX(id_user) FROM users")->fetchColumn() ?: 0);
         $id_user = $maxId + 1;
         $password = password_hash($rawPassword, PASSWORD_DEFAULT);
-        $etabCode = '5454544456';
+        $etabCode = Context::etablissement();
+        if (empty($etabCode)) {
+            $this->error("Erreur d'insertion : L'établissement actif est obligatoire et ne peut pas être null.");
+            return;
+        }
         $activationToken = bin2hex(random_bytes(32));
 
         $data = [

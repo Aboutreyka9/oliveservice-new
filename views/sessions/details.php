@@ -51,7 +51,7 @@ $tauxProg = ($totalPrevu > 0) ? min(100, round(($totalCotise / $totalPrevu) * 10
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
           <div>
             <span style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Durée Totale Prévue</span>
-            <div style="font-size: 20px; font-weight: 800; color: #0F172A; margin-top: 4px;"><?= (int)($item['nombre_jour_session'] ?? 170) ?> Jours</div>
+            <div style="font-size: 20px; font-weight: 800; color: #0F172A; margin-top: 4px;"><?= (int)($item['nombre_jour_session'] ?? 0) ?> Jours</div>
             <div style="font-size: 13px; color: #64748B; margin-top: 2px; font-weight: 500;">Du <?= !empty($item['date_debut_session']) ? date('d/m/Y', strtotime($item['date_debut_session'])) : '-' ?> au <?= !empty($item['date_fin_session']) ? date('d/m/Y', strtotime($item['date_fin_session'])) : '-' ?></div>
           </div>
 

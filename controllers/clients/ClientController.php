@@ -167,7 +167,7 @@ class ClientController extends BaseController
         foreach ($clients as $c) {
             $id = $c['id_client'];
             $idCrypte = $this->validator->crypter($id);
-            $nomComplet = trim(($c['nom_client'] ?? '') . ' ' . ($c['prenom_client'] ?? ''));
+            $nomComplet = trim($c['nom_client'] ?? '');
             if (empty($nomComplet)) $nomComplet = 'Client Sans Nom';
 
             $isActif = (($c['statut_client'] ?? 'actif') === 'actif');
@@ -225,15 +225,23 @@ class ClientController extends BaseController
         // Nettoyage préalable des formats téléphoniques (+225 / 225)
         $this->cleanPhoneFields($data);
 
-        // 1. Contrôle par téléphone (si renseigné)
+        $zoneCodeCheck = !empty($data['zone_code']) ? $data['zone_code'] : Context::zone();
+
+        // 1. Contrôle par Téléphone Principal + zone_code (anti-doublon par zone)
         if (!empty($data['telephone_client'])) {
-            $telClean = $data['telephone_client'];
-            $stmtCheck = $this->model->getCon()->prepare("SELECT code_client, nom_client FROM clients WHERE telephone_client = ? LIMIT 1");
-            $stmtCheck->execute([$telClean]);
+            $telClean = trim($data['telephone_client']);
+            if (!empty($zoneCodeCheck)) {
+                $stmtCheck = $this->model->getCon()->prepare("SELECT code_client, nom_client FROM clients WHERE telephone_client = ? AND zone_code = ? LIMIT 1");
+                $stmtCheck->execute([$telClean, $zoneCodeCheck]);
+            } else {
+                $stmtCheck = $this->model->getCon()->prepare("SELECT code_client, nom_client FROM clients WHERE telephone_client = ? LIMIT 1");
+                $stmtCheck->execute([$telClean]);
+            }
             $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
             if ($existing) {
-                $this->error("Un client existe déjà avec ce numéro de téléphone ({$telClean}) : {$existing['nom_client']} (Code: {$existing['code_client']}).");
+                $nomClient = trim($existing['nom_client'] ?? '');
+                $this->error("Un client existe déjà avec le numéro de téléphone ({$telClean}) dans cette zone : {$nomClient} (Code: {$existing['code_client']}).");
                 return;
             }
         }
@@ -251,17 +259,22 @@ class ClientController extends BaseController
             }
         }
 
-        // 3. Contrôle anti-doublon par Nom complet + Lieu de résidence
+        // 3. Contrôle anti-doublon par Nom complet + Lieu de résidence dans la même zone
         if (!empty($data['nom_client']) && !empty($data['lieu_residence_client'])) {
             $nom = trim($data['nom_client']);
             $residence = trim($data['lieu_residence_client']);
 
-            $stmtCheckNom = $this->model->getCon()->prepare("SELECT code_client, nom_client, telephone_client FROM clients WHERE LOWER(nom_client) = LOWER(?) AND LOWER(lieu_residence_client) = LOWER(?) LIMIT 1");
-            $stmtCheckNom->execute([$nom, $residence]);
+            if (!empty($zoneCodeCheck)) {
+                $stmtCheckNom = $this->model->getCon()->prepare("SELECT code_client, nom_client, telephone_client FROM clients WHERE LOWER(nom_client) = LOWER(?) AND LOWER(lieu_residence_client) = LOWER(?) AND zone_code = ? LIMIT 1");
+                $stmtCheckNom->execute([$nom, $residence, $zoneCodeCheck]);
+            } else {
+                $stmtCheckNom = $this->model->getCon()->prepare("SELECT code_client, nom_client, telephone_client FROM clients WHERE LOWER(nom_client) = LOWER(?) AND LOWER(lieu_residence_client) = LOWER(?) LIMIT 1");
+                $stmtCheckNom->execute([$nom, $residence]);
+            }
             $existingNom = $stmtCheckNom->fetch(PDO::FETCH_ASSOC);
 
             if ($existingNom) {
-                $this->error("Un client nommé '$nom' résidant à '$residence' existe déjà (Contact: {$existingNom['telephone_client']}, Code: {$existingNom['code_client']}).");
+                $this->error("Un client nommé '$nom' résidant à '$residence' existe déjà dans cette zone (Contact: {$existingNom['telephone_client']}, Code: {$existingNom['code_client']}).");
                 return;
             }
         }
@@ -310,8 +323,27 @@ class ClientController extends BaseController
         $data = $_POST;
         unset($data['csrf_token']);
 
+        $this->cleanPhoneFields($data);
+
+        $clientExist = $this->model->getById($id);
+        $zoneCodeCheck = !empty($data['zone_code']) ? $data['zone_code'] : ($clientExist['zone_code'] ?? Context::zone());
+
         if (!empty($data['telephone_client'])) {
-            if (!$this->checkUnique('clients', 'telephone_client', $data['telephone_client'], 'Téléphone client', 'id_client', $id)) return;
+            $telClean = trim($data['telephone_client']);
+            if (!empty($zoneCodeCheck)) {
+                $stmtCheck = $this->model->getCon()->prepare("SELECT id_client, code_client, nom_client FROM clients WHERE telephone_client = ? AND zone_code = ? AND id_client != ? LIMIT 1");
+                $stmtCheck->execute([$telClean, $zoneCodeCheck, $id]);
+            } else {
+                $stmtCheck = $this->model->getCon()->prepare("SELECT id_client, code_client, nom_client FROM clients WHERE telephone_client = ? AND id_client != ? LIMIT 1");
+                $stmtCheck->execute([$telClean, $id]);
+            }
+            $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+            if ($existing) {
+                $nomClient = trim($existing['nom_client'] ?? '');
+                $this->error("Un autre client existe déjà avec ce numéro de téléphone ({$telClean}) dans cette zone : {$nomClient} (Code: {$existing['code_client']}).");
+                return;
+            }
         }
 
         $data['updated_at_client'] = date('Y-m-d H:i:s');

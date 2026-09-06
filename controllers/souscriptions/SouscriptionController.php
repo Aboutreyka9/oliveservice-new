@@ -448,7 +448,11 @@ class SouscriptionController extends BaseController
         ");
         $stmtS->execute([$sessionCode, $etabCode, $zoneCode, $anneeCode]);
         $resS = $stmtS->fetch(PDO::FETCH_ASSOC);
-        $nbJours = (int)($resS['nombre_jour_session'] ?? 170);
+        $nbJours = (int)($resS['nombre_jour_session'] ?? 0);
+        if ($nbJours <= 0) {
+            $this->error("Erreur d'insertion : La session sélectionnée est invalide ou son nombre de jours n'est pas configuré.");
+            return;
+        }
 
         $montantTotalPrevu = $cotisJour * $nbJours;
 
@@ -615,7 +619,11 @@ class SouscriptionController extends BaseController
         ");
         $stmtS->execute([$sessionCode, $etabCode, $zoneCode, $anneeCode]);
         $resS = $stmtS->fetch(PDO::FETCH_ASSOC);
-        $nbJours = (int)($resS['nombre_jour_session'] ?? 170);
+        $nbJours = (int)($resS['nombre_jour_session'] ?? 0);
+        if ($nbJours <= 0) {
+            $this->error("Erreur d'insertion : La session sélectionnée est invalide ou son nombre de jours n'est pas configuré.");
+            return;
+        }
 
         $montantTotalPrevu = $cotisJour * $nbJours;
 

@@ -11,14 +11,14 @@ class EtablissementController extends BaseController
     {
         $items = $this->model->getAll();
         return !empty($items) ? $items[0] : [
-            'id_etablissement' => 1,
-            'libelle_etablissement' => 'Institut Supérieur GEICG',
+            'id_etablissement' => null,
+            'libelle_etablissement' => '',
             'numero_autorisation_etablissement' => '',
-            'telephone_etablissement' => '0708091011',
-            'telephone_etablissement2' => '0102030405',
-            'email_etablissement' => 'contact@geicg.ci',
-            'slogan_etablissement' => 'L\'Excellence au Service de l\'Avenir',
-            'adresse_etablissement' => 'Abidjan Cocody Angré 8ème Tranche',
+            'telephone_etablissement' => '',
+            'telephone_etablissement2' => '',
+            'email_etablissement' => '',
+            'slogan_etablissement' => '',
+            'adresse_etablissement' => '',
             'statut_etablissement' => 'actif'
         ];
     }

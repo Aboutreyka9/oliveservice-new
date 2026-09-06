@@ -294,7 +294,12 @@ class CautisationPaymentController extends BaseController
             return;
         }
 
-        $caisseCode = $caisse['code_caisse'] ?? ($caisse['code_ouverture'] ?? 'CAISSE-DEFAULT');
+        if (!$caisse || (empty($caisse['code_caisse']) && empty($caisse['code_ouverture']))) {
+            $this->error("Erreur d'insertion : Aucune caisse active ouverte n'a été trouvée pour enregistrer ce paiement.");
+            return;
+        }
+
+        $caisseCode = !empty($caisse['code_caisse']) ? $caisse['code_caisse'] : $caisse['code_ouverture'];
 
         // RÈGLE RBAC : Statut initial = 'en_attente' pour les commerciaux, 'valide' pour finance/admin
         $statutInitial = Context::isCommercial() ? 'en_attente' : 'valide';

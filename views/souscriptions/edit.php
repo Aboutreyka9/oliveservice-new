@@ -82,7 +82,7 @@ $sessions = $sessions ?? [];
 
               <div class="form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Durée Totale (en Nombre de Jours) <span style="color: #EF4444;">*</span></label>
-                <input type="number" name="nombre_jour_total" id="input-jours" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; font-weight: 700; color: #1E3A5F; outline: none;" value="<?= htmlspecialchars($item['nombre_jour_total'] ?? '170') ?>" required placeholder="Ex: 170">
+                <input type="number" name="nombre_jour_total" id="input-jours" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; font-weight: 700; color: #1E3A5F; outline: none;" value="<?= htmlspecialchars($item['nombre_jour_total'] ?? '') ?>" required placeholder="Ex: 170">
               </div>
 
               <div class="form-group">

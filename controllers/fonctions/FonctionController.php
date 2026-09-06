@@ -33,9 +33,15 @@ class FonctionController extends BaseController
     {
         $this->requirePost(false);
         $this->requirePermission('ADMIN_MANAGE_USERS');
-        $userCode = Context::user() ?? '';
+        $userCode = Context::user();
         $anneeCode = Context::annee();
-        $etabCode = '5454544456';
+        $etabCode = Context::etablissement();
+
+        if (empty($userCode) || empty($etabCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
+
         $data = $_POST;
         unset($data['csrf_token']);
 
