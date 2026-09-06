@@ -57,8 +57,8 @@ $(function () {
             const checkedAttr = isActif ? 'checked' : '';
             return `
               <div style="display:flex; justify-content:center; align-items:center; gap:8px;">
-                <label  style="position:relative; display:inline-block; width:38px; height:20px; margin:0; cursor:pointer;" title="${isActif ? 'Depense déjà approuvé' : 'Inactif - Cliquez pour activer'}">
-                  <input ${isActif ? 'disabled' : ''} type="checkbox" class="toggle-statut-depense" data-id="${row.id_depense}" ${checkedAttr} style="opacity:0; width:0; height:0;">
+                <label style="position:relative; display:inline-block; width:38px; height:20px; margin:0; cursor:pointer;" title="${isActif ? 'Actif - Cliquez pour désactiver' : 'Inactif - Cliquez pour activer'}">
+                  <input type="checkbox" class="toggle-statut-depense" data-id="${row.id_depense}" ${checkedAttr} style="opacity:0; width:0; height:0;">
                   <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:${isActif ? '#15803D' : '#CBD5E1'}; transition:.3s; border-radius:20px;">
                     <span style="position:absolute; content:''; height:14px; width:14px; left:${isActif ? '20px' : '3px'}; bottom:3px; background-color:white; transition:.3s; border-radius:50%;"></span>
                   </span>
@@ -122,10 +122,20 @@ $(function () {
     $('#btn-reload-depenses').on('click', function () {
       const $btn = $(this);
       const $icon = $btn.find('i, svg');
+      function notifyToast(msg, type) {
+        if (typeof showToast === 'function') {
+          showToast(msg, type);
+        } else if (window.toastr && typeof window.toastr[type] === 'function') {
+          window.toastr[type](msg);
+        } else {
+          alert(msg);
+        }
+      }
+
       $icon.css({ 'transition': 'transform 0.6s ease', 'transform': 'rotate(360deg)' });
       table.ajax.reload(function () {
         setTimeout(() => $icon.css({ 'transform': 'none' }), 600);
-        if (window.toastr) toastr.info('Données des dépenses actualisées');
+        notifyToast('Données des dépenses actualisées', 'info');
       }, false);
     });
 
@@ -135,6 +145,16 @@ $(function () {
       const isChecked = $(this).is(':checked');
       const $input = $(this);
 
+      function notifyToast(msg, type) {
+        if (typeof showToast === 'function') {
+          showToast(msg, type);
+        } else if (window.toastr && typeof window.toastr[type] === 'function') {
+          window.toastr[type](msg);
+        } else {
+          alert(msg);
+        }
+      }
+
       $.ajax({
         url: racine + 'depense/changer',
         type: 'POST',
@@ -143,15 +163,15 @@ $(function () {
         dataType: 'json',
         success: function (res) {
           if (res.status === 1 || res.success) {
-            if (window.toastr) toastr.success(res.message || 'Statut mis à jour avec succès');
+            notifyToast(res.message || 'Statut mis à jour avec succès', 'success');
             table.ajax.reload(null, false);
           } else {
-            if (window.toastr) toastr.error(res.message || 'Erreur lors du changement de statut');
+            notifyToast(res.message || 'Erreur lors du changement de statut', 'error');
             $input.prop('checked', !isChecked);
           }
         },
         error: function () {
-          if (window.toastr) toastr.error('Erreur réseau');
+          notifyToast('Erreur réseau lors de la communication serveur', 'error');
           $input.prop('checked', !isChecked);
         }
       });

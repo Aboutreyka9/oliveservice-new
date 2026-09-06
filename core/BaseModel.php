@@ -121,20 +121,23 @@ abstract class BaseModel
                 return true;
             }
 
-            $where = "WHERE {$this->primaryKey} = :primary_key_id";
-            $data['primary_key_id'] = $id;
+            // La clause SET ne doit contenir que les vraies colonnes passées dans $data
+            $set = implode(', ', array_map(fn($f) => "`$f` = :$f", array_keys($data)));
+            $params = $data;
+
+            $where = "WHERE `{$this->primaryKey}` = :primary_key_id";
+            $params['primary_key_id'] = $id;
 
             if (in_array($this->table, Context::SCOPED_TABLES)) {
-                $where .= " AND etablissement_code = :scoped_etab AND zone_code = :scoped_zone AND annee_code = :scoped_annee";
-                $data['scoped_etab'] = Context::etablissement();
-                $data['scoped_zone'] = Context::zone();
-                $data['scoped_annee'] = Context::annee();
+                $where .= " AND `etablissement_code` = :scoped_etab AND `zone_code` = :scoped_zone AND `annee_code` = :scoped_annee";
+                $params['scoped_etab'] = Context::etablissement();
+                $params['scoped_zone'] = Context::zone();
+                $params['scoped_annee'] = Context::annee();
             }
 
-            $set = implode(', ', array_map(fn($f) => "$f = :$f", array_keys($data)));
-            $sql = "UPDATE {$this->table} SET $set $where";
+            $sql = "UPDATE `{$this->table}` SET $set $where";
             $stmt = $this->pdo->getCon()->prepare($sql);
-            return $stmt->execute($data);
+            return $stmt->execute($params);
         } catch (Exception $e) {
             error_log("Update {$this->table}: " . $e->getMessage());
             return false;

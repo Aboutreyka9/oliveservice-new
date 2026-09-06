@@ -189,12 +189,6 @@ class DepenseController extends BaseController
             return;
         }
 
-        // Blocage de la modification si la dépense est active
-        if (($existing['statut_depense'] ?? '') === 'actif') {
-            $this->error('Impossible de modifier une dépense déjà active.');
-            return;
-        }
-
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -221,8 +215,16 @@ class DepenseController extends BaseController
             }
         }
 
-        if (!empty($data['date_depense']) && empty($data['periode_depense'])) {
-            $data['periode_depense'] = $data['date_depense'] . ' ' . date('H:i:s');
+        if (isset($data['description_depense'])) {
+            $data['motif_depense'] = $data['description_depense'];
+        } elseif (isset($data['motif_depense'])) {
+            $data['description_depense'] = $data['motif_depense'];
+        }
+
+        if (!empty($data['date_depense'])) {
+            if (empty($data['periode_depense'])) {
+                $data['periode_depense'] = $data['date_depense'] . ' ' . date('H:i:s');
+            }
         }
 
         $data['updated_at_depense'] = date('Y-m-d H:i:s');
@@ -308,11 +310,6 @@ class DepenseController extends BaseController
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
             if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
-                header('Location: ' . RACINE . 'depense/list'); exit();
-            }
-            // Blocage de l'accès au formulaire si la dépense est active
-            if (($item['statut_depense'] ?? '') === 'actif') {
-                $_SESSION['error'] = "Impossible de modifier une dépense déjà active.";
                 header('Location: ' . RACINE . 'depense/list'); exit();
             }
             $encryptedId = $this->validator->crypter($id);

@@ -885,15 +885,9 @@ $isPdf = ($pjExt === 'pdf');
           <button type="button" onclick="window.print()" class="btn-header-print" title="Imprimer le bordereau de dépense">
             <i data-lucide="printer" style="width: 16px; height: 16px;"></i> Imprimer
           </button>
-          <?php if (!$isActif): ?>
-            <a href="<?= RACINE ?>depense/edition/<?= $encryptedId ?>" class="btn-header-edit">
-              <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Modifier Dépense
-            </a>
-          <?php else: ?>
-            <button type="button" class="btn-header-locked" title="Dépense active : modification verrouillée pour archivage comptable">
-              <i data-lucide="lock" style="width: 15px; height: 15px;"></i> Dépense Active (Verrouillée)
-            </button>
-          <?php endif; ?>
+          <a href="<?= RACINE ?>depense/edition/<?= $encryptedId ?>" class="btn-header-edit" title="Modifier cette dépense">
+            <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Modifier Dépense
+          </a>
         </div>
       </div>
 
