@@ -15,9 +15,11 @@ require_once __DIR__ . '/../../public/inc/header.php';
           </h1>
           <p class="page-subtitle" style="margin: 4px 0 0; color: #64748B; font-size: 13px;">Gestion et classification des types de vêtements et de linge</p>
         </div>
+        <?php if (Context::can('GESTIONNAIRE_MANAGE_CATEGORIES_ARTICLES', ['ROLE_GESTIONNAIRE', 'ROLE_ADMIN'])): ?>
         <a href="<?= RACINE ?>categorie/formulaire" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
           <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Ajouter une catégorie
         </a>
+        <?php endif; ?>
       </div>
 
       <div class="card" style="border-radius: 14px; border: 1px solid #E2E8F0; padding: 20px; background: #FFFFFF;">

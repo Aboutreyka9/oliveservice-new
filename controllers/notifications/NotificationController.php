@@ -74,7 +74,7 @@ class NotificationController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
 
         if ($this->isLivreur()) {
             $this->error('Action non autorisée pour votre profil.');
@@ -165,7 +165,7 @@ class NotificationController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $id = (int)$this->post('id');
 
         if ($id && $this->model->toggleRead($id)) {
@@ -178,7 +178,7 @@ class NotificationController extends BaseController
     public function delete()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $id = (int)$this->post('id');
 
         if ($id && $this->model->deleteNotification($id)) {

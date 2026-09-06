@@ -9,13 +9,13 @@ class DepenseController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $this->loadView('../views/depenses/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $items = $this->model->getAllWithDetails();
         $data = [];
 
@@ -34,7 +34,7 @@ class DepenseController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -90,7 +90,7 @@ class DepenseController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $id = (int)$this->post('id_depense');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $existing = $this->model->getById($id);
@@ -115,7 +115,7 @@ class DepenseController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $id = $this->post('id');
         if ($id && ($item = $this->model->getById($id))) {
             if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
@@ -134,7 +134,7 @@ class DepenseController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -161,7 +161,7 @@ class DepenseController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -183,7 +183,7 @@ class DepenseController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $typeDepenses = $this->model->getCon()->query("SELECT code_type_depense, libelle_type_depense FROM type_depenses ORDER BY libelle_type_depense ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         $this->loadView('../views/depenses/edit.php', [

@@ -29,9 +29,11 @@
           </div>
         </div>
 
+        <?php if (Context::can('ADMIN_MANAGE_USERS', ['ROLE_ADMIN', 'ROLE_SUPERADMIN'])): ?>
         <a href="<?= RACINE ?>user/formulaire" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); text-decoration: none; cursor: pointer;">
           <i data-lucide="user-plus" style="width: 18px; height: 18px;"></i> Nouvel Utilisateur
         </a>
+        <?php endif; ?>
       </div>
 
       <!-- CARTE TABLEAU PRINCIPALE (NAVY PREMIUM) -->
@@ -118,12 +120,14 @@ $(document).ready(function() {
           ? (IS_SUPER_ADMIN_USER ? 'Compte non activé par jeton (Dérogation Super Admin active)' : 'Jeton d\'activation non validé - Modification réservée au Super Admin')
           : (isActif ? 'Actif - Cliquez pour désactiver' : 'Inactif - Cliquez pour activer');
 
-        var containerStyle = (isPending && !IS_SUPER_ADMIN_USER) ? 'opacity: 0.6; cursor: not-allowed;' : 'cursor: pointer;';
+        var canManage = (window.AppConfig && typeof window.AppConfig.can === 'function') ? window.AppConfig.can('ADMIN_MANAGE_USERS') : false;
+        var containerStyle = (isPending && !IS_SUPER_ADMIN_USER) || !canManage ? 'opacity: 0.6; cursor: not-allowed;' : 'cursor: pointer;';
+        var disabledAttr = (!canManage || (isPending && !IS_SUPER_ADMIN_USER)) ? 'disabled' : '';
 
         var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;">';
         html += '<label style="position:relative; display:inline-block; width:42px; height:22px; margin:0; ' + containerStyle + '" title="' + tooltipMsg + '">';
-        html += '<input type="checkbox" class="toggle-statut-user" data-id="' + (row.id || row.id_user) + '" data-pending="' + (isPending ? '1' : '0') + '" ' + checkedAttr + ' style="opacity:0; width:0; height:0;">';
-        html += '<span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:' + (isActif ? '#059669' : '#CBD5E1') + '; transition:.3s; border-radius:20px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">';
+        html += '<input type="checkbox" class="toggle-statut-user" data-id="' + (row.id || row.id_user) + '" data-pending="' + (isPending ? '1' : '0') + '" ' + checkedAttr + ' ' + disabledAttr + ' style="opacity:0; width:0; height:0;">';
+        html += '<span style="position:absolute; cursor:' + (canManage ? 'pointer' : 'not-allowed') + '; top:0; left:0; right:0; bottom:0; background-color:' + (isActif ? '#059669' : '#CBD5E1') + '; transition:.3s; border-radius:20px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">';
         html += '<span style="position:absolute; content:\'\'; height:16px; width:16px; left:' + (isActif ? '23px' : '3px') + '; bottom:3px; background-color:white; transition:.3s; border-radius:50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></span>';
         html += '</span>';
         html += '</label>';
@@ -137,10 +141,14 @@ $(document).ready(function() {
       }},
       { data: null, width: '170px', orderable: false, render: function(d) {
         var editId = d.editId || d.id;
-        return '<div style="display:flex; justify-content:flex-end; gap:6px;">' +
-               '<a href="' + window.RACINE + 'user/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
-               '<a href="' + window.RACINE + 'user/details/' + editId + '" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir profil"><i data-lucide="eye" style="width:14px;height:14px;"></i> Profil</a>' +
+        var canManage = (window.AppConfig && typeof window.AppConfig.can === 'function') ? window.AppConfig.can('ADMIN_MANAGE_USERS') : false;
+        var html = '<div style="display:flex; justify-content:flex-end; gap:6px;">';
+        if (canManage) {
+          html += '<a href="' + window.RACINE + 'user/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>';
+        }
+        html += '<a href="' + window.RACINE + 'user/details/' + editId + '" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir profil"><i data-lucide="eye" style="width:14px;height:14px;"></i> Profil</a>' +
                '</div>';
+        return html;
       }, className: 'text-end' }
     ],
     language: { url: '<?= RACINE ?>json/datatables-i18n-fr-FR.json' },

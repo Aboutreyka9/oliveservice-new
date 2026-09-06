@@ -9,13 +9,13 @@ class ZoneCommercialController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ZONES');
         $this->loadView('../views/zone_commercials/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ZONES');
         $items = $this->model->getAllWithDetails();
         $data = [];
 
@@ -34,7 +34,7 @@ class ZoneCommercialController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ZONES');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -61,7 +61,7 @@ class ZoneCommercialController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ZONES');
         $id = (int)$this->post('id_zone_commercial');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -80,7 +80,7 @@ class ZoneCommercialController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ZONES');
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
@@ -95,7 +95,7 @@ class ZoneCommercialController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ZONES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -109,7 +109,7 @@ class ZoneCommercialController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ZONES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -125,7 +125,7 @@ class ZoneCommercialController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ZONES');
         $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
         $commerciaux = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user FROM users WHERE statut_user='actif'")->fetchAll(PDO::FETCH_ASSOC);
         $this->loadView('../views/zone_commercials/edit.php', ['item' => [], 'zones' => $zones, 'commerciaux' => $commerciaux]);

@@ -40,38 +40,130 @@ class Context
         return $_SESSION[USERS_AUTH]['id_user'] ?? null;
     }
 
-    public static function role(): string
+    public static function roles(): array
     {
         $roles = $_SESSION[USERS_AUTH]['roles'] ?? [];
-        if (!empty($roles) && is_array($roles)) {
-            return $roles[0];
+        if (empty($roles)) {
+            $singleRole = $_SESSION[USERS_AUTH]['role_code'] ?? ($_SESSION['role_code'] ?? '');
+            if (!empty($singleRole)) {
+                $roles = [$singleRole];
+            }
         }
-        return $_SESSION[USERS_AUTH]['role_code'] ?? ($_SESSION['role_code'] ?? 'ROLE_COMMERCIAL');
+        if (is_string($roles)) {
+            $roles = [$roles];
+        }
+        return array_values(array_unique(array_filter($roles)));
+    }
+
+    public static function role(): string
+    {
+        $roles = self::roles();
+        return $roles[0] ?? 'ROLE_COMMERCIAL';
+    }
+
+    public static function is(string|array $roles): bool
+    {
+        if (self::isSuperAdmin()) {
+            return true;
+        }
+        $targetRoles = is_array($roles) ? $roles : [$roles];
+        return !empty(array_intersect(self::roles(), $targetRoles));
     }
 
     public static function isSuperAdmin(): bool
     {
-        return in_array(self::role(), ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_DIR_GENERAL'], true);
+        return !empty(array_intersect(self::roles(), ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_DIR_GENERAL']));
     }
 
     public static function isCommercial(): bool
     {
-        return self::role() === 'ROLE_COMMERCIAL';
+        return in_array('ROLE_COMMERCIAL', self::roles(), true);
     }
 
     public static function isGestionnaire(): bool
     {
-        return self::role() === 'ROLE_GESTIONNAIRE';
+        return in_array('ROLE_GESTIONNAIRE', self::roles(), true);
     }
 
     public static function isFinance(): bool
     {
-        return self::role() === 'ROLE_FINANCE';
+        return in_array('ROLE_FINANCE', self::roles(), true);
     }
 
     public static function isAdmin(): bool
     {
         return self::isSuperAdmin();
+    }
+
+    public static function permissions(): array
+    {
+        if (self::isSuperAdmin()) {
+            return ['*'];
+        }
+
+        if (isset($_SESSION['user_permissions']) && is_array($_SESSION['user_permissions'])) {
+            return $_SESSION['user_permissions'];
+        }
+
+        $roles = self::roles();
+        if (empty($roles)) {
+            return [];
+        }
+
+        try {
+            $db = (new Database())->getCon();
+            $inClause = implode(',', array_fill(0, count($roles), '?'));
+            $stmt = $db->prepare("
+                SELECT DISTINCT rp.permission_code 
+                FROM role_permissions rp
+                JOIN permissions p ON rp.permission_code = p.code_permission
+                WHERE rp.role_code IN ($inClause)
+                  AND p.statut_permission = 'actif'
+            ");
+            $stmt->execute($roles);
+            $perms = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            $_SESSION['user_permissions'] = $perms;
+            return $perms;
+        } catch (Exception $e) {
+            error_log("Context::permissions error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public static function hasPermission(string $perm): bool
+    {
+        if (self::isSuperAdmin()) {
+            return true;
+        }
+        $perms = self::permissions();
+        return in_array('*', $perms, true) || in_array($perm, $perms, true);
+    }
+
+    public static function hasAnyPermission(array $perms): bool
+    {
+        if (self::isSuperAdmin()) {
+            return true;
+        }
+        foreach ($perms as $p) {
+            if (self::hasPermission($p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static function can(string|array $perms, array $allowedRoles = []): bool
+    {
+        if (self::isSuperAdmin()) {
+            return true;
+        }
+        if (!empty($allowedRoles) && !empty(array_intersect(self::roles(), $allowedRoles))) {
+            return true;
+        }
+        if (is_array($perms)) {
+            return self::hasAnyPermission($perms);
+        }
+        return self::hasPermission($perms);
     }
 
     public static function all(): array
@@ -82,6 +174,8 @@ class Context
             'zone_code' => self::zone(),
             'user_code' => self::user(),
             'role_code' => self::role(),
+            'roles' => self::roles(),
+            'permissions' => self::permissions(),
             'is_super_admin' => self::isSuperAdmin(),
         ];
     }

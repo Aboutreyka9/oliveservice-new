@@ -389,45 +389,23 @@ abstract class BaseController
      */
     protected function getUserPermissions(): array
     {
-        if ($this->isSuperAdmin()) {
-            return ['*'];
-        }
-
-        $roles = $this->getCurrentUserRoles();
-        if (empty($roles)) {
-            return [];
-        }
-
-        try {
-            $pdo = ($this->model && method_exists($this->model, 'getCon')) ? $this->model->getCon() : (new Database())->getCon();
-            $inClause = implode(',', array_fill(0, count($roles), '?'));
-            $sql = "
-                SELECT DISTINCT rp.permission_code 
-                FROM role_permissions rp
-                JOIN permissions p ON rp.permission_code = p.code_permission
-                WHERE rp.role_code IN ($inClause)
-                  AND p.statut_permission = 'actif'
-            ";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($roles);
-            return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
-        } catch (Exception $e) {
-            error_log("Error fetching user permissions: " . $e->getMessage());
-            return [];
-        }
+        return Context::permissions();
     }
 
     /**
-     * Vérifie si l'utilisateur possède une permission métier donnée
+     * Vérifie si l'utilisateur possède une permission métier donnée (ou au moins une parmi une liste)
      */
-    protected function hasPermission(string $permissionCode): bool
+    protected function hasPermission(string|array $permissionCode): bool
     {
         if ($this->isSuperAdmin()) {
             return true;
         }
 
-        $perms = $this->getUserPermissions();
-        return in_array('*', $perms, true) || in_array($permissionCode, $perms, true);
+        if (is_array($permissionCode)) {
+            return Context::hasAnyPermission($permissionCode);
+        }
+
+        return Context::hasPermission($permissionCode);
     }
 
     /**
@@ -443,16 +421,43 @@ abstract class BaseController
     }
 
     /**
-     * Bloque la requête avec une page complète 403 si l'utilisateur ne possède pas la permission requise
+     * Bloque la requête avec une page complète 403 (ou JSON 403 si AJAX) si l'utilisateur ne possède pas la permission requise
      */
-    protected function requirePermission(string $permissionCode, string $customMessage = ''): void
+    protected function requirePermission(string|array $permissionCode, string $customMessage = ''): void
     {
         $this->requireAuth();
 
         if (!$this->hasPermission($permissionCode)) {
-            $msg = !empty($customMessage) ? $customMessage : "Accès refusé : vous ne possédez pas le privilège [{$permissionCode}] requis pour accéder à cette section.";
-            $this->renderForbidden($msg, $permissionCode);
+            $codeStr = is_array($permissionCode) ? implode(' / ', $permissionCode) : $permissionCode;
+            $msg = !empty($customMessage) ? $customMessage : "Accès refusé : vous ne possédez pas le privilège [{$codeStr}] requis pour accéder à cette section.";
+            $this->renderForbidden($msg, $codeStr);
         }
+    }
+
+    /**
+     * Bloque la requête si l'utilisateur ne possède aucun des rôles spécifiés
+     */
+    protected function requireAnyRole(array $roles, string $customMessage = ''): void
+    {
+        $this->requireAuth();
+
+        if ($this->isSuperAdmin()) {
+            return;
+        }
+
+        if (!$this->hasAnyRole($roles)) {
+            $rolesStr = implode(', ', $roles);
+            $msg = !empty($customMessage) ? $customMessage : "Accès refusé : cette action est réservée aux profils [{$rolesStr}].";
+            $this->renderForbidden($msg, $rolesStr);
+        }
+    }
+
+    /**
+     * Bloque la requête si l'utilisateur ne possède pas le rôle spécifié
+     */
+    protected function requireRole(string $role, string $customMessage = ''): void
+    {
+        $this->requireAnyRole([$role], $customMessage);
     }
 
     /**

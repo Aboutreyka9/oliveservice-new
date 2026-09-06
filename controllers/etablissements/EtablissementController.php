@@ -25,42 +25,42 @@ class EtablissementController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ETABLISSEMENTS');
         $item = $this->getSingleItem();
         $this->loadView('../views/etablissements/config.php', ['item' => $item]);
     }
 
     public function config()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ETABLISSEMENTS');
         $item = $this->getSingleItem();
         $this->loadView('../views/etablissements/config.php', ['item' => $item]);
     }
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ETABLISSEMENTS');
         $item = $this->getSingleItem();
         $this->loadView('../views/etablissements/config.php', ['item' => $item]);
     }
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ETABLISSEMENTS');
         $item = $this->getSingleItem();
         $this->loadView('../views/etablissements/config.php', ['item' => $item]);
     }
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ETABLISSEMENTS');
         $item = $this->getSingleItem();
         $this->loadView('../views/etablissements/config.php', ['item' => $item]);
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ETABLISSEMENTS');
         $item = $this->getSingleItem();
         $id = $item['id_etablissement'] ?? 1;
         $idCrypte = $this->validator->crypter($id);
@@ -70,7 +70,7 @@ class EtablissementController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ETABLISSEMENTS');
         $id = (int)$this->post('id_etablissement');
         $data = $_POST;
         unset($data['csrf_token']);
@@ -142,7 +142,7 @@ class EtablissementController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_ETABLISSEMENTS');
         $id = (int)$this->post('id');
         $statut = $this->post('statut') ?: $this->post('status');
         if ($id && $this->model->getById($id)) {

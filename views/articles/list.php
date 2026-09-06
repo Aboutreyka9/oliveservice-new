@@ -21,9 +21,11 @@
           </div>
         </div>
 
+        <?php if (Context::can('GESTIONNAIRE_MANAGE_ARTICLES', ['ROLE_GESTIONNAIRE', 'ROLE_ADMIN'])): ?>
         <a href="<?= RACINE ?>article/formulaire" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); text-decoration: none; cursor: pointer;">
           <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Nouvel Article
         </a>
+        <?php endif; ?>
       </div>
 
       <!-- CARTE TABLEAU PRINCIPALE (NAVY PREMIUM) -->
@@ -65,6 +67,10 @@ $(document).ready(function() {
       }},
       { data: 'statut_article', width: '90px', className: 'text-center', render: function(d, type, row) {
         var isActif = (d === 'actif');
+        var canManage = window.AppConfig && window.AppConfig.can ? window.AppConfig.can('GESTIONNAIRE_MANAGE_ARTICLES') : false;
+        if (!canManage) {
+          return '<span style="font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; background:' + (isActif ? '#ECFDF5; color:#047857;' : '#F1F5F9; color:#64748B;') + '">' + (isActif ? 'Actif' : 'Inactif') + '</span>';
+        }
         var checkedAttr = isActif ? 'checked' : '';
         return '<div style="display:flex; justify-content:center; align-items:center;">' +
                '<label style="position:relative; display:inline-block; width:42px; height:22px; margin:0; cursor:pointer;" title="' + (isActif ? 'Actif - Cliquez pour désactiver' : 'Inactif - Cliquez pour activer') + '">' +
@@ -77,8 +83,10 @@ $(document).ready(function() {
       }},
       { data: null, width: '170px', orderable: false, render: function(d) {
         var editId = d.editId || d.id_article;
+        var canManage = window.AppConfig && window.AppConfig.can ? window.AppConfig.can('GESTIONNAIRE_MANAGE_ARTICLES') : false;
+        var editBtn = canManage ? '<a href="' + window.RACINE + 'article/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' : '';
         return '<div style="display:flex; justify-content:flex-end; gap:6px;">' +
-               '<a href="' + window.RACINE + 'article/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
+               editBtn +
                '<a href="' + window.RACINE + 'article/details/' + editId + '" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir détails"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>' +
                '</div>';
       }, className: 'text-end' }

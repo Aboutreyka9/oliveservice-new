@@ -9,13 +9,13 @@ class UserController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $this->loadView('../views/users/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $sql = "SELECT u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code,
                        z.libelle_zone,
                        GROUP_CONCAT(DISTINCT r.libelle_role ORDER BY r.id SEPARATOR '||') as roles_libelles,
@@ -61,7 +61,7 @@ class UserController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
 
         $nom = trim($_POST['nom'] ?? '');
         $prenom = trim($_POST['prenom'] ?? '');
@@ -201,7 +201,7 @@ class UserController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $id = (int)$this->post('id_user');
         if (!$id) { $this->error('Identifiant invalide'); return; }
 
@@ -294,7 +294,7 @@ class UserController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $id = $this->post('id');
 
         $userRoles = $_SESSION[USERS_AUTH]['roles'] ?? [];
@@ -323,7 +323,7 @@ class UserController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         try {
             $userId = $this->validator->decrypter($details);
             $userProfile = $this->model->getById($userId);
@@ -358,7 +358,7 @@ class UserController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $roles = (new ModelRole())->getAll();
         $fonctions = (new ModelFonction())->getAll();
         $zones = $this->model->getCon()->query("SELECT * FROM zones WHERE statut_zone = 'actif' ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -375,7 +375,7 @@ class UserController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         try {
             $decryptedId = $this->validator->decrypter($details);
             $userProfile = $this->model->getById($decryptedId);

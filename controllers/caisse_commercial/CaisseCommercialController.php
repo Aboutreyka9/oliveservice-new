@@ -9,13 +9,13 @@ class CaisseCommercialController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_MANAGE_OWN_CAISSE', 'FINANCE_VIEW_CLOTURES_CAISSE']);
         $this->loadView('../views/caisse_commercial/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_MANAGE_OWN_CAISSE', 'FINANCE_VIEW_CLOTURES_CAISSE']);
         $sql = "
             SELECT c.*, u.nom_user, u.prenom_user, val.nom_user as nom_validator, val.prenom_user as prenom_validator
             FROM caisses c
@@ -57,7 +57,7 @@ class CaisseCommercialController extends BaseController
 
     public function getDailyTotals()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_MANAGE_OWN_CAISSE', 'FINANCE_VIEW_CLOTURES_CAISSE']);
         $date = $_GET['date'] ?? ($_POST['date'] ?? date('Y-m-d'));
         $db = $this->model->getCon();
 
@@ -124,7 +124,7 @@ class CaisseCommercialController extends BaseController
 
     public function apiGetCommercialSession()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_MANAGE_OWN_CAISSE');
         $userCode = Context::user() ?? '';
         $dateToday = date('Y-m-d');
         $db = $this->model->getCon();
@@ -297,7 +297,7 @@ class CaisseCommercialController extends BaseController
     public function ouvrirMaCaisse()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_MANAGE_OWN_CAISSE');
         $userCode = Context::user() ?? '';
         $anneeCode = Context::annee();
         $etabCode = Context::etablissement();
@@ -343,7 +343,7 @@ class CaisseCommercialController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_MANAGE_OWN_CAISSE');
         $userCode = Context::user() ?? '';
         $db = $this->model->getCon();
 
@@ -404,7 +404,7 @@ class CaisseCommercialController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_CLOTURES_CAISSE');
         $id = (int)$this->post('id_caisse');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -421,7 +421,7 @@ class CaisseCommercialController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_CLOTURES_CAISSE');
         $id = (int)$this->post('id');
         $statut = $this->post('statut') ?: $this->post('status');
         if ($id && $this->model->getById($id)) {
@@ -450,7 +450,7 @@ class CaisseCommercialController extends BaseController
 
     public function details($param)
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_MANAGE_OWN_CAISSE', 'FINANCE_VIEW_CLOTURES_CAISSE']);
         try {
             $sqlCaisse = "
                 SELECT c.*, u.nom_user, u.prenom_user
@@ -500,7 +500,7 @@ class CaisseCommercialController extends BaseController
 
     public function edition($param)
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_CLOTURES_CAISSE');
         try {
             $id = $this->validator->decrypter($param);
             $item = $this->model->getById($id);
@@ -514,7 +514,7 @@ class CaisseCommercialController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_MANAGE_OWN_CAISSE');
         $this->loadView('../views/caisse_commercial/edit.php', ['item' => []]);
     }
 }

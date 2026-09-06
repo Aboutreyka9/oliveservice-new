@@ -52,6 +52,10 @@ $(function() {
           className: 'text-center', 
           render: function(d, type, row) {
             const isActif = (d === 'actif');
+            const canManage = window.AppConfig && window.AppConfig.can ? window.AppConfig.can('GESTIONNAIRE_MANAGE_PACKS') : false;
+            if (!canManage) {
+              return `<span style="font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px; background:${isActif ? '#ECFDF5; color:#047857;' : '#F1F5F9; color:#64748B;'}">${isActif ? 'Actif' : 'Inactif'}</span>`;
+            }
             const checkedAttr = isActif ? 'checked' : '';
             return `
               <div style="display:flex; justify-content:center; align-items:center;">
@@ -71,10 +75,13 @@ $(function() {
           className: 'text-end',
           render: function(d) {
             const editId = d.editId || d.id_pack;
-            return `
+            const canManage = window.AppConfig && window.AppConfig.can ? window.AppConfig.can('GESTIONNAIRE_MANAGE_PACKS') : false;
+            const editBtn = canManage ? `
               <a href="${racine}pack/edition/${editId}" class="btn btn-sm btn-secondary me-1">
                 <i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer
-              </a>
+              </a>` : '';
+            return `
+              ${editBtn}
               <a href="${racine}pack/details/${editId}" class="btn btn-sm btn-info">
                 <i data-lucide="eye" style="width:14px;height:14px;"></i> Détails
               </a>
