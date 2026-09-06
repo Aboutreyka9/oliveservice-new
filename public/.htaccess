@@ -1,5 +1,10 @@
 RewriteEngine On
 
+# Bloquer l'accès direct aux scripts temporaires
+<FilesMatch "^(diag|test_|check_|cleanup|get_|save_|db_).*\.php$">
+    Require all denied
+</FilesMatch>
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]
