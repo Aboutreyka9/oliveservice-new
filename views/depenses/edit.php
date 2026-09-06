@@ -116,19 +116,32 @@ $(document).ready(function() {
     $('.select2').select2({ width: '100%' });
   }
 
+  function notifyToast(msg, type) {
+    if (typeof showToast === 'function') {
+      showToast(msg, type);
+    } else if (window.toastr && typeof window.toastr[type] === 'function') {
+      window.toastr[type](msg);
+    } else {
+      alert(msg);
+    }
+  }
+
   $('#form-depense').on('submit', function(e) {
     e.preventDefault();
     var rawVal = parseFloat($('input[name="montant_depense"]').val());
     var montantVal = isNaN(rawVal) ? 0 : Math.abs(rawVal);
     $('input[name="montant_depense"]').val(montantVal > 0 ? montantVal : '');
     if (montantVal <= 0) {
-      if (window.toastr) {
-        toastr.error('Le montant doit être un nombre positif strictement supérieur à zéro !');
-      } else {
-        alert('Le montant doit être un nombre positif strictement supérieur à zéro !');
-      }
+      notifyToast('Le montant doit être un nombre positif strictement supérieur à zéro !', 'error');
       $('input[name="montant_depense"]').focus();
       return false;
+    }
+
+    var $btn = $(this).find('button[type="submit"]');
+    var originalHtml = $btn.html();
+    $btn.prop('disabled', true);
+    if (typeof loading === 'function') {
+      loading($btn, true, 'Enregistrement en cours...');
     }
 
     var formData = new FormData(this);
@@ -139,16 +152,34 @@ $(document).ready(function() {
       processData: false,
       contentType: false,
       dataType: 'json',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
       success: function(res) {
-        if (res.status === 1 || res.success) {
-          if (window.toastr) toastr.success(res.message || 'Opération réussie');
-          setTimeout(function() { window.location.href = '<?= RACINE ?>depense/list'; }, 1000);
+        if (typeof loading === 'function') {
+          loading($btn, false, originalHtml);
         } else {
-          if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
+          $btn.prop('disabled', false).html(originalHtml);
+        }
+
+        if (res && (res.status === 1 || res.success)) {
+          notifyToast(res.message || 'Opération réussie avec succès !', 'success');
+          setTimeout(function() { 
+            window.location.href = '<?= RACINE ?>depense/list'; 
+          }, 800);
+        } else {
+          notifyToast((res && res.message) ? res.message : 'Erreur lors de l\'enregistrement de la dépense', 'error');
         }
       },
-      error: function() {
-        if (window.toastr) toastr.error('Erreur réseau');
+      error: function(xhr) {
+        if (typeof loading === 'function') {
+          loading($btn, false, originalHtml);
+        } else {
+          $btn.prop('disabled', false).html(originalHtml);
+        }
+        var msg = 'Erreur lors de la communication avec le serveur.';
+        if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+          msg = xhr.responseJSON.message;
+        }
+        notifyToast(msg, 'error');
       }
     });
   });

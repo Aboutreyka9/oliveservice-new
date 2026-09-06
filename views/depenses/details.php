@@ -17,6 +17,13 @@ $modes = [
 ];
 $modeLibelle = $modes[$item['mode_reglement'] ?? ''] ?? (ucfirst($item['mode_reglement'] ?? 'Espèces'));
 
+// Logo établissement
+$rawLogo = !empty($item['logo_etablissement']) ? $item['logo_etablissement'] : ($globalEtablissementLogo ?? '');
+$logoEtabSrc = '';
+if (!empty($rawLogo)) {
+    $logoEtabSrc = (strpos($rawLogo, 'http') === 0) ? $rawLogo : RACINE . ltrim($rawLogo, '/');
+}
+
 // Détection de l'extension de la pièce justificative
 $pj = $item['piece_joint'] ?? null;
 $pjExt = $pj ? strtolower(pathinfo($pj, PATHINFO_EXTENSION)) : '';
@@ -450,20 +457,371 @@ $isPdf = ($pjExt === 'pdf');
   margin-top: 2px;
 }
 
-/* GESTION DE L'IMPRESSION (BON DE DÉCAISSEMENT) */
+/* BLOC EXCLUSIF IMPRESSION (MASQUÉ À L'ÉCRAN) */
+.print-header-bon,
+.print-signatures-bon,
+.print-footer-bon {
+  display: none;
+}
+
+/* GESTION COMPLÈTE DE L'IMPRESSION (BORDEREAU / BON DE DÉCAISSEMENT A4) */
 @media print {
-  .app-sidebar, .topbar, .nav-header, .detail-actions, .btn-header-back, .btn-header-print, .btn-header-edit, .btn-header-locked {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm 8mm 10mm;
+  }
+
+  html, body {
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    font-size: 10pt !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    line-height: 1.3 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    overflow: visible !important;
+  }
+
+  /* Masquage strict de la navigation, barres d'outils et éléments web */
+  aside, .sidebar, #sidebar,
+  header.topbar, .topbar,
+  footer.footer, #footer, .footer,
+  .bottom-nav, #bottomNav,
+  .modal-overlay, #genericModal, #confirmModal,
+  .mobile-actions-overlay, #mobileActionOverlay,
+  .dropdown-panel, #panelProfil,
+  .detail-header, /* Remplacé par le print-header-bon officiel */
+  .detail-actions,
+  .btn-header-back, .btn-header-print, .btn-header-edit, .btn-header-locked,
+  .pj-actions-bar,
+  .empty-pj-box,
+  .no-pj-print {
     display: none !important;
   }
+
+  /* Réinitialisation complète des conteneurs de layout */
   .app-layout, .main-content, .content-wrapper, .detail-page-wrap {
     margin: 0 !important;
+    margin-left: 0 !important;
     padding: 0 !important;
     width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
     box-shadow: none !important;
+    border: none !important;
+    background: #FFFFFF !important;
+    overflow: visible !important;
   }
-  .detail-hero-card, .info-card, .desc-card, .pj-card, .audit-card {
+
+  /* 1. EN-TÊTE OFFICIEL BORDEREAU DE CAISSE */
+  .print-header-bon {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-bottom: 2px solid #0F172A !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 10px !important;
+    gap: 12px !important;
+  }
+
+  .print-header-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    flex: 1.2 !important;
+  }
+
+  .print-etab-logo {
+    max-height: 48px !important;
+    max-width: 75px !important;
+    object-fit: contain !important;
+  }
+
+  .print-etab-info h2 {
+    font-size: 12.5px !important;
+    font-weight: 800 !important;
+    color: #0F172A !important;
+    margin: 0 0 2px 0 !important;
+    text-transform: uppercase !important;
+    line-height: 1.2 !important;
+  }
+
+  .print-etab-info p {
+    font-size: 8.5px !important;
+    color: #475569 !important;
+    margin: 1px 0 !important;
+    line-height: 1.2 !important;
+  }
+
+  .print-header-center {
+    flex: 1.1 !important;
+    text-align: center !important;
+    padding: 0 6px !important;
+  }
+
+  .print-header-center .bon-badge-title {
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    color: #0F172A !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border: 1.5px solid #0F172A !important;
+    padding: 3px 12px !important;
+    display: inline-block !important;
+    border-radius: 4px !important;
+    background: #F8FAFC !important;
+  }
+
+  .print-header-center .bon-num {
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    color: #DC2626 !important;
+    margin-top: 2px !important;
+    font-family: monospace !important;
+  }
+
+  .print-header-center .bon-subtitle {
+    font-size: 8px !important;
+    color: #64748B !important;
+    text-transform: uppercase !important;
+    margin-top: 1px !important;
+    letter-spacing: 0.3px !important;
+  }
+
+  .print-header-right {
+    flex: 0.9 !important;
+    text-align: right !important;
+    font-size: 8.5px !important;
+    color: #475569 !important;
+    line-height: 1.3 !important;
+  }
+
+  .print-header-right p {
+    margin: 1px 0 !important;
+  }
+
+  /* 2. BANNIÈRE SYNTHÈSE HERO */
+  .detail-hero-card {
+    border: 1.5px solid #0F172A !important;
+    border-radius: 6px !important;
+    padding: 8px 14px !important;
+    margin-bottom: 10px !important;
     box-shadow: none !important;
-    border: 1px solid #CCCCCC !important;
+    background: #F8FAFC !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .detail-hero-card::before {
+    display: none !important;
+  }
+
+  .hero-amount-label {
+    font-size: 9px !important;
+    color: #475569 !important;
+    margin-bottom: 2px !important;
+  }
+
+  .hero-amount-val {
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+    letter-spacing: -0.3px !important;
+  }
+
+  .badge-status-lg {
+    padding: 4px 10px !important;
+    font-size: 10px !important;
+    border: 1px solid #475569 !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    border-radius: 4px !important;
+  }
+
+  /* 3. GRILLE DES INFORMATIONS EN 3 COLONNES */
+  .detail-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .info-card {
+    border: 1px solid #94A3B8 !important;
+    border-radius: 6px !important;
+    padding: 8px 10px !important;
+    box-shadow: none !important;
+    background: #FFFFFF !important;
+  }
+
+  .info-card-header {
+    margin-bottom: 4px !important;
+    padding-bottom: 3px !important;
+    border-bottom: 1px solid #E2E8F0 !important;
+  }
+
+  .info-card-header h3 {
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    color: #0F172A !important;
+    letter-spacing: 0.3px !important;
+  }
+
+  .info-row {
+    padding: 3px 0 !important;
+    font-size: 9px !important;
+    border-bottom: 1px dashed #E2E8F0 !important;
+  }
+
+  .info-label {
+    color: #475569 !important;
+    font-size: 8.5px !important;
+    font-weight: 600 !important;
+  }
+
+  .info-val {
+    color: #0F172A !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+  }
+
+  /* 4. BLOC MOTIF & DESCRIPTION */
+  .desc-card {
+    border: 1px solid #94A3B8 !important;
+    border-radius: 6px !important;
+    padding: 8px 10px !important;
+    box-shadow: none !important;
+    margin-bottom: 8px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .desc-content {
+    font-size: 9px !important;
+    padding: 6px 10px !important;
+    border: 1px solid #CBD5E1 !important;
+    background: #FAFAFA !important;
+    line-height: 1.35 !important;
+    border-left: 3px solid #0F172A !important;
+  }
+
+  /* 5. BLOC PIÈCE JOINTE (SI PRÉSENTE) */
+  .pj-card {
+    border: 1px solid #94A3B8 !important;
+    border-radius: 6px !important;
+    padding: 8px 10px !important;
+    box-shadow: none !important;
+    margin-bottom: 8px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .pj-preview-img-wrap {
+    max-width: 200px !important;
+    max-height: 100px !important;
+    border: 1px solid #CBD5E1 !important;
+  }
+
+  .pj-preview-img {
+    max-height: 100px !important;
+    object-fit: contain !important;
+  }
+
+  /* 6. VOLET TRAÇABILITÉ AUDIT */
+  .audit-card {
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 6px !important;
+    padding: 6px 10px !important;
+    box-shadow: none !important;
+    margin-bottom: 10px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .audit-grid {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+  }
+
+  .audit-item {
+    gap: 4px !important;
+  }
+
+  .audit-icon {
+    display: none !important;
+  }
+
+  .audit-texts span {
+    font-size: 7.5px !important;
+    color: #64748B !important;
+    text-transform: uppercase !important;
+  }
+
+  .audit-texts strong {
+    font-size: 9px !important;
+    color: #0F172A !important;
+  }
+
+  /* 7. BLOC SIGNATURES OFFICIELLES (3 COLONNES) */
+  .print-signatures-bon {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+    margin-top: 6px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .sign-box {
+    border: 1.5px solid #0F172A !important;
+    border-radius: 6px !important;
+    padding: 6px 8px !important;
+    min-height: 80px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    background: #FFFFFF !important;
+  }
+
+  .sign-box-title {
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    color: #0F172A !important;
+    border-bottom: 1px solid #CBD5E1 !important;
+    padding-bottom: 2px !important;
+    margin-bottom: 3px !important;
+  }
+
+  .sign-box-desc {
+    font-size: 8.5px !important;
+    color: #334155 !important;
+    line-height: 1.25 !important;
+  }
+
+  .sign-box-footer {
+    font-size: 7.5px !important;
+    color: #94A3B8 !important;
+    border-top: 1px dotted #CBD5E1 !important;
+    padding-top: 2px !important;
+    text-align: right !important;
+  }
+
+  /* 8. PIED DE PAGE LÉGAL IMPRESSION */
+  .print-footer-bon {
+    display: block !important;
+    text-align: center !important;
+    font-size: 7.5px !important;
+    color: #64748B !important;
+    border-top: 1px solid #CBD5E1 !important;
+    margin-top: 8px !important;
+    padding-top: 3px !important;
   }
 }
 </style>
@@ -474,6 +832,37 @@ $isPdf = ($pjExt === 'pdf');
     <?php require_once __DIR__ . '/../../public/inc/nav.php'; ?>
     <div class="detail-page-wrap">
       
+      <!-- EN-TÊTE OFFICIEL BORDEREAU DE DÉPENSE (VISIBLE UNIQUEMENT À L'IMPRESSION) -->
+      <div class="print-header-bon">
+        <div class="print-header-left">
+          <?php if (!empty($logoEtabSrc)): ?>
+            <img src="<?= htmlspecialchars($logoEtabSrc) ?>" alt="Logo" class="print-etab-logo">
+          <?php endif; ?>
+          <div class="print-etab-info">
+            <h2><?= htmlspecialchars($item['libelle_etablissement'] ?? 'ÉTABLISSEMENT SCOLAIRE') ?></h2>
+            <?php if (!empty($item['adresse_etablissement'])): ?>
+              <p><i data-lucide="map-pin" style="width:11px;height:11px;"></i> <?= htmlspecialchars($item['adresse_etablissement']) ?></p>
+            <?php endif; ?>
+            <?php if (!empty($item['telephone_etablissement'])): ?>
+              <p><i data-lucide="phone" style="width:11px;height:11px;"></i> Tél : <?= htmlspecialchars($item['telephone_etablissement']) ?></p>
+            <?php endif; ?>
+            <p>Zone : <?= htmlspecialchars($item['libelle_zone'] ?? '-') ?> &bull; Exercice : <?= htmlspecialchars($item['libelle_annee'] ?? '-') ?></p>
+          </div>
+        </div>
+
+        <div class="print-header-center">
+          <div class="bon-badge-title">BON DE DÉCAISSEMENT</div>
+          <div class="bon-num">N° <?= htmlspecialchars($item['code_depense'] ?? '-') ?></div>
+          <div class="bon-subtitle">Bordereau comptable de sortie de caisse</div>
+        </div>
+
+        <div class="print-header-right">
+          <p><strong>Date d'édition :</strong> <?= date('d/m/Y à H:i') ?></p>
+          <p><strong>Opérateur :</strong> <?= htmlspecialchars($_SESSION['nom'] ?? 'Administration') ?></p>
+          <p><strong>Statut :</strong> <?= $isActif ? 'VALIDÉE & COMPTABILISÉE' : 'EN ATTENTE D\'APPROBATION' ?></p>
+        </div>
+      </div>
+
       <!-- EN-TÊTE DE LA FICHE -->
       <div class="detail-header">
         <div class="detail-header-left">
@@ -496,15 +885,9 @@ $isPdf = ($pjExt === 'pdf');
           <button type="button" onclick="window.print()" class="btn-header-print" title="Imprimer le bordereau de dépense">
             <i data-lucide="printer" style="width: 16px; height: 16px;"></i> Imprimer
           </button>
-          <?php if (!$isActif): ?>
-            <a href="<?= RACINE ?>depense/edition/<?= $encryptedId ?>" class="btn-header-edit">
-              <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Modifier Dépense
-            </a>
-          <?php else: ?>
-            <button type="button" class="btn-header-locked" title="Dépense active : modification verrouillée pour archivage comptable">
-              <i data-lucide="lock" style="width: 15px; height: 15px;"></i> Dépense Active (Verrouillée)
-            </button>
-          <?php endif; ?>
+          <a href="<?= RACINE ?>depense/edition/<?= $encryptedId ?>" class="btn-header-edit" title="Modifier cette dépense">
+            <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Modifier Dépense
+          </a>
         </div>
       </div>
 
@@ -648,7 +1031,7 @@ $isPdf = ($pjExt === 'pdf');
       </div>
 
       <!-- BLOC PIÈCE JUSTIFICATIVE -->
-      <div class="pj-card">
+      <div class="pj-card <?= empty($pj) ? 'no-pj-print' : '' ?>">
         <div class="info-card-header" style="margin-bottom: 16px;">
           <i data-lucide="paperclip" style="width: 18px; height: 18px; color: #1E3A5F;"></i>
           <h3>Pièce Justificative (Facture, Reçu, Bon de Caisse)</h3>
@@ -738,6 +1121,41 @@ $isPdf = ($pjExt === 'pdf');
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- BLOC SIGNATURES OFFICIELLES (IMPRESSION SEULEMENT) -->
+      <div class="print-signatures-bon">
+        <div class="sign-box">
+          <div class="sign-box-title">1. Initiateur / Agent Demandeur</div>
+          <div class="sign-box-desc">
+            <strong><?= htmlspecialchars($nomAuteur ?: 'Agent Initiateur') ?></strong><br>
+            <span>Date : <?= htmlspecialchars($dateEngage) ?></span>
+          </div>
+          <div class="sign-box-footer">Signature & Date</div>
+        </div>
+
+        <div class="sign-box">
+          <div class="sign-box-title">2. Caisse / Règlement</div>
+          <div class="sign-box-desc">
+            <strong>Mode : <?= htmlspecialchars($modeLibelle) ?></strong><br>
+            <span>Montant : <?= number_format(abs($montant), 0, ',', ' ') ?> FCFA</span>
+          </div>
+          <div class="sign-box-footer">Cachet & Signature Caisse</div>
+        </div>
+
+        <div class="sign-box">
+          <div class="sign-box-title">3. Direction / Ordonnancement</div>
+          <div class="sign-box-desc">
+            <strong>Statut : <?= $isActif ? 'APPROUVÉ & VALIDÉ' : 'EN ATTENTE DE VISA' ?></strong><br>
+            <span>Mention "Bon à décaisser"</span>
+          </div>
+          <div class="sign-box-footer">Visa & Cachet Direction</div>
+        </div>
+      </div>
+
+      <!-- PIED DE PAGE IMPRESSION (OFFICIEL) -->
+      <div class="print-footer-bon">
+        Document comptable officiel certifié généré par Olive Service le <?= date('d/m/Y à H:i') ?>. Ce bon justifie l'imputation et la sortie des fonds engagés ci-dessus.
       </div>
 
     </div>
