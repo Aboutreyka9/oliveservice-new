@@ -7,10 +7,44 @@ class DepenseController extends BaseController
         return new ModelDepense();
     }
 
+    public function getStats(): array
+    {
+        $items = $this->model->getAllWithDetails();
+        $totalMontant = 0;
+        $totalActif = 0;
+        $totalInactif = 0;
+        $nbActif = 0;
+        $nbInactif = 0;
+
+        foreach ($items as $d) {
+            $m = abs((float)($d['montant_depense'] ?? 0));
+            $totalMontant += $m;
+            if (($d['statut_depense'] ?? '') === 'actif') {
+                $totalActif += $m;
+                $nbActif++;
+            } else {
+                $totalInactif += $m;
+                $nbInactif++;
+            }
+        }
+
+        return [
+            'total_montant' => $totalMontant,
+            'total_actif' => $totalActif,
+            'total_inactif' => $totalInactif,
+            'nb_actif' => $nbActif,
+            'nb_inactif' => $nbInactif,
+            'total_depenses' => count($items)
+        ];
+    }
+
     public function list()
     {
         $this->requirePermission('FINANCE_MANAGE_DEPENSES');
-        $this->loadView('../views/depenses/list.php');
+        $stats = $this->getStats();
+        $this->loadView('../views/depenses/list.php', [
+            'stats' => $stats
+        ]);
     }
 
     public function apiList()
@@ -18,10 +52,25 @@ class DepenseController extends BaseController
         $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $items = $this->model->getAllWithDetails();
         $data = [];
+        $totalMontant = 0;
+        $totalActif = 0;
+        $totalInactif = 0;
+        $nbActif = 0;
+        $nbInactif = 0;
 
         foreach ($items as $d) {
             $id = $d['id_depense'];
             $idCrypte = $this->validator->crypter($id);
+            $m = abs((float)($d['montant_depense'] ?? 0));
+            $totalMontant += $m;
+            if (($d['statut_depense'] ?? '') === 'actif') {
+                $totalActif += $m;
+                $nbActif++;
+            } else {
+                $totalInactif += $m;
+                $nbInactif++;
+            }
+
             $createdAt = !empty($d['created_at_depense']) ? date('d/m/Y H:i', strtotime($d['created_at_depense'])) : '-';
             $periode = !empty($d['periode_depense']) ? date('d/m/Y', strtotime($d['periode_depense'])) : (!empty($d['date_depense']) ? date('d/m/Y', strtotime($d['date_depense'])) : '-');
             $data[] = array_merge($d, [
@@ -33,7 +82,20 @@ class DepenseController extends BaseController
                 'nom_auteur_complet' => trim(($d['nom_user'] ?? '') . ' ' . ($d['prenom_user'] ?? ''))
             ]);
         }
-        $this->json(['data' => $data]);
+
+        $stats = [
+            'total_montant' => $totalMontant,
+            'total_actif' => $totalActif,
+            'total_inactif' => $totalInactif,
+            'nb_actif' => $nbActif,
+            'nb_inactif' => $nbInactif,
+            'total_depenses' => count($items)
+        ];
+
+        $this->json([
+            'data' => $data,
+            'stats' => $stats
+        ]);
     }
 
     public function add()
@@ -127,9 +189,16 @@ class DepenseController extends BaseController
             return;
         }
 
+        // Blocage de la modification si la dépense est active
+        if (($existing['statut_depense'] ?? '') === 'actif') {
+            $this->error('Impossible de modifier une dépense déjà active.');
+            return;
+        }
+
         $data = $_POST;
         unset($data['csrf_token']);
 
+        // Vérification que le montant est toujours strictement positif
         if (isset($data['montant_depense'])) {
             $montant = abs((float)$data['montant_depense']);
             if ($montant <= 0) {
@@ -197,9 +266,28 @@ class DepenseController extends BaseController
                 return;
             }
 
-            $stmtTd = $this->model->getCon()->prepare("SELECT * FROM type_depenses WHERE code_type_depense = ?");
-            $stmtTd->execute([$item['type_depense_code']]);
-            $typeDepense = $stmtTd->fetch(PDO::FETCH_ASSOC);
+            // Récupérer les informations complètes avec jointures (agent, zone, établissement, type de dépense)
+            $sql = "
+                SELECT d.*, 
+                       td.libelle_type_depense,
+                       u.nom_user, u.prenom_user, u.telephone_user, u.email_user,
+                       z.libelle_zone,
+                       e.libelle_etablissement,
+                       a.libelle_annee
+                FROM depenses d
+                LEFT JOIN type_depenses td ON td.code_type_depense = d.type_depense_code
+                LEFT JOIN users u ON u.code_user = d.user_code
+                LEFT JOIN zones z ON z.code_zone = d.zone_code
+                LEFT JOIN etablissements e ON e.code_etablissement = d.etablissement_code
+                LEFT JOIN annees a ON a.code_annee = d.annee_code
+                WHERE d.id_depense = ?
+            ";
+            $stmt = $this->model->getCon()->prepare($sql);
+            $stmt->execute([$id]);
+            $enriched = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($enriched) {
+                $item = $enriched;
+            }
 
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
@@ -208,7 +296,7 @@ class DepenseController extends BaseController
         }
         $this->loadView('../views/depenses/details.php', [
             'item' => $item,
-            'typeDepense' => $typeDepense,
+            'typeDepense' => ['libelle_type_depense' => $item['libelle_type_depense'] ?? ''],
             'encryptedId' => $encryptedId
         ]);
     }
@@ -220,6 +308,11 @@ class DepenseController extends BaseController
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
             if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                header('Location: ' . RACINE . 'depense/list'); exit();
+            }
+            // Blocage de l'accès au formulaire si la dépense est active
+            if (($item['statut_depense'] ?? '') === 'actif') {
+                $_SESSION['error'] = "Impossible de modifier une dépense déjà active.";
                 header('Location: ' . RACINE . 'depense/list'); exit();
             }
             $encryptedId = $this->validator->crypter($id);
