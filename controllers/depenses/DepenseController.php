@@ -272,7 +272,7 @@ class DepenseController extends BaseController
                        td.libelle_type_depense,
                        u.nom_user, u.prenom_user, u.telephone_user, u.email_user,
                        z.libelle_zone,
-                       e.libelle_etablissement,
+                       e.libelle_etablissement, e.adresse_etablissement, e.telephone_etablissement, e.logo_etablissement,
                        a.libelle_annee
                 FROM depenses d
                 LEFT JOIN type_depenses td ON td.code_type_depense = d.type_depense_code
