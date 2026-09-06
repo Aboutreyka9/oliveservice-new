@@ -103,7 +103,7 @@ class CautisationPaymentController extends BaseController
      */
     public function situation($codesouscription = null)
     {
-        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
+        $this->requirePermission(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION']);
 
         $code = $codesouscription ?? ($_GET['code'] ?? null);
         if (!$code) {
@@ -121,7 +121,7 @@ class CautisationPaymentController extends BaseController
         $userCode     = $_SESSION[USERS_AUTH]['code_user'] ?? '';
         $modelCaisse  = new ModelCaisse();
         $caisseActive = $modelCaisse->getActiveOuvertureForToday($userCode);
-        $caisseOuverte = !empty($caisseActive);
+        $caisseOuverte = !empty($caisseActive) || !Context::isCommercial();
 
         $this->loadView('../views/cautisations_payment/situation.php', [
             'souscription'  => $souscription,
@@ -135,7 +135,7 @@ class CautisationPaymentController extends BaseController
      */
     public function situationDetails()
     {
-        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
+        $this->requirePermission(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION']);
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
@@ -162,7 +162,7 @@ class CautisationPaymentController extends BaseController
      */
     public function simulate()
     {
-        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
+        $this->requirePermission(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION']);
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
@@ -220,7 +220,7 @@ class CautisationPaymentController extends BaseController
 
     public function history()
     {
-        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
+        $this->requirePermission(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION']);
         $codeSouscription = $this->post('code_souscription') ?? '';
         if (empty($codeSouscription)) {
             $this->json(['status' => 0, 'data' => [], 'message' => 'Code souscription manquant']);
@@ -232,7 +232,7 @@ class CautisationPaymentController extends BaseController
 
     public function store()
     {
-        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
+        $this->requirePermission(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION']);
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
@@ -294,12 +294,7 @@ class CautisationPaymentController extends BaseController
             return;
         }
 
-        if (!$caisse || (empty($caisse['code_caisse']) && empty($caisse['code_ouverture']))) {
-            $this->error("Erreur d'insertion : Aucune caisse active ouverte n'a été trouvée pour enregistrer ce paiement.");
-            return;
-        }
-
-        $caisseCode = !empty($caisse['code_caisse']) ? $caisse['code_caisse'] : $caisse['code_ouverture'];
+        $caisseCode = !empty($caisse['code_caisse']) ? $caisse['code_caisse'] : (!empty($caisse['code_ouverture']) ? $caisse['code_ouverture'] : 'CAISSE-GEN');
 
         // RÈGLE RBAC : Statut initial = 'en_attente' pour les commerciaux, 'valide' pour finance/admin
         $statutInitial = Context::isCommercial() ? 'en_attente' : 'valide';

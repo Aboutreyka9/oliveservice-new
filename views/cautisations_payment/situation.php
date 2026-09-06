@@ -445,22 +445,24 @@ const JOURS_RESTANTS   = <?= $joursRestants ?>;
 const CODE_SOUSCRIPTION = '<?= htmlspecialchars($codeSouscription) ?>';
 const CAISSE_OUVERTE   = <?= $caisseOuverte ? 'true' : 'false' ?>;
 
+function notifyToast(msg, type = 'info', title = null) {
+    if (window.toastr && typeof window.toastr[type] === 'function') {
+        if (title) {
+            window.toastr[type](msg, title, { timeOut: 5000, closeButton: true, progressBar: true });
+        } else {
+            window.toastr[type](msg, '', { timeOut: 5000, closeButton: true, progressBar: true });
+        }
+    } else if (typeof showToast === 'function') {
+        showToast(msg, type, title);
+    } else {
+        alert((title ? title + ' : ' : '') + msg);
+    }
+}
+
 function openPaymentModal() {
     if (!CAISSE_OUVERTE) {
-        // Caisse fermée — bloquer le modal et notifier l'agent
-        const msg = 'Votre caisse est actuellement FERMÉE pour aujourd\'hui.\nVeuillez effectuer l\'ouverture de caisse avant de collecter des cotisations.';
-        if (typeof showToast === 'function') {
-            showToast(msg, 'warning');
-        } else if (window.toastr) {
-            toastr.warning(
-                'Veuillez effectuer l\'ouverture de caisse avant de collecter des cotisations.',
-                'Caisse fermée',
-                { timeOut: 6000, extendedTimeOut: 2000, closeButton: true }
-            );
-        } else {
-            alert(msg);
-        }
-        return; // ← bloquer l'ouverture du modal
+        notifyToast('Veuillez effectuer l\'ouverture de caisse avant de collecter des cotisations.', 'warning', 'Caisse fermée');
+        return;
     }
     const modal = document.getElementById('paymentModal');
     if (modal) {
@@ -592,30 +594,25 @@ document.getElementById('savePaymentBtn').addEventListener('click', function() {
     const mode = document.getElementById('paymentMode').value;
     const typeRadio = document.querySelector('input[name="type_paiement"]:checked');
     const type = typeRadio ? typeRadio.value : 'montant';
-// toastr.warning('Le montant doit être supérieur à 0.'); return;
+
     if (montant <= 0) {
-        if (window.toastr) toastr.warning('Le montant doit être supérieur à 0.');
-        else alert('Le montant doit être supérieur à 0.');
+        notifyToast('Le montant doit être supérieur à 0 FCFA.', 'warning', 'Montant invalide');
         return;
     }
     if (jours <= 0) {
-        if (window.toastr) toastr.warning('Le nombre de jours doit être supérieur à 0.');
-        else alert('Le nombre de jours doit être supérieur à 0.');
+        notifyToast('Le nombre de jours doit être au moins de 1 jour.', 'warning', 'Nombre de jours invalide');
         return;
     }
     if (PRIX_COTISATION > 0 && montant % PRIX_COTISATION > 0.01) {
-        if (window.toastr) toastr.warning('Le montant doit être un multiple de ' + formatCurrency(PRIX_COTISATION) + '.');
-        else alert('Le montant doit être un multiple de ' + formatCurrency(PRIX_COTISATION) + '.');
+        notifyToast('Le montant doit être un multiple de ' + formatCurrency(PRIX_COTISATION) + '.', 'warning', 'Montant incorrect');
         return;
     }
     if (montant > MONTANT_RESTANT) {
-        if (window.toastr) toastr.warning('Le montant dépasse le montant restant à payer (' + formatCurrency(MONTANT_RESTANT) + ').');
-        else alert('Le montant dépasse le montant restant à payer (' + formatCurrency(MONTANT_RESTANT) + ').');
+        notifyToast('Le montant dépasse le solde restant à payer (' + formatCurrency(MONTANT_RESTANT) + ').', 'warning', 'Plafond dépassé');
         return;
     }
     if (jours > JOURS_RESTANTS) {
-        if (window.toastr) toastr.warning('Le nombre de jours dépasse le nombre de jours restants (' + JOURS_RESTANTS + ' jours).');
-        else alert('Le nombre de jours dépasse le nombre de jours restants (' + JOURS_RESTANTS + ' jours).');
+        notifyToast('Le nombre de jours dépasse le nombre de jours restants (' + JOURS_RESTANTS + ' jours).', 'warning', 'Plafond dépassé');
         return;
     }
 
@@ -644,22 +641,21 @@ document.getElementById('savePaymentBtn').addEventListener('click', function() {
             closePaymentModal();
             loadHistory();
             updateCalculations();
-            if (window.toastr) {
-                toastr.success('Paiement enregistré avec succès ! Code : ' + result.code_cautisation + ' | Prochain RDV : ' + result.prochain_rdv);
-            } else {
-                alert('✅ Paiement enregistré avec succès !\n\nCode : ' + result.code_cautisation + '\nProchain RDV : ' + result.prochain_rdv);
-            }
+            
+            const msgSuccess = (result.message || 'Paiement enregistré avec succès !') + 
+              (result.code_cautisation ? ' [Code : ' + result.code_cautisation + ']' : '') +
+              (result.prochain_rdv ? ' | Prochain RDV : ' + result.prochain_rdv : '');
+
+            notifyToast(msgSuccess, 'success', 'Paiement effectué');
             setTimeout(function() { location.reload(); }, 1500);
         } else {
-            if (window.toastr) toastr.error(result.message || 'Erreur lors de l\'enregistrement');
-            else alert('❌ ' + result.message);
+            notifyToast(result.message || 'Erreur lors de l\'enregistrement du paiement', 'error', 'Échec du paiement');
         }
     })
     .catch(err => {
         btn.disabled = false;
         btn.innerHTML = '<i data-lucide="save" style="width: 18px; height: 18px;"></i> Valider le paiement';
-        if (window.toastr) toastr.error('Erreur : ' + err.message);
-        else alert('❌ Erreur : ' + err.message);
+        notifyToast(err.message || 'Erreur réseau lors du paiement', 'error', 'Erreur système');
     });
 });
 
