@@ -476,12 +476,7 @@ $stats = $stats ?? [
             <i data-lucide="rotate-cw" style="width: 15px; height: 15px;"></i>
             <span>Actualiser</span>
           </button>
-          <?php if (Context::can('COMMERCIAL_ADD_CLIENT', ['ROLE_COMMERCIAL', 'ROLE_ADMIN'])): ?>
-          <a href="<?= RACINE ?>client/formulaire" class="btn-add-client" title="Créer un nouveau profil client">
-            <i data-lucide="user-plus" style="width: 16px; height: 16px;"></i>
-            <span>Nouveau Client</span>
-          </a>
-          <?php endif; ?>
+          
           <?php if (Context::can('COMMERCIAL_ADD_SOUSCRIPTION', ['ROLE_COMMERCIAL', 'ROLE_ADMIN'])): ?>
           <a href="<?= RACINE ?>souscription/wizard" class="btn-add-sous" title="Lancer une nouvelle souscription pack">
             <i data-lucide="plus-circle" style="width: 17px; height: 17px;"></i>
