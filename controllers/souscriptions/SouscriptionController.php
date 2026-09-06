@@ -488,9 +488,21 @@ class SouscriptionController extends BaseController
         $emailClient = trim($data['email_client'] ?? '');
         $sexeClient = trim($data['sexe_client'] ?? '');
         $lieuClient = trim($data['lieu_residence_client'] ?? '');
-        $professionClient = trim($data['profession_client'] ?? '');
         $sessionCode = $data['session_code'] ?? '';
-        $zoneCode = $data['zone_code'] ?? Context::zone();
+        $zoneCode = $data['zone_code'] ?? '';
+
+        // Détermination fiable de la zone à partir de la session sélectionnée
+        if (!empty($sessionCode)) {
+            $stmtSessZ = $this->model->getCon()->prepare("SELECT zone_code FROM sessions WHERE code_session = ? LIMIT 1");
+            $stmtSessZ->execute([$sessionCode]);
+            $sessZ = $stmtSessZ->fetchColumn();
+            if (!empty($sessZ)) {
+                $zoneCode = $sessZ;
+            }
+        }
+        if (empty($zoneCode)) {
+            $zoneCode = Context::zone();
+        }
 
         $rawPacks = $data['packs'] ?? '[]';
         $packCodes = is_array($rawPacks) ? $rawPacks : json_decode($rawPacks, true);

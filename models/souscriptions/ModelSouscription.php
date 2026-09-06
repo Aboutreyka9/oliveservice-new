@@ -36,10 +36,9 @@ class ModelSouscription extends BaseModel
                 $params[] = $etab;
             }
 
-            $zone = $zoneCode ?: Context::zone();
-            if (!empty($zone)) {
+            if (!empty($zoneCode)) {
                 $sql .= " AND s.zone_code = ?";
-                $params[] = $zone;
+                $params[] = $zoneCode;
             }
 
             $annee = $anneeCode ?: Context::annee();

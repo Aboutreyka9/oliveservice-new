@@ -127,7 +127,7 @@
                     <option value="">-- Choisir une session --</option>
                     <?php if (!empty($sessions) && is_array($sessions)): ?>
                       <?php foreach ($sessions as $s): ?>
-                        <option value="<?= $s['code_session'] ?>"><?= htmlspecialchars($s['libelle_session']) ?></option>
+                        <option value="<?= $s['code_session'] ?>" data-zone="<?= htmlspecialchars($s['zone_code'] ?? '') ?>"><?= htmlspecialchars($s['libelle_session']) ?></option>
                       <?php endforeach; ?>
                     <?php endif; ?>
                   </select>
@@ -537,8 +537,8 @@ $(document).ready(function() {
     $('#hidden-email_client').val($('#email_client').val().trim());
     $('#hidden-sexe_client').val($('#sexe_client').val());
     $('#hidden-lieu_residence_client').val($('#lieu_residence_client').val().trim());
-    $('#hidden-profession_client').val($('#profession_client').val().trim());
-    $('#hidden-zone_code').val($('#filter-session').val() || '');
+    var selectedSessionZone = $('#filter-session option:selected').data('zone') || '<?= Context::zone() ?>';
+    $('#hidden-zone_code').val(selectedSessionZone);
     $('#hidden-session_code').val($('#filter-session').val() || '');
     $('#hidden-packs').val(JSON.stringify(selectedPacks));
 
