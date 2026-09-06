@@ -7,10 +7,106 @@ class ClientController extends BaseController
         return new ModelClient();
     }
 
+    public function getStats(): array
+    {
+        $anneeCode = Context::annee();
+        $zoneCode = Context::zone();
+        $userCode = Context::user();
+        $etabCode = Context::etablissement();
+
+        $whereClause = "WHERE (c.etablissement_code = ? OR c.etablissement_code IS NULL)";
+        $params = [$etabCode];
+
+        if (Context::isCommercial()) {
+            $whereClause .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.user_code = ? AND sub.etablissement_code = ? AND sub.annee_code = ?))";
+            $params[] = $userCode;
+            $params[] = $userCode;
+            $params[] = $etabCode;
+            $params[] = $anneeCode;
+        } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
+            $whereClause .= " AND (c.zone_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.zone_code = ? AND sub.etablissement_code = ? AND sub.annee_code = ?))";
+            $params[] = $zoneCode;
+            $params[] = $zoneCode;
+            $params[] = $etabCode;
+            $params[] = $anneeCode;
+        }
+
+        $sql = "
+            SELECT 
+                COUNT(*) as total_clients,
+                COUNT(CASE WHEN c.statut_client = 'actif' THEN 1 END) as clients_actifs,
+                COUNT(CASE WHEN c.statut_client != 'actif' OR c.statut_client IS NULL THEN 1 END) as clients_inactifs,
+                COUNT(CASE WHEN EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.etablissement_code = ? AND sub.zone_code = ? AND sub.annee_code = ?) THEN 1 END) as clients_souscripteurs,
+                COUNT(CASE WHEN c.created_at_client >= DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01') THEN 1 END) as nouveaux_ce_mois
+            FROM clients c
+            {$whereClause}
+        ";
+        $statsParams = array_merge([$etabCode, $zoneCode, $anneeCode], $params);
+
+        // Cumul des cotisations encaissées pour les clients du périmètre
+        $sqlCot = "
+            SELECT COALESCE(SUM(cc.montant_cautisation_client), 0) as total_cotise
+            FROM cautisation_clients cc
+            WHERE cc.etablissement_code = ? AND cc.zone_code = ? AND cc.annee_code = ?
+              AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)
+        ";
+        $cotParams = [$etabCode, $zoneCode, $anneeCode];
+        if (Context::isCommercial()) {
+            $sqlCot .= " AND (cc.user_code = ? OR cc.commercial_code = ?)";
+            $cotParams[] = $userCode;
+            $cotParams[] = $userCode;
+        }
+
+        try {
+            $stmt = $this->model->getCon()->prepare($sql);
+            $stmt->execute($statsParams);
+            $res = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+            $stmtCot = $this->model->getCon()->prepare($sqlCot);
+            $stmtCot->execute($cotParams);
+            $resCot = $stmtCot->fetch(PDO::FETCH_ASSOC) ?: [];
+
+            $total = (int)($res['total_clients'] ?? 0);
+            $actifs = (int)($res['clients_actifs'] ?? 0);
+            $inactifs = (int)($res['clients_inactifs'] ?? 0);
+            $souscripteurs = (int)($res['clients_souscripteurs'] ?? 0);
+            $nouveaux = (int)($res['nouveaux_ce_mois'] ?? 0);
+            $totalCotise = (float)($resCot['total_cotise'] ?? 0);
+            $tauxEngagement = $total > 0 ? round(($souscripteurs / $total) * 100, 1) : 0;
+            $tauxActifs = $total > 0 ? round(($actifs / $total) * 100, 1) : 0;
+
+            return [
+                'total_clients' => $total,
+                'clients_actifs' => $actifs,
+                'clients_inactifs' => $inactifs,
+                'clients_souscripteurs' => $souscripteurs,
+                'nouveaux_ce_mois' => $nouveaux,
+                'total_cotise' => $totalCotise,
+                'taux_engagement' => $tauxEngagement,
+                'taux_actifs' => $tauxActifs
+            ];
+        } catch (Exception $e) {
+            error_log("ClientController::getStats error: " . $e->getMessage());
+            return [
+                'total_clients' => 0,
+                'clients_actifs' => 0,
+                'clients_inactifs' => 0,
+                'clients_souscripteurs' => 0,
+                'nouveaux_ce_mois' => 0,
+                'total_cotise' => 0,
+                'taux_engagement' => 0,
+                'taux_actifs' => 0
+            ];
+        }
+    }
+
     public function list()
     {
         $this->requirePermission(['COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
-        $this->loadView('../views/clients/list.php');
+        $stats = $this->getStats();
+        $this->loadView('../views/clients/list.php', [
+            'stats' => $stats
+        ]);
     }
 
     public function apiList()
@@ -22,45 +118,101 @@ class ClientController extends BaseController
         $etabCode = Context::etablissement();
 
         $sql = "
-            SELECT DISTINCT c.*, z.libelle_zone
+            SELECT c.*, z.libelle_zone,
+                   (SELECT COUNT(*) FROM souscriptions sub 
+                    WHERE sub.client_code = c.code_client 
+                      AND sub.etablissement_code = ? AND sub.zone_code = ? AND sub.annee_code = ?) as nb_souscriptions,
+                   (SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients cc 
+                    WHERE cc.client_code = c.code_client 
+                      AND cc.etablissement_code = ? AND cc.zone_code = ? AND cc.annee_code = ? 
+                      AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)) as total_cotise
             FROM clients c
             LEFT JOIN zones z ON z.code_zone = c.zone_code
-            LEFT JOIN souscriptions s ON s.client_code = c.code_client 
-                 AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
             WHERE (c.etablissement_code = ? OR c.etablissement_code IS NULL)
         ";
-        $params = [$etabCode, $zoneCode, $anneeCode, $etabCode];
+        $params = [
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode
+        ];
 
         // Application du filtrage strict selon le rôle RBAC (Context)
         if (Context::isCommercial()) {
-            // Le commercial ne voit que ses propres clients créés par lui ou rattachés à ses souscriptions
-            $sql .= " AND (c.user_code = ? OR s.user_code = ?)";
+            $sql .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.user_code = ? AND sub2.etablissement_code = ? AND sub2.annee_code = ?))";
             $params[] = $userCode;
             $params[] = $userCode;
+            $params[] = $etabCode;
+            $params[] = $anneeCode;
         } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
-            $sql .= " AND (c.zone_code = ? OR s.zone_code = ?)";
+            $sql .= " AND (c.zone_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.zone_code = ? AND sub2.etablissement_code = ? AND sub2.annee_code = ?))";
             $params[] = $zoneCode;
             $params[] = $zoneCode;
+            $params[] = $etabCode;
+            $params[] = $anneeCode;
         }
 
-        $sql .= " ORDER BY c.created_at_client DESC";
+        $sql .= " ORDER BY c.created_at_client DESC, c.id_client DESC";
 
         $stmt = $this->model->getCon()->prepare($sql);
         $stmt->execute($params);
         $clients = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $data = [];
 
+        $totalClients = count($clients);
+        $totalActifs = 0;
+        $totalInactifs = 0;
+        $totalSouscripteurs = 0;
+        $cumulCotise = 0;
+
         foreach ($clients as $c) {
             $id = $c['id_client'];
             $idCrypte = $this->validator->crypter($id);
+            $nomComplet = trim(($c['nom_client'] ?? '') . ' ' . ($c['prenom_client'] ?? ''));
+            if (empty($nomComplet)) $nomComplet = 'Client Sans Nom';
+
+            $isActif = (($c['statut_client'] ?? 'actif') === 'actif');
+            if ($isActif) $totalActifs++; else $totalInactifs++;
+
+            $nbSous = (int)($c['nb_souscriptions'] ?? 0);
+            if ($nbSous > 0) $totalSouscripteurs++;
+
+            $cotise = (float)($c['total_cotise'] ?? 0);
+            $cumulCotise += $cotise;
+
+            // Dérivation des initiales
+            $words = explode(' ', $nomComplet);
+            $inits = '';
+            foreach ($words as $w) {
+                if (!empty($w)) $inits .= mb_substr($w, 0, 1, 'UTF-8');
+            }
+            $inits = mb_strtoupper(mb_substr($inits, 0, 2, 'UTF-8'), 'UTF-8');
+            if (empty($inits)) $inits = 'CL';
+
             $data[] = array_merge($c, [
                 'id' => $id,
                 'editId' => $idCrypte,
-                'nom_complet' => trim($c['nom_client'] ?? '')
+                'nom_complet' => $nomComplet,
+                'initiales' => $inits,
+                'date_creation' => !empty($c['created_at_client']) ? date('d/m/Y', strtotime($c['created_at_client'])) : '-',
+                'nb_souscriptions' => $nbSous,
+                'total_cotise' => $cotise,
+                'total_cotise_fmt' => number_format($cotise, 0, ',', ' ') . ' F',
+                'statut_client' => $c['statut_client'] ?? 'actif'
             ]);
         }
 
-        $this->json(['data' => $data]);
+        $this->json([
+            'data' => $data,
+            'stats' => [
+                'total_clients' => $totalClients,
+                'clients_actifs' => $totalActifs,
+                'clients_inactifs' => $totalInactifs,
+                'clients_souscripteurs' => $totalSouscripteurs,
+                'total_cotise' => $cumulCotise,
+                'taux_engagement' => $totalClients > 0 ? round(($totalSouscripteurs / $totalClients) * 100, 1) : 0,
+                'taux_actifs' => $totalClients > 0 ? round(($totalActifs / $totalClients) * 100, 1) : 0
+            ]
+        ]);
     }
 
     public function add()
