@@ -83,10 +83,10 @@ $title = $isEdit ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur';
 
               <div class="form-group" style="width: 100%; box-sizing: border-box;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Zone d'Affectation <span style="color: #64748B; font-weight: 500; font-size: 12px;">(Optionnel)</span></label>
-                <select class="form-control select2" id="sel_zone_user" name="zone_user" style="width: 100%;">
+                <select class="form-control select2" id="sel_zone_code" name="zone_code" style="width: 100%;">
                   <option value="">-- Aucune zone (Global) --</option>
                   <?php if (!empty($zones)): foreach($zones as $z): ?>
-                    <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= (($user['zone_user'] ?? '') == $z['code_zone']) ? 'selected' : '' ?>>
+                    <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ((($user['zone_code'] ?? $user['zone_user'] ?? '') == $z['code_zone']) ? 'selected' : '') ?>>
                       <?= htmlspecialchars($z['libelle_zone']) ?>
                     </option>
                   <?php endforeach; endif; ?>
@@ -294,7 +294,7 @@ $(document).ready(function() {
   if (window.lucide) lucide.createIcons();
   if ($.fn.select2) {
     $('#sel_fonction_user').select2({ placeholder: "-- Sélectionner un poste --", allowClear: true, width: '100%' });
-    $('#sel_zone_user').select2({ placeholder: "-- Aucune zone (Global) --", allowClear: true, width: '100%' });
+    $('#sel_zone_code, #sel_zone_user').select2({ placeholder: "-- Aucune zone (Global) --", allowClear: true, width: '100%' });
     $('#sel_roles_user').select2({ placeholder: "Sélectionnez un ou plusieurs rôles", closeOnSelect: false, width: '100%' });
     $('#sel_roles_user').on('change', renderRolePermissions);
   }
