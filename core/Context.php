@@ -17,17 +17,17 @@ class Context
 
     public static function annee(): string
     {
-        return $_SESSION['annee_active_code'] ?? '6DSpC5ev5eJac6ShmSSwUHm4ah1s9baP';
+        return $_SESSION['annee_active_code'] ?? '';
     }
 
     public static function etablissement(): string
     {
-        return $_SESSION['etablissement_active_code'] ?? '5454544456';
+        return $_SESSION['etablissement_active_code'] ?? '';
     }
 
     public static function zone(): string
     {
-        return $_SESSION['zone_active_code'] ?? '6QIlVfXP0LiXE9tBzHownYLAAqDi2';
+        return $_SESSION['zone_active_code'] ?? '';
     }
 
     public static function user(): ?string

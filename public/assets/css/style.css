@@ -3473,3 +3473,42 @@ body {
         font-size: 0.65rem;
     }
 }
+
+/* Désactiver le changement involontaire au scroll sur tous les champs type number */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* Grille responsive standard pour formulaires et agencements (col-md-6, row, etc.) */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -10px;
+    margin-left: -10px;
+}
+.col-12, .col-md-6, .col-md-12 {
+    position: relative;
+    width: 100%;
+    padding-right: 10px;
+    padding-left: 10px;
+    box-sizing: border-box;
+}
+.col-12 {
+    flex: 0 0 100%;
+    max-width: 100%;
+}
+@media (min-width: 768px) {
+    .col-md-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+    .col-md-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}

@@ -770,4 +770,19 @@ if (modalSave) {
     function escapeHtml(str) {
         return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
+
+    // Empêcher le scroll de la molette de la souris sur TOUS les champs type="number"
+    document.addEventListener('wheel', function(e) {
+        if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'number') {
+            e.preventDefault();
+            e.target.blur();
+        } else if (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'number') {
+            document.activeElement.blur();
+        }
+    }, { passive: false });
+
+    $(document).on('wheel', 'input[type=number]', function(e) {
+        e.preventDefault();
+        $(this).blur();
+    });
 });
