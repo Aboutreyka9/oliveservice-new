@@ -92,7 +92,13 @@ class ModelHome extends BaseModel
             $stmt->execute($pCotis);
             $totalCotisations = (float)($stmt->fetchColumn() ?: 0);
 
-            $totalPaiements = (float)($db->query("SELECT COALESCE(SUM(montant_paiement), 0) FROM paiements WHERE statut_paiement = 'confirme'")->fetchColumn() ?: 0);
+            // Table paiements : optionnelle, peut ne pas encore exister
+            $totalPaiements = 0.0;
+            try {
+                $totalPaiements = (float)($db->query("SELECT COALESCE(SUM(montant_paiement), 0) FROM paiements WHERE statut_paiement = 'confirme'")->fetchColumn() ?: 0);
+            } catch (Exception $e) {
+                // Table paiements absente ou non disponible — on ignore
+            }
             $caEncaisse = $totalCotisations + $totalPaiements;
 
             // 5. Versements
