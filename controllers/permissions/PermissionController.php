@@ -9,13 +9,13 @@ class PermissionController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_PERMISSIONS');
         $this->loadView('../views/permissions/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_PERMISSIONS');
         $items = $this->model->getAll();
         $data = [];
         foreach ($items as $i) {
@@ -32,7 +32,7 @@ class PermissionController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_PERMISSIONS');
         $data = $_POST;
         unset($data['csrf_token']);
         if (!empty($data['libelle_permission'])) {
@@ -65,7 +65,7 @@ class PermissionController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_PERMISSIONS');
         $id = (int)$this->post('id_permission');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -89,7 +89,7 @@ class PermissionController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_PERMISSIONS');
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
@@ -104,7 +104,7 @@ class PermissionController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_PERMISSIONS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -118,7 +118,7 @@ class PermissionController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_PERMISSIONS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -132,14 +132,14 @@ class PermissionController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_PERMISSIONS');
         $this->loadView('../views/permissions/edit.php', ['item' => []]);
     }
 
     public function addModule()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_PERMISSIONS');
         $libelle = trim($this->post('libelle_module') ?? '');
         if ($libelle === '') {
             $this->json(['status' => 0, 'message' => 'Le libellé du module est requis'], 400);

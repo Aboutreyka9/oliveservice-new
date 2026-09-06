@@ -9,13 +9,13 @@ class CotisationController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS']);
         $this->loadView('../views/cotisations/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS']);
         
         $sql = "
             SELECT c.*, 
@@ -56,7 +56,7 @@ class CotisationController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -145,7 +145,7 @@ class CotisationController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_EDIT_COTISATION');
 
         // RÈGLE STRICTE RBAC : Un commercial ne peut PAS modifier les cotisations
         if (Context::isCommercial()) {
@@ -171,7 +171,7 @@ class CotisationController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_EDIT_COTISATION');
 
         if (Context::isCommercial()) {
             $this->error('Action non autorisée. Les commerciaux ne peuvent pas changer le statut d\'une cotisation.');
@@ -192,12 +192,17 @@ class CotisationController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS']);
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
             if (!$item) {
                 $this->renderNotFound("La cotisation demandée est introuvable.");
+                return;
+            }
+
+            if (Context::isCommercial() && ($item['commercial_code'] ?? '') !== Context::user() && ($item['user_code'] ?? '') !== Context::user()) {
+                $this->renderForbidden("Vous n'êtes pas autorisé à consulter cette cotisation.");
                 return;
             }
 
@@ -236,7 +241,7 @@ class CotisationController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_EDIT_COTISATION');
         if (Context::isCommercial()) {
             header('Location: ' . RACINE . 'cotisation/list');
             exit();
@@ -277,7 +282,7 @@ class CotisationController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
         $sqlSous = "
             SELECT s.code_souscription, s.montant_cotisation_journaliere, s.montant_total_cotise, s.montant_total_prevu, s.nombre_jour_total, s.nombre_jour_cotise, c.nom_client, p.libelle_pack 
             FROM souscriptions s 

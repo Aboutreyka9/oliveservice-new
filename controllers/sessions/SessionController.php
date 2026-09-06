@@ -9,13 +9,13 @@ class SessionController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_SESSIONS');
         $this->loadView('../views/sessions/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_SESSIONS');
         $stmt = $this->model->getCon()->prepare("
             SELECT s.*, a.libelle_annee, z.libelle_zone 
             FROM sessions s 
@@ -54,7 +54,7 @@ class SessionController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_SESSIONS');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -86,7 +86,7 @@ class SessionController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_SESSIONS');
         $id = (int)$this->post('id_session');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $existing = $this->model->getById($id);
@@ -111,7 +111,7 @@ class SessionController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_SESSIONS');
         $id = $this->post('id');
         if ($id && ($item = $this->model->getById($id))) {
             if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
@@ -130,7 +130,7 @@ class SessionController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_SESSIONS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -205,7 +205,7 @@ class SessionController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_SESSIONS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -236,7 +236,7 @@ class SessionController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_SESSIONS');
         $annees = $this->model->getCon()->query("SELECT * FROM annees WHERE statut_annee = 'actif' ORDER BY id_annee DESC")->fetchAll(PDO::FETCH_ASSOC);
         $zones = $this->model->getCon()->query("SELECT * FROM zones ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
         $this->loadView('../views/sessions/edit.php', [

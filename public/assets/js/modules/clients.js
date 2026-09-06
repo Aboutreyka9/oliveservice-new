@@ -33,10 +33,13 @@ $(function() {
           className: 'text-end',
           render: function(d) {
             const editId = d.editId || d.id_client;
-            return `
+            const canEdit = window.AppConfig && window.AppConfig.can ? window.AppConfig.can('GESTIONNAIRE_EDIT_CLIENT') : false;
+            const editBtn = canEdit ? `
               <a href="${racine}client/edition/${editId}" class="btn btn-sm btn-secondary me-1">
                 <i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer
-              </a>
+              </a>` : '';
+            return `
+              ${editBtn}
               <a href="${racine}client/details/${editId}" class="btn btn-sm btn-info">
                 <i data-lucide="eye" style="width:14px;height:14px;"></i> Détails
               </a>

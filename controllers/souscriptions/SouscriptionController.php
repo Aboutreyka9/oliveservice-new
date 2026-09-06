@@ -9,7 +9,7 @@ class SouscriptionController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_SOUSCRIPTIONS', 'GESTIONNAIRE_VIEW_ALL_SOUSCRIPTIONS']);
 
         $userScopeFilter = Context::isCommercial() ? Context::user() : null;
         $zoneScopeFilter = Context::isGestionnaire() ? Context::zone() : null;
@@ -59,7 +59,7 @@ class SouscriptionController extends BaseController
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_SOUSCRIPTIONS', 'GESTIONNAIRE_VIEW_ALL_SOUSCRIPTIONS']);
 
         // Récupération sécurisée du périmètre d'accès selon le rôle connecté
         $userScopeFilter = Context::isCommercial() ? Context::user() : null;
@@ -122,7 +122,7 @@ class SouscriptionController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -183,7 +183,7 @@ class SouscriptionController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_EDIT_SOUSCRIPTION');
 
         // RÈGLE STRICTE RBAC : Les commerciaux ne peuvent pas modifier les souscriptions
         if (Context::isCommercial()) {
@@ -215,7 +215,7 @@ class SouscriptionController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_EDIT_SOUSCRIPTION');
 
         if (Context::isCommercial()) {
             $this->error('Action non autorisée. Les commerciaux ne peuvent pas changer le statut d\'une souscription.');
@@ -240,12 +240,17 @@ class SouscriptionController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_SOUSCRIPTIONS', 'GESTIONNAIRE_VIEW_ALL_SOUSCRIPTIONS']);
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getByIdWithDetails($id);
             if (!$item) {
                 $this->renderNotFound("La souscription demandée est introuvable.");
+                return;
+            }
+
+            if (Context::isCommercial() && $item['user_code'] !== Context::user()) {
+                $this->renderForbidden("Vous n'êtes pas autorisé à consulter cette souscription.");
                 return;
             }
 
@@ -288,7 +293,7 @@ class SouscriptionController extends BaseController
 
     public function edition($edition)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_EDIT_SOUSCRIPTION');
 
         if (Context::isCommercial()) {
             $this->renderNotFound("Action non autorisée. Les commerciaux ne peuvent pas modifier les souscriptions.");
@@ -333,7 +338,7 @@ class SouscriptionController extends BaseController
 
     public function wizard()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
         $anneeCode = Context::annee();
@@ -353,7 +358,7 @@ class SouscriptionController extends BaseController
 
     public function wizardData()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
         $sessionCode = $_GET['session_code'] ?? '';
         $categorieCode = $_GET['categorie_code'] ?? '';
 
@@ -402,7 +407,7 @@ class SouscriptionController extends BaseController
     public function createWizard()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
 
         $rawInput = file_get_contents('php://input');
         $data = json_decode($rawInput, true);
@@ -474,7 +479,7 @@ class SouscriptionController extends BaseController
     public function wizardSubmit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
         $data = $_POST;
         unset($data['csrf_token']);
 

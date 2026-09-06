@@ -9,13 +9,13 @@ class ArticleController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ARTICLES');
         $this->loadView('../views/articles/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ARTICLES');
         $items = $this->model->getAll();
         $data = [];
 
@@ -34,7 +34,7 @@ class ArticleController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ARTICLES');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -66,7 +66,7 @@ class ArticleController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ARTICLES');
         $id = (int)$this->post('id_article');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -89,7 +89,7 @@ class ArticleController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ARTICLES');
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
@@ -104,7 +104,7 @@ class ArticleController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ARTICLES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -125,7 +125,7 @@ class ArticleController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ARTICLES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -139,7 +139,7 @@ class ArticleController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ARTICLES');
         $this->loadView('../views/articles/edit.php', ['item' => []]);
     }
 }

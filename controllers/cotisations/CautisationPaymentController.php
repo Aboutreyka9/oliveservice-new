@@ -12,7 +12,7 @@ class CautisationPaymentController extends BaseController
      */
     public function searchForm()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
         $clients = $this->getClientsForSearch();
         $this->loadView('../views/cautisations_payment/search.php', [
             'clients' => $clients
@@ -58,7 +58,7 @@ class CautisationPaymentController extends BaseController
      */
     public function search()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
@@ -103,7 +103,7 @@ class CautisationPaymentController extends BaseController
      */
     public function situation($codesouscription = null)
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
 
         $code = $codesouscription ?? ($_GET['code'] ?? null);
         if (!$code) {
@@ -127,7 +127,7 @@ class CautisationPaymentController extends BaseController
      */
     public function situationDetails()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
@@ -154,7 +154,7 @@ class CautisationPaymentController extends BaseController
      */
     public function simulate()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
@@ -212,7 +212,7 @@ class CautisationPaymentController extends BaseController
 
     public function history()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
         $codeSouscription = $this->post('code_souscription') ?? '';
         if (empty($codeSouscription)) {
             $this->json(['status' => 0, 'data' => [], 'message' => 'Code souscription manquant']);
@@ -224,7 +224,7 @@ class CautisationPaymentController extends BaseController
 
     public function store()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);

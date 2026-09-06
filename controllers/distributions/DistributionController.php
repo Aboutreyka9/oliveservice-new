@@ -9,13 +9,13 @@ class DistributionController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         $this->loadView('../views/distributions/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         $items = $this->model->getAllWithDetails();
         $data = [];
 
@@ -35,7 +35,7 @@ class DistributionController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -105,7 +105,7 @@ class DistributionController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         $id = (int)$this->post('id_distribution');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $existing = $this->model->getById($id);
@@ -130,7 +130,7 @@ class DistributionController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         $id = $this->post('id');
         if ($id && ($item = $this->model->getById($id))) {
             if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
@@ -149,7 +149,7 @@ class DistributionController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -197,7 +197,7 @@ class DistributionController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -242,7 +242,7 @@ class DistributionController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
         $anneeCode = Context::annee();

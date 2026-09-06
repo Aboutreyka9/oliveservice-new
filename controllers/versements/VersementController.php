@@ -9,13 +9,13 @@ class VersementController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_MAKE_VERSEMENT', 'FINANCE_VALIDATE_VERSEMENT']);
         $this->loadView('../views/versements/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_MAKE_VERSEMENT', 'FINANCE_VALIDATE_VERSEMENT']);
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
         $anneeCode = Context::annee();
@@ -63,7 +63,7 @@ class VersementController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_MAKE_VERSEMENT');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -110,7 +110,7 @@ class VersementController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_VALIDATE_VERSEMENT');
 
         if (Context::isCommercial()) {
             $this->error('Action non autorisée. Les commerciaux ne peuvent pas modifier un versement transmis.');
@@ -140,7 +140,7 @@ class VersementController extends BaseController
     public function valider()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_VALIDATE_VERSEMENT');
 
         // RÈGLE RBAC : Seul le profil Finance / Admin peut valider ou rejeter un versement
         if (!Context::isFinance() && !Context::isAdmin()) {
@@ -196,7 +196,7 @@ class VersementController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_VALIDATE_VERSEMENT');
 
         if (!Context::isFinance() && !Context::isAdmin()) {
             $this->error('Action non autorisée. Seul le service Comptabilité / Finance peut modifier le statut d\'un versement.');
@@ -221,12 +221,18 @@ class VersementController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_MAKE_VERSEMENT', 'FINANCE_VALIDATE_VERSEMENT']);
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
             if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
                 $this->renderNotFound("Le versement demandé est introuvable.");
+                return;
+            }
+
+            // Un commercial ne peut consulter que ses propres versements
+            if (Context::isCommercial() && $item['commercial_code'] !== Context::user() && $item['user_code'] !== Context::user()) {
+                $this->renderForbidden("Vous n'êtes pas autorisé à consulter ce versement.");
                 return;
             }
 
@@ -263,7 +269,7 @@ class VersementController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_VALIDATE_VERSEMENT');
         if (Context::isCommercial()) {
             header('Location: ' . RACINE . 'versement/list');
             exit();
@@ -292,7 +298,7 @@ class VersementController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_MAKE_VERSEMENT');
         $commerciaux = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user FROM users WHERE statut_user='actif'")->fetchAll(PDO::FETCH_ASSOC);
         $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
 

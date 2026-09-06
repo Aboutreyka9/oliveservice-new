@@ -21,9 +21,11 @@
           </div>
         </div>
 
+        <?php if (Context::can('ADMIN_MANAGE_USERS', ['ROLE_ADMIN', 'ROLE_SUPERADMIN'])): ?>
         <a href="<?= RACINE ?>fonction/formulaire" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); text-decoration: none; cursor: pointer;">
           <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Ajouter Fonction / Poste
         </a>
+        <?php endif; ?>
       </div>
 
       <!-- CARTE TABLEAU PRINCIPALE (NAVY PREMIUM) -->
@@ -67,10 +69,13 @@ $(document).ready(function() {
       { data: 'statut_fonction', width: '110px', className: 'text-center', render: function(d, type, row) {
         var isActif = (d === 'actif');
         var checkedAttr = isActif ? 'checked' : '';
+        var canManage = (window.AppConfig && typeof window.AppConfig.can === 'function') ? window.AppConfig.can('ADMIN_MANAGE_USERS') : false;
+        var disabledAttr = canManage ? '' : 'disabled';
+        var cursorStyle = canManage ? 'cursor:pointer;' : 'cursor:not-allowed; opacity:0.6;';
         return '<div style="display:flex; justify-content:center; align-items:center;">' +
-               '<label style="position:relative; display:inline-block; width:42px; height:22px; margin:0; cursor:pointer;" title="' + (isActif ? 'Actif - Cliquez pour désactiver' : 'Inactif - Cliquez pour activer') + '">' +
-               '<input type="checkbox" class="toggle-statut-fonction" data-id="' + row.id_fonction + '" ' + checkedAttr + ' style="opacity:0; width:0; height:0;">' +
-               '<span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:' + (isActif ? '#059669' : '#CBD5E1') + '; transition:.3s; border-radius:20px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">' +
+               '<label style="position:relative; display:inline-block; width:42px; height:22px; margin:0; ' + cursorStyle + '" title="' + (isActif ? 'Actif' : 'Inactif') + '">' +
+               '<input type="checkbox" class="toggle-statut-fonction" data-id="' + row.id_fonction + '" ' + checkedAttr + ' ' + disabledAttr + ' style="opacity:0; width:0; height:0;">' +
+               '<span style="position:absolute; ' + cursorStyle + ' top:0; left:0; right:0; bottom:0; background-color:' + (isActif ? '#059669' : '#CBD5E1') + '; transition:.3s; border-radius:20px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">' +
                '<span style="position:absolute; content:\'\'; height:16px; width:16px; left:' + (isActif ? '23px' : '3px') + '; bottom:3px; background-color:white; transition:.3s; border-radius:50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></span>' +
                '</span>' +
                '</label>' +
@@ -78,10 +83,14 @@ $(document).ready(function() {
       } },
       { data: null, width: '170px', orderable: false, render: function(d) {
         var editId = d.editId || d.id_fonction;
-        return '<div style="display:flex; justify-content:flex-end; gap:6px;">' +
-               '<a href="' + window.RACINE + 'fonction/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
-               '<a href="' + window.RACINE + 'fonction/details/' + editId + '" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir détails"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>' +
-               '</div>';
+        var canManage = (window.AppConfig && typeof window.AppConfig.can === 'function') ? window.AppConfig.can('ADMIN_MANAGE_USERS') : false;
+        var html = '<div style="display:flex; justify-content:flex-end; gap:6px;">';
+        if (canManage) {
+          html += '<a href="' + window.RACINE + 'fonction/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>';
+        }
+        html += '<a href="' + window.RACINE + 'fonction/details/' + editId + '" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir détails"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>' +
+                '</div>';
+        return html;
       }, className: 'text-end' }
     ],
     language: { url: '<?= RACINE ?>json/datatables-i18n-fr-FR.json' },

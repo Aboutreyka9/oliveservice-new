@@ -9,13 +9,13 @@ class ClientController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         $this->loadView('../views/clients/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         $anneeCode = Context::annee();
         $zoneCode = Context::zone();
         $userCode = Context::user();
@@ -66,7 +66,7 @@ class ClientController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_ADD_CLIENT');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -145,7 +145,7 @@ class ClientController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_EDIT_CLIENT');
 
         // RÈGLE STRICTE RBAC : Les commerciaux ne peuvent pas modifier les fiches clients
         if (Context::isCommercial()) {
@@ -175,7 +175,7 @@ class ClientController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_EDIT_CLIENT');
 
         if (Context::isCommercial()) {
             $this->error('Action non autorisée. Les commerciaux ne peuvent pas changer le statut d\'un client.');
@@ -196,7 +196,7 @@ class ClientController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -277,7 +277,7 @@ class ClientController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_EDIT_CLIENT');
         if (Context::isCommercial()) {
             header('Location: ' . RACINE . 'client/list');
             exit();
@@ -296,7 +296,7 @@ class ClientController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_ADD_CLIENT');
         $this->loadView('../views/clients/edit.php', ['item' => []]);
     }
 }

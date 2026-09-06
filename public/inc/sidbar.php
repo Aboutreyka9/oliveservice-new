@@ -14,36 +14,10 @@
   $currentUri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
 
   // --- SYSTÈME D'AUTORISATIONS & RBAC DU SIDEBAR (OLIVE SERVICE 4 PROFILS) ---
-  $userRoles = $_SESSION[USERS_AUTH]['roles'] ?? [];
-  if (empty($userRoles)) {
-      $singleRole = $_SESSION[USERS_AUTH]['role_code'] ?? ($_SESSION['role_code'] ?? 'ROLE_COMMERCIAL');
-      $userRoles = !empty($singleRole) ? [$singleRole] : ['ROLE_COMMERCIAL'];
-  }
-  if (is_string($userRoles)) {
-      $userRoles = [$userRoles];
-  }
-  $userRoleCode = $userRoles[0] ?? 'ROLE_COMMERCIAL';
-  $isSuperAdmin = !empty(array_intersect($userRoles, ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_DIR_GENERAL']));
-
-  // Récupérer les permissions cumulées de tous les rôles de l'utilisateur
-  $userPermissions = $_SESSION['permissions'] ?? [];
-  if (!$isSuperAdmin && empty($userPermissions)) {
-      try {
-          $dbConn = (new Database())->getCon();
-          $inClause = implode(',', array_fill(0, count($userRoles), '?'));
-          $stmtP = $dbConn->prepare("
-              SELECT DISTINCT rp.permission_code 
-              FROM role_permissions rp
-              JOIN permissions p ON rp.permission_code = p.code_permission
-              WHERE rp.role_code IN ($inClause) AND p.statut_permission = 'actif'
-          ");
-          $stmtP->execute($userRoles);
-          $userPermissions = $stmtP->fetchAll(PDO::FETCH_COLUMN) ?: [];
-          $_SESSION['permissions'] = $userPermissions;
-      } catch (Exception $e) {
-          $userPermissions = [];
-      }
-  }
+  $userRoles = Context::roles();
+  $userRoleCode = Context::role();
+  $isSuperAdmin = Context::isSuperAdmin();
+  $userPermissions = Context::permissions();
 
   $canAccess = function(array $requiredPerms = [], array $allowedRoles = []) use ($isSuperAdmin, $userRoles, $userPermissions) {
       if ($isSuperAdmin) return true;
