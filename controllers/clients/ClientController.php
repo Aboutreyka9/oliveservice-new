@@ -19,15 +19,17 @@ class ClientController extends BaseController
         $anneeCode = Context::annee();
         $zoneCode = Context::zone();
         $userCode = Context::user();
+        $etabCode = Context::etablissement();
 
         $sql = "
             SELECT DISTINCT c.*, z.libelle_zone
             FROM clients c
             LEFT JOIN zones z ON z.code_zone = c.zone_code
-            LEFT JOIN souscriptions s ON s.client_code = c.code_client
-            WHERE 1=1
+            LEFT JOIN souscriptions s ON s.client_code = c.code_client 
+                 AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
+            WHERE (c.etablissement_code = ? OR c.etablissement_code IS NULL)
         ";
-        $params = [];
+        $params = [$etabCode, $zoneCode, $anneeCode, $etabCode];
 
         // Application du filtrage strict selon le rôle RBAC (Context)
         if (Context::isCommercial()) {
@@ -39,11 +41,6 @@ class ClientController extends BaseController
             $sql .= " AND (c.zone_code = ? OR s.zone_code = ?)";
             $params[] = $zoneCode;
             $params[] = $zoneCode;
-        }
-
-        if (!empty($anneeCode) && $anneeCode !== '0GklBk07waYoLB6pHwY') {
-            $sql .= " AND s.annee_code = ?";
-            $params[] = $anneeCode;
         }
 
         $sql .= " ORDER BY c.created_at_client DESC";
@@ -208,16 +205,25 @@ class ClientController extends BaseController
                 return;
             }
 
+            $etabCode = Context::etablissement();
+            $zoneCode = Context::zone();
+            $anneeCode = Context::annee();
+
             // Récupérer les souscriptions de ce client avec filtrage par rôle
             $sql = "
                 SELECT s.*, p.libelle_pack, z.libelle_zone
                 FROM souscriptions s
-                LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription
-                LEFT JOIN packs p ON p.code_pack = ps.pack_code
+                LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription AND ps.etablissement_code = ? AND ps.zone_code = ? AND ps.annee_code = ?
+                LEFT JOIN packs p ON p.code_pack = ps.pack_code AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
                 LEFT JOIN zones z ON z.code_zone = s.zone_code
-                WHERE s.client_code = ?
+                WHERE s.client_code = ? AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
             ";
-            $params = [$item['code_client']];
+            $params = [
+                $etabCode, $zoneCode, $anneeCode,
+                $etabCode, $zoneCode, $anneeCode,
+                $item['code_client'],
+                $etabCode, $zoneCode, $anneeCode
+            ];
 
             if (Context::isCommercial()) {
                 $sql .= " AND s.user_code = ?";
@@ -234,10 +240,15 @@ class ClientController extends BaseController
             $sqlCot = "
                 SELECT cc.*, s.code_souscription
                 FROM cautisation_clients cc
-                LEFT JOIN souscriptions s ON s.code_souscription = cc.souscription_code
+                LEFT JOIN souscriptions s ON s.code_souscription = cc.souscription_code AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
                 WHERE (cc.client_code = ? OR s.client_code = ?)
+                  AND cc.etablissement_code = ? AND cc.zone_code = ? AND cc.annee_code = ?
             ";
-            $paramsCot = [$item['code_client'], $item['code_client']];
+            $paramsCot = [
+                $etabCode, $zoneCode, $anneeCode,
+                $item['code_client'], $item['code_client'],
+                $etabCode, $zoneCode, $anneeCode
+            ];
 
             if (Context::isCommercial()) {
                 $sqlCot .= " AND (cc.user_code = ? OR cc.commercial_code = ?)";

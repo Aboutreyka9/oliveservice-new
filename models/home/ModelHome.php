@@ -29,10 +29,20 @@ class ModelHome extends BaseModel
             }
 
             $userCodeFilter = Context::isCommercial() ? Context::user() : ($userCode ?? null);
+            $etabCode = Context::etablissement();
+            $zoneCode = Context::zone();
 
             // 1. Clients
             $sqlClients = "SELECT COUNT(*) FROM clients WHERE 1=1";
             $pClients = [];
+            if ($etabCode) {
+                $sqlClients .= " AND etablissement_code = ?";
+                $pClients[] = $etabCode;
+            }
+            if ($zoneCode) {
+                $sqlClients .= " AND zone_code = ?";
+                $pClients[] = $zoneCode;
+            }
             if ($userCodeFilter) {
                 $sqlClients .= " AND user_code = ?";
                 $pClients[] = $userCodeFilter;
@@ -42,26 +52,32 @@ class ModelHome extends BaseModel
             $totalClients = (int)$stmt->fetchColumn();
 
             // 2. Packs & Articles
-            $totalPacks = (int)$db->query("SELECT COUNT(*) FROM packs WHERE statut_pack = 'actif'")->fetchColumn();
+            $sqlPacks = "SELECT COUNT(*) FROM packs WHERE statut_pack = 'actif'";
+            $pPacks = [];
+            $sqlPacksCond = [];
+            Context::applyTripleFilter('', $sqlPacksCond, $pPacks);
+            if (!empty($sqlPacksCond)) $sqlPacks .= " AND " . implode(' AND ', $sqlPacksCond);
+            $stmtPacks = $db->prepare($sqlPacks);
+            $stmtPacks->execute($pPacks);
+            $totalPacks = (int)$stmtPacks->fetchColumn();
+
             $totalArticles = (int)$db->query("SELECT COUNT(*) FROM articles WHERE statut_article = 'actif'")->fetchColumn();
 
             // 3. Souscriptions
             $sqlSouscr = "SELECT COUNT(*) FROM souscriptions WHERE statut_souscription IN ('valide', 'reconduite')";
             $pSouscr = [];
-            if ($userCodeFilter) {
-                $sqlSouscr .= " AND user_code = ?";
-                $pSouscr[] = $userCodeFilter;
-            }
+            $condsSouscr = [];
+            Context::applyTripleFilter('', $condsSouscr, $pSouscr, true);
+            if (!empty($condsSouscr)) $sqlSouscr .= " AND " . implode(' AND ', $condsSouscr);
             $stmt = $db->prepare($sqlSouscr);
             $stmt->execute($pSouscr);
             $totalSouscriptions = (int)$stmt->fetchColumn();
 
             $sqlSoldees = "SELECT COUNT(*) FROM souscriptions WHERE statut_souscription = 'solde'";
             $pSoldees = [];
-            if ($userCodeFilter) {
-                $sqlSoldees .= " AND user_code = ?";
-                $pSoldees[] = $userCodeFilter;
-            }
+            $condsSoldees = [];
+            Context::applyTripleFilter('', $condsSoldees, $pSoldees, true);
+            if (!empty($condsSoldees)) $sqlSoldees .= " AND " . implode(' AND ', $condsSoldees);
             $stmt = $db->prepare($sqlSoldees);
             $stmt->execute($pSoldees);
             $totalSouscriptionsSoldees = (int)$stmt->fetchColumn();
@@ -69,11 +85,9 @@ class ModelHome extends BaseModel
             // 4. Cotisations
             $sqlCotis = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE statut_cautisation_client != 'ennule'";
             $pCotis = [];
-            if ($userCodeFilter) {
-                $sqlCotis .= " AND (user_code = ? OR commercial_code = ?)";
-                $pCotis[] = $userCodeFilter;
-                $pCotis[] = $userCodeFilter;
-            }
+            $condsCotis = [];
+            Context::applyTripleFilter('', $condsCotis, $pCotis, true, false);
+            if (!empty($condsCotis)) $sqlCotis .= " AND " . implode(' AND ', $condsCotis);
             $stmt = $db->prepare($sqlCotis);
             $stmt->execute($pCotis);
             $totalCotisations = (float)($stmt->fetchColumn() ?: 0);
@@ -84,33 +98,51 @@ class ModelHome extends BaseModel
             // 5. Versements
             $sqlVersVal = "SELECT COALESCE(SUM(montant_versement), 0) FROM versements_commerciaux WHERE statut_versement = 'valide'";
             $pVersVal = [];
-            if ($userCodeFilter) {
-                $sqlVersVal .= " AND (user_code = ? OR commercial_code = ?)";
-                $pVersVal[] = $userCodeFilter;
-                $pVersVal[] = $userCodeFilter;
-            }
+            $condsVersVal = [];
+            Context::applyTripleFilter('', $condsVersVal, $pVersVal, true, false);
+            if (!empty($condsVersVal)) $sqlVersVal .= " AND " . implode(' AND ', $condsVersVal);
             $stmt = $db->prepare($sqlVersVal);
             $stmt->execute($pVersVal);
             $totalVersements = (float)($stmt->fetchColumn() ?: 0);
 
             $sqlVersAtt = "SELECT COALESCE(SUM(montant_versement), 0) FROM versements_commerciaux WHERE statut_versement = 'En attente'";
             $pVersAtt = [];
-            if ($userCodeFilter) {
-                $sqlVersAtt .= " AND (user_code = ? OR commercial_code = ?)";
-                $pVersAtt[] = $userCodeFilter;
-                $pVersAtt[] = $userCodeFilter;
-            }
+            $condsVersAtt = [];
+            Context::applyTripleFilter('', $condsVersAtt, $pVersAtt, true, false);
+            if (!empty($condsVersAtt)) $sqlVersAtt .= " AND " . implode(' AND ', $condsVersAtt);
             $stmt = $db->prepare($sqlVersAtt);
             $stmt->execute($pVersAtt);
             $totalVersementsEnAttente = (float)($stmt->fetchColumn() ?: 0);
 
             // 6. Dépenses & Solde Net
-            $totalDepenses = (float)($db->query("SELECT COALESCE(SUM(montant_depense), 0) FROM depenses WHERE statut_depense != 'inactif'")->fetchColumn() ?: 0);
+            $sqlDepenses = "SELECT COALESCE(SUM(montant_depense), 0) FROM depenses WHERE statut_depense != 'inactif'";
+            $pDepenses = [];
+            $condsDepenses = [];
+            Context::applyTripleFilter('', $condsDepenses, $pDepenses, false);
+            if (!empty($condsDepenses)) $sqlDepenses .= " AND " . implode(' AND ', $condsDepenses);
+            $stmtDep = $db->prepare($sqlDepenses);
+            $stmtDep->execute($pDepenses);
+            $totalDepenses = (float)($stmtDep->fetchColumn() ?: 0);
             $soldeNet = $caEncaisse - $totalDepenses;
 
             // 7. Distributions
-            $totalDistributions = (int)$db->query("SELECT COUNT(*) FROM distributions")->fetchColumn();
-            $totalDistributionsValidees = (int)$db->query("SELECT COUNT(*) FROM distributions WHERE statut_distribution = 'valide'")->fetchColumn();
+            $sqlDist = "SELECT COUNT(*) FROM distributions WHERE 1=1";
+            $pDist = [];
+            $condsDist = [];
+            Context::applyTripleFilter('', $condsDist, $pDist, false);
+            if (!empty($condsDist)) $sqlDist .= " AND " . implode(' AND ', $condsDist);
+            $stmtDist = $db->prepare($sqlDist);
+            $stmtDist->execute($pDist);
+            $totalDistributions = (int)$stmtDist->fetchColumn();
+
+            $sqlDistVal = "SELECT COUNT(*) FROM distributions WHERE statut_distribution = 'valide'";
+            $pDistVal = [];
+            $condsDistVal = [];
+            Context::applyTripleFilter('', $condsDistVal, $pDistVal, false);
+            if (!empty($condsDistVal)) $sqlDistVal .= " AND " . implode(' AND ', $condsDistVal);
+            $stmtDistVal = $db->prepare($sqlDistVal);
+            $stmtDistVal->execute($pDistVal);
+            $totalDistributionsValidees = (int)$stmtDistVal->fetchColumn();
 
             return [
                 'annee_code' => $anneeCode,
@@ -161,11 +193,9 @@ class ModelHome extends BaseModel
                     LEFT JOIN clients cl ON cl.code_client = s.client_code
                     WHERE 1=1";
             $params = [];
-            if (Context::isCommercial()) {
-                $sql .= " AND (c.user_code = ? OR c.commercial_code = ?)";
-                $params[] = Context::user();
-                $params[] = Context::user();
-            }
+            $conds = [];
+            Context::applyTripleFilter('c', $conds, $params, true, false);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
             $limitInt = max(1, (int)$limit);
             $sql .= " ORDER BY c.id_cautisation_client DESC LIMIT $limitInt";
             $stmt = $db->prepare($sql);
@@ -187,11 +217,9 @@ class ModelHome extends BaseModel
                     LEFT JOIN zones z ON z.code_zone = v.zone_code
                     WHERE 1=1";
             $params = [];
-            if (Context::isCommercial()) {
-                $sql .= " AND (v.user_code = ? OR v.commercial_code = ?)";
-                $params[] = Context::user();
-                $params[] = Context::user();
-            }
+            $conds = [];
+            Context::applyTripleFilter('v', $conds, $params, true, false);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
             $limitInt = max(1, (int)$limit);
             $sql .= " ORDER BY v.id_versement DESC LIMIT $limitInt";
             $stmt = $db->prepare($sql);
@@ -210,9 +238,16 @@ class ModelHome extends BaseModel
             $sql = "SELECT d.*, td.libelle_type_depense
                     FROM depenses d
                     LEFT JOIN type_depenses td ON td.code_type_depense = d.type_depense_code
-                    ORDER BY d.id_depense DESC
-                    LIMIT $limit";
-            return $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    WHERE 1=1";
+            $params = [];
+            $conds = [];
+            Context::applyTripleFilter('d', $conds, $params, false);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $limitInt = max(1, (int)$limit);
+            $sql .= " ORDER BY d.id_depense DESC LIMIT $limitInt";
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelHome::getRecentDepenses error: " . $e->getMessage());
             return [];
@@ -227,9 +262,16 @@ class ModelHome extends BaseModel
                     FROM versements_commerciaux v
                     LEFT JOIN users u ON u.code_user = v.commercial_code
                     LEFT JOIN zones z ON z.code_zone = v.zone_code
-                    WHERE v.statut_versement = 'En attente'
-                    ORDER BY v.id_versement DESC LIMIT " . (int)$limit;
-            return $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    WHERE v.statut_versement = 'En attente'";
+            $params = [];
+            $conds = [];
+            Context::applyTripleFilter('v', $conds, $params, true, false);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $limitInt = max(1, (int)$limit);
+            $sql .= " ORDER BY v.id_versement DESC LIMIT $limitInt";
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelHome::getPendingVersements error: " . $e->getMessage());
             return [];
@@ -245,8 +287,16 @@ class ModelHome extends BaseModel
                     LEFT JOIN souscriptions s ON s.code_souscription = d.souscription_code
                     LEFT JOIN clients cl ON cl.code_client = s.client_code
                     LEFT JOIN packs p ON p.code_pack = s.pack_code
-                    ORDER BY d.id_distribution DESC LIMIT " . (int)$limit;
-            return $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    WHERE 1=1";
+            $params = [];
+            $conds = [];
+            Context::applyTripleFilter('d', $conds, $params, false);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $limitInt = max(1, (int)$limit);
+            $sql .= " ORDER BY d.id_distribution DESC LIMIT $limitInt";
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelHome::getPendingDistributions error: " . $e->getMessage());
             return [];

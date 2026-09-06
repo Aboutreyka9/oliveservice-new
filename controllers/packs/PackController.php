@@ -16,6 +16,10 @@ class PackController extends BaseController
     public function apiList()
     {
         $this->requireAuth();
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
         $sql = "
             SELECT p.*, 
                    c.libelle_categorie_pack,
@@ -25,12 +29,18 @@ class PackController extends BaseController
                    a.libelle_annee
             FROM packs p
             LEFT JOIN categorie_packs c ON c.code_categorie_pack = p.categorie_pack_code
-            LEFT JOIN sessions s ON s.code_session = p.session_code
+            LEFT JOIN sessions s ON s.code_session = p.session_code AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
             LEFT JOIN zones z ON z.code_zone = p.zone_code
             LEFT JOIN annees a ON a.code_annee = p.annee_code
+            WHERE p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
             ORDER BY p.annee_code ASC, p.zone_code ASC, p.id_pack DESC
         ";
-        $items = $this->model->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute([
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode
+        ]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $data = [];
 
         foreach ($items as $i) {
@@ -61,19 +71,22 @@ class PackController extends BaseController
         $data = $_POST;
         unset($data['csrf_token']);
 
+        $userCode = Context::user() ?? '';
+        $anneeCode = Context::annee();
+        $etabCode = Context::etablissement();
+        $zoneCode = !empty($data['zone_code']) ? $data['zone_code'] : Context::zone();
+
         if (!empty($data['libelle_pack'])) {
             $conditions = [
                 'session_code' => $data['session_code'] ?? '',
                 'categorie_pack_code' => $data['categorie_pack_code'] ?? '',
-                'zone_code' => $data['zone_code'] ?? '',
-                'libelle_pack' => $data['libelle_pack'] ?? ''
+                'zone_code' => $zoneCode,
+                'libelle_pack' => $data['libelle_pack'] ?? '',
+                'etablissement_code' => $etabCode,
+                'annee_code' => $anneeCode
             ];
             if (!$this->checkUniquePair('packs', $conditions, 'Pack (Session + Catégorie + Zone + Nom)')) return;
         }
-
-        $userCode = Context::user() ?? '';
-        $anneeCode = Context::annee();
-        $etabCode = Context::etablissement();
 
         if (empty($data['code_pack'])) {
             $data['code_pack'] = $this->validator->generateCode('packs', 'code_pack', 'PCK-', 8);
@@ -99,13 +112,14 @@ class PackController extends BaseController
         $cols = $this->model->getCon()->query("DESCRIBE packs")->fetchAll(PDO::FETCH_COLUMN);
         if (in_array('user_code', $cols)) $data['user_code'] = $userCode;
         if (in_array('etablissement_code', $cols)) $data['etablissement_code'] = $etabCode;
-        if (in_array('annee_code', $cols) && empty($data['annee_code'])) $data['annee_code'] = $anneeCode;
+        if (in_array('annee_code', $cols)) $data['annee_code'] = $anneeCode;
+        if (in_array('zone_code', $cols)) $data['zone_code'] = $zoneCode;
 
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->create($filteredData)) {
             // Traiter la liste des articles du pack s'il y en a
             if (!empty($_POST['articles']) && is_array($_POST['articles'])) {
-                $this->model->syncArticles($data['code_pack'], $_POST['articles'], $anneeCode, $etabCode);
+                $this->model->syncArticles($data['code_pack'], $_POST['articles'], $anneeCode, $etabCode, $zoneCode);
             }
             $this->success('Pack créé avec succès!');
         } else {
@@ -123,7 +137,10 @@ class PackController extends BaseController
         unset($data['csrf_token']);
 
         $pack = $this->model->getById($id);
-        if (!$pack) { $this->error('Pack introuvable'); return; }
+        if (!$pack || $pack['etablissement_code'] !== Context::etablissement() || $pack['zone_code'] !== Context::zone() || $pack['annee_code'] !== Context::annee()) {
+            $this->error('Pack introuvable ou non autorisé'); 
+            return; 
+        }
 
         if (!empty($data['libelle_pack'])) {
             $conditions = [
@@ -158,7 +175,8 @@ class PackController extends BaseController
             if (isset($_POST['articles']) && is_array($_POST['articles'])) {
                 $anneeCode = Context::annee();
                 $etabCode = Context::etablissement();
-                $this->model->syncArticles($pack['code_pack'], $_POST['articles'], $anneeCode, $etabCode);
+                $zoneCode = $pack['zone_code'] ?? Context::zone();
+                $this->model->syncArticles($pack['code_pack'], $_POST['articles'], $anneeCode, $etabCode, $zoneCode);
             }
             $this->success('Pack modifié avec succès!');
         } else {
@@ -171,7 +189,11 @@ class PackController extends BaseController
         $this->requirePost(false);
         $this->requireAuth();
         $id = $this->post('id');
-        if ($id && $this->model->getById($id)) {
+        if ($id && ($item = $this->model->getById($id))) {
+            if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                $this->error('Pack introuvable');
+                return;
+            }
             if ($this->model->toggleStatus($id)) {
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
@@ -188,7 +210,7 @@ class PackController extends BaseController
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) {
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
                 $this->renderNotFound("Le pack demandé est introuvable.");
                 return;
             }
@@ -211,15 +233,29 @@ class PackController extends BaseController
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) { header('Location: ' . RACINE . 'pack/list'); exit(); }
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                header('Location: ' . RACINE . 'pack/list'); exit();
+            }
             $packArticles = $this->model->getArticles($item['code_pack']);
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'pack/list'); exit();
         }
 
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
         $categories = $this->model->getCon()->query("SELECT code_categorie_pack, libelle_categorie_pack FROM categorie_packs WHERE statut_categorie_pack='actif'")->fetchAll(PDO::FETCH_ASSOC);
-        $sessions = $this->model->getCon()->query("SELECT code_session, libelle_session, nombre_jour_session FROM sessions WHERE statut_session='actif'")->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmtSessions = $this->model->getCon()->prepare("
+            SELECT code_session, libelle_session, nombre_jour_session 
+            FROM sessions 
+            WHERE statut_session='actif' AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtSessions->execute([$etabCode, $zoneCode, $anneeCode]);
+        $sessions = $stmtSessions->fetchAll(PDO::FETCH_ASSOC);
+
         $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
         $articles = $this->model->getCon()->query("SELECT code_article, libelle_article FROM articles WHERE statut_article='actif'")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -237,8 +273,20 @@ class PackController extends BaseController
     public function formulaire()
     {
         $this->requireAuth();
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
         $categories = $this->model->getCon()->query("SELECT code_categorie_pack, libelle_categorie_pack FROM categorie_packs WHERE statut_categorie_pack='actif'")->fetchAll(PDO::FETCH_ASSOC);
-        $sessions = $this->model->getCon()->query("SELECT code_session, libelle_session, nombre_jour_session FROM sessions WHERE statut_session='actif'")->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmtSessions = $this->model->getCon()->prepare("
+            SELECT code_session, libelle_session, nombre_jour_session 
+            FROM sessions 
+            WHERE statut_session='actif' AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtSessions->execute([$etabCode, $zoneCode, $anneeCode]);
+        $sessions = $stmtSessions->fetchAll(PDO::FETCH_ASSOC);
+
         $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
         $articles = $this->model->getCon()->query("SELECT code_article, libelle_article FROM articles WHERE statut_article='actif'")->fetchAll(PDO::FETCH_ASSOC);
 

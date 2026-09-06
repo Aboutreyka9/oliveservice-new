@@ -16,6 +16,9 @@ class VersementController extends BaseController
     public function apiList()
     {
         $this->requireAuth();
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
 
         $sql = "
             SELECT v.*, 
@@ -26,9 +29,9 @@ class VersementController extends BaseController
             LEFT JOIN users uc ON uc.code_user = v.commercial_code
             LEFT JOIN users uv ON uv.code_user = v.user_validate
             LEFT JOIN zones z ON z.code_zone = v.zone_code
-            WHERE 1=1
+            WHERE v.etablissement_code = ? AND v.zone_code = ? AND v.annee_code = ?
         ";
-        $params = [];
+        $params = [$etabCode, $zoneCode, $anneeCode];
 
         // RÈGLE RBAC : Le commercial ne voit que ses propres versements
         if (Context::isCommercial()) {
@@ -66,6 +69,8 @@ class VersementController extends BaseController
 
         $userCode = Context::user() ?? '';
         $etabCode = Context::etablissement();
+        $anneeCode = Context::annee();
+        $zoneCode = $data['zone_code'] ?? Context::zone();
         $codeVersement = $this->validator->generateCode('versements_commerciaux', 'code_versement_commercial', 'VRS-', 8);
 
         $commercialCode = !empty($data['commercial_code']) ? $data['commercial_code'] : $userCode;
@@ -81,9 +86,10 @@ class VersementController extends BaseController
             'commercial_code' => $commercialCode,
             'periode_versement_debut' => !empty($data['periode_versement_debut']) ? $data['periode_versement_debut'] : date('Y-m-d'),
             'periode_versement_fin' => !empty($data['periode_versement_fin']) ? $data['periode_versement_fin'] : date('Y-m-d'),
-            'zone_code' => $data['zone_code'] ?? Context::zone() ?? '',
+            'zone_code' => $zoneCode,
             'statut_versement' => 'En attente',
             'etablissement_code' => $etabCode,
+            'annee_code' => $anneeCode,
             'user_code' => $userCode,
             'created_at_versement' => date('Y-m-d H:i:s'),
             'user_validate' => '',
@@ -113,6 +119,12 @@ class VersementController extends BaseController
 
         $id = (int)$this->post('id_versement');
         if (!$id) { $this->error('Identifiant invalide'); return; }
+        $existing = $this->model->getById($id);
+        if (!$existing || $existing['etablissement_code'] !== Context::etablissement() || $existing['zone_code'] !== Context::zone() || $existing['annee_code'] !== Context::annee()) {
+            $this->error('Versement introuvable ou non autorisé');
+            return;
+        }
+
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -147,7 +159,7 @@ class VersementController extends BaseController
         }
 
         $versement = $this->model->getById($id);
-        if (!$versement) {
+        if (!$versement || $versement['etablissement_code'] !== Context::etablissement() || $versement['zone_code'] !== Context::zone() || $versement['annee_code'] !== Context::annee()) {
             $this->error('Versement introuvable.');
             return;
         }
@@ -159,8 +171,14 @@ class VersementController extends BaseController
                     UPDATE cautisation_clients 
                     SET statut_cautisation_client = 'valide', updated_at_cautisation_client = NOW()
                     WHERE commercial_code = ? AND statut_cautisation_client = 'en_attente'
+                      AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
                 ");
-                $stmtCotis->execute([$versement['commercial_code']]);
+                $stmtCotis->execute([
+                    $versement['commercial_code'],
+                    Context::etablissement(),
+                    Context::zone(),
+                    Context::annee()
+                ]);
             }
             $this->success('Versement validé et cotisations du commercial actualisées avec succès !', ['reload' => true]);
         } else {
@@ -179,7 +197,11 @@ class VersementController extends BaseController
         }
 
         $id = $this->post('id');
-        if ($id && $this->model->getById($id)) {
+        if ($id && ($item = $this->model->getById($id))) {
+            if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                $this->error('Versement introuvable');
+                return;
+            }
             if ($this->model->toggleStatus($id)) {
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
@@ -196,7 +218,7 @@ class VersementController extends BaseController
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) {
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
                 $this->renderNotFound("Le versement demandé est introuvable.");
                 return;
             }
@@ -233,7 +255,9 @@ class VersementController extends BaseController
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) { header('Location: ' . RACINE . 'versement/list'); exit(); }
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) { 
+                header('Location: ' . RACINE . 'versement/list'); exit(); 
+            }
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'versement/list'); exit();

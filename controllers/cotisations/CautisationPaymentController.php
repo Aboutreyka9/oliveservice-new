@@ -24,14 +24,16 @@ class CautisationPaymentController extends BaseController
         $con = $this->model->getCon();
         $userCode = Context::user();
         $zoneCode = Context::zone();
+        $etabCode = Context::etablissement();
+        $anneeCode = Context::annee();
 
         $sql = "
             SELECT DISTINCT c.code_client, c.nom_client, c.telephone_client
             FROM clients c
-            LEFT JOIN souscriptions s ON s.client_code = c.code_client
-            WHERE 1=1
+            JOIN souscriptions s ON s.client_code = c.code_client
+            WHERE s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
         ";
-        $params = [];
+        $params = [$etabCode, $zoneCode, $anneeCode];
 
         if (Context::isCommercial()) {
             $sql .= " AND (c.user_code = ? OR s.user_code = ?)";
@@ -326,6 +328,9 @@ class CautisationPaymentController extends BaseController
     private function searchSouscriptions(string $criteria, string $type): array
     {
         $con = $this->model->getCon();
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
 
         $sql = "
             SELECT s.*, 
@@ -333,11 +338,12 @@ class CautisationPaymentController extends BaseController
                    sess.libelle_session, sess.nombre_jour_session
              FROM souscriptions s
             LEFT JOIN clients c ON c.code_client = s.client_code
-            LEFT JOIN sessions sess ON sess.code_session = s.session_code
+            LEFT JOIN sessions sess ON sess.code_session = s.session_code AND sess.etablissement_code = ? AND sess.zone_code = ? AND sess.annee_code = ?
             WHERE s.statut_souscription != 'annule'
+              AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
         ";
 
-        $paramsBase = [];
+        $paramsBase = [$etabCode, $zoneCode, $anneeCode, $etabCode, $zoneCode, $anneeCode];
         if (Context::isCommercial()) {
             $sql .= " AND s.user_code = ?";
             $paramsBase[] = Context::user() ?? '';
@@ -388,6 +394,9 @@ class CautisationPaymentController extends BaseController
     private function getSouscriptionWithDetails(string $codeSouscription): ?array
     {
         $con = $this->model->getCon();
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
 
         $sql = "
             SELECT s.*, 
@@ -396,11 +405,12 @@ class CautisationPaymentController extends BaseController
                    z.libelle_zone, z.code_zone
             FROM souscriptions s
             LEFT JOIN clients c ON c.code_client = s.client_code
-            LEFT JOIN sessions sess ON sess.code_session = s.session_code
+            LEFT JOIN sessions sess ON sess.code_session = s.session_code AND sess.etablissement_code = ? AND sess.zone_code = ? AND sess.annee_code = ?
             LEFT JOIN zones z ON z.code_zone = s.zone_code
             WHERE s.code_souscription = ?
+              AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
         ";
-        $params = [$codeSouscription];
+        $params = [$etabCode, $zoneCode, $anneeCode, $codeSouscription, $etabCode, $zoneCode, $anneeCode];
 
         if (Context::isCommercial()) {
             $sql .= " AND (s.user_code = ? OR s.zone_code = ?)";
@@ -460,14 +470,19 @@ class CautisationPaymentController extends BaseController
     private function getPacksSouscrits(string $codeSouscription): array
     {
         $con = $this->model->getCon();
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
         $stmt = $con->prepare("
             SELECT p.code_pack, p.libelle_pack, p.prix_cotisation_pack, cp.libelle_categorie_pack
             FROM pack_souscriptions ps
-            JOIN packs p ON p.code_pack = ps.pack_code
+            JOIN packs p ON p.code_pack = ps.pack_code AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
             LEFT JOIN categorie_packs cp ON cp.code_categorie_pack = p.categorie_pack_code
             WHERE ps.souscription_code = ?
+              AND ps.etablissement_code = ? AND ps.zone_code = ? AND ps.annee_code = ?
         ");
-        $stmt->execute([$codeSouscription]);
+        $stmt->execute([$etabCode, $zoneCode, $anneeCode, $codeSouscription, $etabCode, $zoneCode, $anneeCode]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
@@ -480,8 +495,9 @@ class CautisationPaymentController extends BaseController
                 COALESCE(SUM(nombre_jour), 0) as nombre_jours_payes
             FROM cautisation_clients
             WHERE souscription_code = ? AND statut_cautisation_client = 'valide'
+              AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
         ");
-        $stmt->execute([$codeSouscription]);
+        $stmt->execute([$codeSouscription, Context::etablissement(), Context::zone(), Context::annee()]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['total_cotise' => 0, 'nombre_jours_payes' => 0];
     }
 
@@ -493,9 +509,10 @@ class CautisationPaymentController extends BaseController
             FROM cautisation_clients c
             LEFT JOIN users u ON u.code_user = c.commercial_code
             WHERE c.souscription_code = ?
+              AND c.etablissement_code = ? AND c.zone_code = ? AND c.annee_code = ?
             ORDER BY c.date_cautisation DESC
         ");
-        $stmt->execute([$codeSouscription]);
+        $stmt->execute([$codeSouscription, Context::etablissement(), Context::zone(), Context::annee()]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $result = [];
@@ -518,13 +535,28 @@ class CautisationPaymentController extends BaseController
     private function getTotalPackAmount(string $codeSouscription): float
     {
         $con = $this->model->getCon();
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
         $stmt = $con->prepare("
-            SELECT ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) * COALESCE(sess.nombre_jour_session, 0)) as total
+            SELECT ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) 
+                     FROM pack_souscriptions ps2 
+                     JOIN packs p2 ON p2.code_pack = ps2.pack_code AND p2.etablissement_code = ? AND p2.zone_code = ? AND p2.annee_code = ?
+                     WHERE ps2.souscription_code = s.code_souscription
+                       AND ps2.etablissement_code = ? AND ps2.zone_code = ? AND ps2.annee_code = ?) * COALESCE(sess.nombre_jour_session, 0)) as total
             FROM souscriptions s
-            LEFT JOIN sessions sess ON sess.code_session = s.session_code
+            LEFT JOIN sessions sess ON sess.code_session = s.session_code AND sess.etablissement_code = ? AND sess.zone_code = ? AND sess.annee_code = ?
             WHERE s.code_souscription = ?
+              AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
         ");
-        $stmt->execute([$codeSouscription]);
+        $stmt->execute([
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode,
+            $codeSouscription,
+            $etabCode, $zoneCode, $anneeCode
+        ]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return (float) ($row['total'] ?? 0);
     }
@@ -534,6 +566,9 @@ class CautisationPaymentController extends BaseController
         $con = $this->model->getCon();
         $userCode = Context::user();
         $dateToday = date('Y-m-d');
+        $anneeCode = Context::annee();
+        $zoneCode = Context::zone() ?: $zoneCode;
+        $etabCode = Context::etablissement() ?: $etabCode;
 
         // 1. Chercher une ouverture de caisse active pour ce commercial aujourd'hui
         if (Context::isCommercial()) {
@@ -541,9 +576,10 @@ class CautisationPaymentController extends BaseController
                 SELECT code_caisse, montant_total_attendu as fond_initial, date_ouverture
                 FROM caisses 
                 WHERE user_code = ? AND DATE(date_ouverture) = ? AND statut_caisse = 'ouverte'
+                  AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
                 ORDER BY id_caisse DESC LIMIT 1
             ");
-            $stmt->execute([$userCode, $dateToday]);
+            $stmt->execute([$userCode, $dateToday, $etabCode, $zoneCode, $anneeCode]);
             $ouv = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($ouv) return $ouv;
         }
@@ -551,10 +587,10 @@ class CautisationPaymentController extends BaseController
         // 2. Fallback caisses agence/établissement
         $stmt = $con->prepare("
             SELECT * FROM caisses 
-            WHERE etablissement_code = ? AND statut_caisse = 'ouverte'
+            WHERE etablissement_code = ? AND zone_code = ? AND annee_code = ? AND statut_caisse = 'ouverte'
             ORDER BY id_caisse DESC LIMIT 1
         ");
-        $stmt->execute([$etabCode]);
+        $stmt->execute([$etabCode, $zoneCode, $anneeCode]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 }

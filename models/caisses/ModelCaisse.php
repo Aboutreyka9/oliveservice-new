@@ -13,12 +13,15 @@ class ModelCaisse extends BaseModel
     public function getActiveOuvertureForToday(string $userCode, ?string $date = null)
     {
         if (!$date) $date = date('Y-m-d');
-        $stmt = $this->getCon()->prepare("
-            SELECT * FROM caisses 
-            WHERE user_code = ? AND DATE(date_ouverture) = ? AND statut_caisse = 'ouverte' 
-            ORDER BY id_caisse DESC LIMIT 1
-        ");
-        $stmt->execute([$userCode, $date]);
+        $sql = "SELECT * FROM caisses WHERE user_code = ? AND DATE(date_ouverture) = ? AND statut_caisse = 'ouverte'";
+        $params = [$userCode, $date];
+        $conds = [];
+        Context::applyTripleFilter('', $conds, $params, false);
+        if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+        $sql .= " ORDER BY id_caisse DESC LIMIT 1";
+
+        $stmt = $this->getCon()->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -27,12 +30,15 @@ class ModelCaisse extends BaseModel
      */
     public function getCurrentCaisse(string $userCode)
     {
-        $stmt = $this->getCon()->prepare("
-            SELECT * FROM caisses 
-            WHERE user_code = ? AND statut_caisse = 'ouverte' 
-            ORDER BY id_caisse DESC LIMIT 1
-        ");
-        $stmt->execute([$userCode]);
+        $sql = "SELECT * FROM caisses WHERE user_code = ? AND statut_caisse = 'ouverte'";
+        $params = [$userCode];
+        $conds = [];
+        Context::applyTripleFilter('', $conds, $params, false);
+        if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+        $sql .= " ORDER BY id_caisse DESC LIMIT 1";
+
+        $stmt = $this->getCon()->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -41,12 +47,15 @@ class ModelCaisse extends BaseModel
      */
     public function getLastClosedCaisse(string $userCode)
     {
-        $stmt = $this->getCon()->prepare("
-            SELECT * FROM caisses 
-            WHERE user_code = ? AND statut_caisse = 'cloture' 
-            ORDER BY id_caisse DESC LIMIT 1
-        ");
-        $stmt->execute([$userCode]);
+        $sql = "SELECT * FROM caisses WHERE user_code = ? AND statut_caisse = 'cloture'";
+        $params = [$userCode];
+        $conds = [];
+        Context::applyTripleFilter('', $conds, $params, false);
+        if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+        $sql .= " ORDER BY id_caisse DESC LIMIT 1";
+
+        $stmt = $this->getCon()->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }

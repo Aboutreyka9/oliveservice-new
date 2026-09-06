@@ -27,17 +27,10 @@ class CotisationController extends BaseController
             WHERE 1=1
         ";
         $params = [];
-
-        // Application du périmètre de données RBAC
-        if (Context::isCommercial()) {
-            $sql .= " AND (c.commercial_code = ? OR c.user_code = ?)";
-            $params[] = Context::user();
-            $params[] = Context::user();
-        }
-
-        if (Context::annee() && Context::annee() !== '0GklBk07waYoLB6pHwY') {
-            $sql .= " AND c.annee_code = ?";
-            $params[] = Context::annee();
+        $conds = [];
+        Context::applyTripleFilter('c', $conds, $params, true, false);
+        if (!empty($conds)) {
+            $sql .= " AND " . implode(' AND ', $conds);
         }
 
         $sql .= " ORDER BY c.date_cautisation DESC, c.id_cautisation_client DESC";
@@ -129,6 +122,7 @@ class CotisationController extends BaseController
             'statut_cautisation_client' => $statutInitial,
             'annee_code' => $anneeCode,
             'etablissement_code' => $etabCode,
+            'zone_code' => Context::zone(),
             'user_code' => $userCode,
             'created_at_cautisation_client' => date('Y-m-d H:i:s'),
             'updated_at_cautisation_client' => date('Y-m-d H:i:s')
@@ -207,15 +201,20 @@ class CotisationController extends BaseController
                 return;
             }
 
-            $stmtSous = $this->model->getCon()->prepare("
+            $sqlSous = "
                 SELECT s.*, c.nom_client, p.libelle_pack 
                 FROM souscriptions s 
                 LEFT JOIN clients c ON c.code_client = s.client_code 
                 LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code 
                 WHERE s.code_souscription = ?
-            ");
-            $stmtSous->execute([$item['souscription_code']]);
+            ";
+            $pSous = [$item['souscription_code']];
+            $cSous = [];
+            Context::applyTripleFilter('s', $cSous, $pSous, false);
+            if (!empty($cSous)) $sqlSous .= " AND " . implode(' AND ', $cSous);
+            $stmtSous = $this->model->getCon()->prepare($sqlSous);
+            $stmtSous->execute($pSous);
             $souscription = $stmtSous->fetch(PDO::FETCH_ASSOC);
 
             $stmtCommercial = $this->model->getCon()->prepare("SELECT * FROM users WHERE code_user = ?");
@@ -251,14 +250,21 @@ class CotisationController extends BaseController
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'cotisation/list'); exit();
         }
-        $souscriptions = $this->model->getCon()->query("
+        $sqlSous = "
             SELECT s.code_souscription, c.nom_client, p.libelle_pack 
             FROM souscriptions s 
             LEFT JOIN clients c ON c.code_client = s.client_code 
             LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
             LEFT JOIN packs p ON p.code_pack = ps.pack_code 
             WHERE s.statut_souscription IN ('valide', 'reconduite')
-        ")->fetchAll(PDO::FETCH_ASSOC);
+        ";
+        $pS = [];
+        $cS = [];
+        Context::applyTripleFilter('s', $cS, $pS, false);
+        if (!empty($cS)) $sqlSous .= " AND " . implode(' AND ', $cS);
+        $stmtS = $this->model->getCon()->prepare($sqlSous);
+        $stmtS->execute($pS);
+        $souscriptions = $stmtS->fetchAll(PDO::FETCH_ASSOC);
         $commerciaux = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user FROM users WHERE statut_user='actif'")->fetchAll(PDO::FETCH_ASSOC);
 
         $this->loadView('../views/cotisations/edit.php', [
@@ -272,14 +278,21 @@ class CotisationController extends BaseController
     public function formulaire()
     {
         $this->requireAuth();
-        $souscriptions = $this->model->getCon()->query("
+        $sqlSous = "
             SELECT s.code_souscription, s.montant_cotisation_journaliere, s.montant_total_cotise, s.montant_total_prevu, s.nombre_jour_total, s.nombre_jour_cotise, c.nom_client, p.libelle_pack 
             FROM souscriptions s 
             LEFT JOIN clients c ON c.code_client = s.client_code 
             LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
             LEFT JOIN packs p ON p.code_pack = ps.pack_code 
             WHERE s.statut_souscription IN ('valide', 'reconduite')
-        ")->fetchAll(PDO::FETCH_ASSOC);
+        ";
+        $pS = [];
+        $cS = [];
+        Context::applyTripleFilter('s', $cS, $pS, false);
+        if (!empty($cS)) $sqlSous .= " AND " . implode(' AND ', $cS);
+        $stmtS = $this->model->getCon()->prepare($sqlSous);
+        $stmtS->execute($pS);
+        $souscriptions = $stmtS->fetchAll(PDO::FETCH_ASSOC);
         $commerciaux = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user FROM users WHERE statut_user='actif'")->fetchAll(PDO::FETCH_ASSOC);
 
         $selectedSouscription = $_GET['souscription'] ?? '';

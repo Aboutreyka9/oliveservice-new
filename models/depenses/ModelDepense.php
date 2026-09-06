@@ -17,9 +17,17 @@ class ModelDepense extends BaseModel
                 FROM depenses d
                 LEFT JOIN type_depenses td ON td.code_type_depense = d.type_depense_code
                 LEFT JOIN users u ON u.code_user = d.user_code
-                ORDER BY d.created_at_depense DESC, d.id_depense DESC
+                WHERE 1=1
             ";
-            return $this->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $params = [];
+            $conds = [];
+            Context::applyTripleFilter('d', $conds, $params, false);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $sql .= " ORDER BY d.created_at_depense DESC, d.id_depense DESC";
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelDepense::getAllWithDetails error: " . $e->getMessage());
             return [];

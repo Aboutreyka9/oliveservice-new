@@ -131,8 +131,15 @@ class SouscriptionController extends BaseController
             return;
         }
 
-        $stmtPack = $this->model->getCon()->prepare("SELECT * FROM packs WHERE code_pack = ?");
-        $stmtPack->execute([$data['pack_code']]);
+        $etabCode = Context::etablissement();
+        $anneeCode = Context::annee();
+        $zoneCode = $data['zone_code'] ?? Context::zone();
+
+        $stmtPack = $this->model->getCon()->prepare("
+            SELECT * FROM packs 
+            WHERE code_pack = ? AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtPack->execute([$data['pack_code'], $etabCode, $zoneCode, $anneeCode]);
         $pack = $stmtPack->fetch(PDO::FETCH_ASSOC);
 
         if (!$pack) {
@@ -141,8 +148,6 @@ class SouscriptionController extends BaseController
         }
 
         $userCode = Context::user() ?? '';
-        $etabCode = Context::etablissement();
-        $anneeCode = Context::annee();
         $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
 
         $nbJours = (int)($data['nombre_jour_total'] ?: ($pack['nombre_jour_pack'] ?: 170));
@@ -153,7 +158,7 @@ class SouscriptionController extends BaseController
             'code_souscription' => $codeSouscription,
             'client_code' => $data['client_code'],
             'session_code' => $data['session_code'] ?: ($pack['session_code'] ?: null),
-            'zone_code' => $data['zone_code'] ?: ($pack['zone_code'] ?: null),
+            'zone_code' => $zoneCode,
             'date_debut_souscription' => $data['date_debut_souscription'] ?: date('Y-m-d'),
             'montant_total_prevu' => $montantTotal,
             'montant_cotisation_journaliere' => $cotisJour,
@@ -188,6 +193,12 @@ class SouscriptionController extends BaseController
 
         $id = (int)$this->post('id_souscription');
         if (!$id) { $this->error('Identifiant invalide'); return; }
+        $existing = $this->model->getById($id);
+        if (!$existing || $existing['etablissement_code'] !== Context::etablissement() || $existing['zone_code'] !== Context::zone() || $existing['annee_code'] !== Context::annee()) {
+            $this->error('Souscription introuvable ou non autorisée');
+            return;
+        }
+
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -212,7 +223,11 @@ class SouscriptionController extends BaseController
         }
 
         $id = $this->post('id');
-        if ($id && $this->model->getById($id)) {
+        if ($id && ($item = $this->model->getById($id))) {
+            if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                $this->error('Souscription introuvable');
+                return;
+            }
             if ($this->model->toggleStatus($id)) {
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
@@ -248,9 +263,10 @@ class SouscriptionController extends BaseController
                 FROM cautisation_clients c
                 LEFT JOIN users u ON u.code_user = c.commercial_code
                 WHERE c.souscription_code = ?
+                  AND c.etablissement_code = ? AND c.zone_code = ? AND c.annee_code = ?
                 ORDER BY c.date_cautisation DESC
             ");
-            $stmtCotis->execute([$item['code_souscription']]);
+            $stmtCotis->execute([$item['code_souscription'], Context::etablissement(), Context::zone(), Context::annee()]);
             $cotisations = $stmtCotis->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $encryptedId = $this->validator->crypter($id);
@@ -282,18 +298,25 @@ class SouscriptionController extends BaseController
         try {
             $id = $this->validator->decrypter($edition);
             $item = $this->model->getById($id);
-            if (!$item) {
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
                 $this->renderNotFound("La souscription demandée est introuvable.");
                 return;
             }
 
             $modelClient = new ModelClient();
-            $modelPack = new ModelPack();
-            $modelSession = new ModelSession();
-
             $clients = $modelClient->getAll();
-            $packs = $modelPack->getAll();
-            $sessions = $modelSession->getAll();
+
+            $etabCode = Context::etablissement();
+            $zoneCode = Context::zone();
+            $anneeCode = Context::annee();
+
+            $stmtP = $this->model->getCon()->prepare("SELECT * FROM packs WHERE statut_pack='actif' AND etablissement_code = ? AND zone_code = ? AND annee_code = ?");
+            $stmtP->execute([$etabCode, $zoneCode, $anneeCode]);
+            $packs = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+
+            $stmtS = $this->model->getCon()->prepare("SELECT * FROM sessions WHERE statut_session='actif' AND etablissement_code = ? AND zone_code = ? AND annee_code = ?");
+            $stmtS->execute([$etabCode, $zoneCode, $anneeCode]);
+            $sessions = $stmtS->fetchAll(PDO::FETCH_ASSOC);
 
         } catch (Exception $e) {
             $this->renderNotFound("La souscription demandée est introuvable.");
@@ -311,10 +334,15 @@ class SouscriptionController extends BaseController
     public function wizard()
     {
         $this->requireAuth();
-        $modelSession = new ModelSession();
-        $modelCat = new ModelCategoriePack();
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
 
-        $sessions = $modelSession->getAll();
+        $stmtS = $this->model->getCon()->prepare("SELECT * FROM sessions WHERE statut_session='actif' AND etablissement_code = ? AND zone_code = ? AND annee_code = ?");
+        $stmtS->execute([$etabCode, $zoneCode, $anneeCode]);
+        $sessions = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+
+        $modelCat = new ModelCategoriePack();
         $categories = $modelCat->getAll();
 
         $this->loadView('../views/souscriptions/wizard.php', [
@@ -334,16 +362,27 @@ class SouscriptionController extends BaseController
             return;
         }
 
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
         $sql = "
             SELECT p.*, c.libelle_categorie_pack, s.nombre_jour_session,
-                   (SELECT COUNT(*) FROM pack_articles pa WHERE pa.pack_code = p.code_pack) as nombre_articles,
-                   (SELECT COUNT(*) FROM pack_souscriptions ps WHERE ps.pack_code = p.code_pack) as nombre_souscriptions
+                   (SELECT COUNT(*) FROM pack_articles pa WHERE pa.pack_code = p.code_pack AND pa.etablissement_code = ? AND pa.zone_code = ? AND pa.annee_code = ?) as nombre_articles,
+                   (SELECT COUNT(*) FROM pack_souscriptions ps WHERE ps.pack_code = p.code_pack AND ps.etablissement_code = ? AND ps.zone_code = ? AND ps.annee_code = ?) as nombre_souscriptions
             FROM packs p
             LEFT JOIN categorie_packs c ON c.code_categorie_pack = p.categorie_pack_code
-            LEFT JOIN sessions s ON s.code_session = p.session_code
+            LEFT JOIN sessions s ON s.code_session = p.session_code AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
             WHERE p.session_code = ? AND p.statut_pack = 'actif'
+              AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
         ";
-        $params = [$sessionCode];
+        $params = [
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode,
+            $sessionCode,
+            $etabCode, $zoneCode, $anneeCode
+        ];
 
         if (!empty($categorieCode)) {
             $sql .= " AND p.categorie_pack_code = ?";
@@ -376,20 +415,28 @@ class SouscriptionController extends BaseController
         $userCode = Context::user() ?? '';
         $etabCode = Context::etablissement();
         $anneeCode = Context::annee();
-        $zoneCode = $data['zone_code'] ?? Context::zone() ?? '6QIlVfXP0LiXE9tBzHownYLAAqDi2';
-        $sessionCode = $data['session_code'] ?? 'kezoZf6kVz40261eKu';
+        $zoneCode = $data['zone_code'] ?? Context::zone();
+        $sessionCode = $data['session_code'] ?? '';
         $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
 
         $packCodes = $data['pack_codes'];
 
         $inClause = implode(',', array_fill(0, count($packCodes), '?'));
-        $stmtP = $this->model->getCon()->prepare("SELECT SUM(prix_cotisation_pack) as total_prix FROM packs WHERE code_pack IN ($inClause)");
-        $stmtP->execute($packCodes);
+        $stmtP = $this->model->getCon()->prepare("
+            SELECT SUM(prix_cotisation_pack) as total_prix 
+            FROM packs 
+            WHERE code_pack IN ($inClause) AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtP->execute(array_merge($packCodes, [$etabCode, $zoneCode, $anneeCode]));
         $resP = $stmtP->fetch(PDO::FETCH_ASSOC);
         $cotisJour = (float)($resP['total_prix'] ?? 0);
 
-        $stmtS = $this->model->getCon()->prepare("SELECT nombre_jour_session FROM sessions WHERE code_session = ?");
-        $stmtS->execute([$sessionCode]);
+        $stmtS = $this->model->getCon()->prepare("
+            SELECT nombre_jour_session 
+            FROM sessions 
+            WHERE code_session = ? AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtS->execute([$sessionCode, $etabCode, $zoneCode, $anneeCode]);
         $resS = $stmtS->fetch(PDO::FETCH_ASSOC);
         $nbJours = (int)($resS['nombre_jour_session'] ?? 170);
 
@@ -493,7 +540,7 @@ class SouscriptionController extends BaseController
             if (empty($zoneCode)) {
                 $stmtDZ = $db->query("SELECT code_zone FROM zones LIMIT 1");
                 $dz = $stmtDZ->fetch(PDO::FETCH_ASSOC);
-                $zoneCode = $dz['code_zone'] ?? '6QIlVfXP0LiXE9tBzHownYLAAqDi2';
+                $zoneCode = $dz['code_zone'] ?? Context::zone();
             }
 
             $clientData = [
@@ -524,13 +571,21 @@ class SouscriptionController extends BaseController
         $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
 
         $inClause = implode(',', array_fill(0, count($packCodes), '?'));
-        $stmtP = $db->prepare("SELECT SUM(prix_cotisation_pack) as total_prix FROM packs WHERE code_pack IN ($inClause)");
-        $stmtP->execute($packCodes);
+        $stmtP = $db->prepare("
+            SELECT SUM(prix_cotisation_pack) as total_prix 
+            FROM packs 
+            WHERE code_pack IN ($inClause) AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtP->execute(array_merge($packCodes, [$etabCode, $zoneCode, $anneeCode]));
         $resP = $stmtP->fetch(PDO::FETCH_ASSOC);
         $cotisJour = (float)($resP['total_prix'] ?? 0);
 
-        $stmtS = $db->prepare("SELECT nombre_jour_session FROM sessions WHERE code_session = ?");
-        $stmtS->execute([$sessionCode]);
+        $stmtS = $db->prepare("
+            SELECT nombre_jour_session 
+            FROM sessions 
+            WHERE code_session = ? AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtS->execute([$sessionCode, $etabCode, $zoneCode, $anneeCode]);
         $resS = $stmtS->fetch(PDO::FETCH_ASSOC);
         $nbJours = (int)($resS['nombre_jour_session'] ?? 170);
 

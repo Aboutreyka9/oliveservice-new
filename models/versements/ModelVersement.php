@@ -19,9 +19,17 @@ class ModelVersement extends BaseModel
                 LEFT JOIN users u ON u.code_user = v.commercial_code
                 LEFT JOIN users val ON val.code_user = v.user_validate
                 LEFT JOIN zones z ON z.code_zone = v.zone_code
-                ORDER BY v.created_at_versement DESC, v.id_versement DESC
+                WHERE 1=1
             ";
-            return $this->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $params = [];
+            $conds = [];
+            Context::applyTripleFilter('v', $conds, $params, true, false);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $sql .= " ORDER BY v.created_at_versement DESC, v.id_versement DESC";
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelVersement::getAllWithDetails error: " . $e->getMessage());
             return [];

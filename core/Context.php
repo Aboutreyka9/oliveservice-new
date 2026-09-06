@@ -2,9 +2,22 @@
 
 class Context
 {
+    public const SCOPED_TABLES = [
+        'caisses',
+        'cautisation_clients',
+        'depenses',
+        'distributions',
+        'pack_articles',
+        'pack_souscriptions',
+        'packs',
+        'sessions',
+        'souscriptions',
+        'versements_commerciaux'
+    ];
+
     public static function annee(): string
     {
-        return $_SESSION['annee_active_code'] ?? '0GklBk07waYoLB6pHwY';
+        return $_SESSION['annee_active_code'] ?? '6DSpC5ev5eJac6ShmSSwUHm4ah1s9baP';
     }
 
     public static function etablissement(): string
@@ -12,9 +25,9 @@ class Context
         return $_SESSION['etablissement_active_code'] ?? '5454544456';
     }
 
-    public static function zone(): ?string
+    public static function zone(): string
     {
-        return $_SESSION['zone_active_code'] ?? null;
+        return $_SESSION['zone_active_code'] ?? '6QIlVfXP0LiXE9tBzHownYLAAqDi2';
     }
 
     public static function user(): ?string
@@ -108,6 +121,54 @@ class Context
             $conditions[] = "{$prefix}annee_code = ?";
             $params[] = self::annee();
         }
+    }
+
+    /**
+     * Applique systématiquement les 3 filtres : etablissement_code, zone_code, annee_code
+     * (requis pour les 10 tables cibles) et optionnellement le filtre RBAC user_code.
+     */
+    public static function applyTripleFilter(string $tableAlias, ?array &$conditions, array &$params, bool $applyUserScope = false, bool $userFieldAsCommercial = true): void
+    {
+        $conditions = $conditions ?? [];
+        $prefix = !empty($tableAlias) ? rtrim($tableAlias, '.') . '.' : '';
+
+        $etab = self::etablissement();
+        if (!empty($etab)) {
+            $conditions[] = "{$prefix}etablissement_code = ?";
+            $params[] = $etab;
+        }
+
+        $zone = self::zone();
+        if (!empty($zone)) {
+            $conditions[] = "{$prefix}zone_code = ?";
+            $params[] = $zone;
+        }
+
+        $annee = self::annee();
+        if (!empty($annee)) {
+            $conditions[] = "{$prefix}annee_code = ?";
+            $params[] = $annee;
+        }
+
+        if ($applyUserScope && self::isCommercial()) {
+            $userCol = $userFieldAsCommercial ? 'user_code' : 'commercial_code';
+            $conditions[] = "({$prefix}{$userCol} = ? OR {$prefix}user_code = ?)";
+            $params[] = self::user();
+            $params[] = self::user();
+        }
+    }
+
+    /**
+     * Retourne une clause SQL complète avec les 3 filtres
+     */
+    public static function getTripleFilterSQL(string $tableAlias = '', array &$params = [], string $conjunction = 'AND', bool $applyUserScope = false, bool $userFieldAsCommercial = true): string
+    {
+        $conditions = [];
+        self::applyTripleFilter($tableAlias, $conditions, $params, $applyUserScope, $userFieldAsCommercial);
+        if (empty($conditions)) {
+            return '';
+        }
+        return ' ' . trim($conjunction) . ' ' . implode(' AND ', $conditions);
     }
 
     public static function applyTo(array &$data, array $fields = ['annee_code', 'etablissement_code', 'zone_code', 'user_code']): void

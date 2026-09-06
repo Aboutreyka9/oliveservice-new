@@ -16,13 +16,15 @@ class SessionController extends BaseController
     public function apiList()
     {
         $this->requireAuth();
-        $stmt = $this->model->getCon()->query("
+        $stmt = $this->model->getCon()->prepare("
             SELECT s.*, a.libelle_annee, z.libelle_zone 
             FROM sessions s 
             LEFT JOIN annees a ON a.code_annee = s.annee_code 
             LEFT JOIN zones z ON z.code_zone = s.zone_code 
+            WHERE s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
             ORDER BY s.id_session DESC
         ");
+        $stmt->execute([Context::etablissement(), Context::zone(), Context::annee()]);
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $data = [];
         foreach ($items as $i) {
@@ -57,8 +59,9 @@ class SessionController extends BaseController
         unset($data['csrf_token']);
 
         $userCode = Context::user() ?? '';
-        $anneeCode = $data['annee_code'] ?? ($_SESSION['annee_active_code'] ?? 'VL0hWQ');
-        $etabCode = '5454544456';
+        $anneeCode = Context::annee();
+        $etabCode = Context::etablissement();
+        $zoneCode = !empty($data['zone_code']) ? $data['zone_code'] : Context::zone();
 
         if (empty($data['code_session'])) {
             $data['code_session'] = $this->validator->generateCode('sessions', 'code_session', 'SES-', 8);
@@ -70,6 +73,7 @@ class SessionController extends BaseController
         if (in_array('user_code', $cols)) $data['user_code'] = $userCode;
         if (in_array('etablissement_code', $cols)) $data['etablissement_code'] = $etabCode;
         if (in_array('annee_code', $cols)) $data['annee_code'] = $anneeCode;
+        if (in_array('zone_code', $cols)) $data['zone_code'] = $zoneCode;
 
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->create($filteredData)) {
@@ -85,6 +89,12 @@ class SessionController extends BaseController
         $this->requireAuth();
         $id = (int)$this->post('id_session');
         if (!$id) { $this->error('Identifiant invalide'); return; }
+        $existing = $this->model->getById($id);
+        if (!$existing || $existing['etablissement_code'] !== Context::etablissement() || $existing['zone_code'] !== Context::zone() || $existing['annee_code'] !== Context::annee()) {
+            $this->error('Session introuvable ou non autorisée');
+            return;
+        }
+
         $data = $_POST;
         unset($data['csrf_token']);
         $data['updated_at_session'] = date('Y-m-d H:i:s');
@@ -103,7 +113,11 @@ class SessionController extends BaseController
         $this->requirePost(false);
         $this->requireAuth();
         $id = $this->post('id');
-        if ($id && $this->model->getById($id)) {
+        if ($id && ($item = $this->model->getById($id))) {
+            if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                $this->error('Session introuvable');
+                return;
+            }
             if ($this->model->toggleStatus($id)) {
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
@@ -120,12 +134,15 @@ class SessionController extends BaseController
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) {
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
                 $this->renderNotFound("La session demandée est introuvable.");
                 return;
             }
             
             $sessionCode = $item['code_session'];
+            $etabCode = Context::etablissement();
+            $zoneCode = Context::zone();
+            $anneeCode = Context::annee();
 
             // Année liée
             $stmtAnnee = $this->model->getCon()->prepare("SELECT * FROM annees WHERE code_annee = ?");
@@ -133,8 +150,12 @@ class SessionController extends BaseController
             $annee = $stmtAnnee->fetch(PDO::FETCH_ASSOC) ?: [];
 
             // Packs de cette session
-            $stmtPacks = $this->model->getCon()->prepare("SELECT * FROM packs WHERE session_code = ? ORDER BY libelle_pack ASC");
-            $stmtPacks->execute([$sessionCode]);
+            $stmtPacks = $this->model->getCon()->prepare("
+                SELECT * FROM packs 
+                WHERE session_code = ? AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+                ORDER BY libelle_pack ASC
+            ");
+            $stmtPacks->execute([$sessionCode, $etabCode, $zoneCode, $anneeCode]);
             $packs = $stmtPacks->fetchAll(PDO::FETCH_ASSOC);
 
             // Souscriptions de cette session
@@ -142,12 +163,16 @@ class SessionController extends BaseController
                 SELECT s.*, c.nom_client, c.prenom_client, p.libelle_pack 
                 FROM souscriptions s 
                 LEFT JOIN clients c ON c.code_client = s.client_code 
-                LEFT JOIN packs p ON p.code_pack = s.pack_code 
-                WHERE s.session_code = ? 
+                LEFT JOIN packs p ON p.code_pack = s.pack_code AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
+                WHERE s.session_code = ? AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
                 ORDER BY s.id_souscription DESC 
                 LIMIT 50
             ");
-            $stmtSous->execute([$sessionCode]);
+            $stmtSous->execute([
+                $etabCode, $zoneCode, $anneeCode,
+                $sessionCode,
+                $etabCode, $zoneCode, $anneeCode
+            ]);
             $souscriptions = $stmtSous->fetchAll(PDO::FETCH_ASSOC);
 
             // Stats financières
@@ -157,9 +182,9 @@ class SessionController extends BaseController
                     COALESCE(SUM(s.montant_total_cotise), 0) as total_cotise,
                     COALESCE(SUM(s.montant_total_prevu), 0) as total_prevu
                 FROM souscriptions s 
-                WHERE s.session_code = ?
+                WHERE s.session_code = ? AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
             ");
-            $stmtStats->execute([$sessionCode]);
+            $stmtStats->execute([$sessionCode, $etabCode, $zoneCode, $anneeCode]);
             $stats = $stmtStats->fetch(PDO::FETCH_ASSOC) ?: ['total_souscriptions' => 0, 'total_cotise' => 0, 'total_prevu' => 0];
 
             $encryptedId = $this->validator->crypter($id);
@@ -184,7 +209,9 @@ class SessionController extends BaseController
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) { header('Location: ' . RACINE . 'session/list'); exit(); }
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                header('Location: ' . RACINE . 'session/list'); exit();
+            }
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'session/list'); exit();

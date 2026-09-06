@@ -24,9 +24,10 @@ class CaisseCommercialController extends BaseController
             WHERE 1=1
         ";
         $params = [];
-        if (Context::isCommercial()) {
-            $sql .= " AND c.user_code = ?";
-            $params[] = Context::user();
+        $conds = [];
+        Context::applyTripleFilter('c', $conds, $params, true);
+        if (!empty($conds)) {
+            $sql .= " AND " . implode(' AND ', $conds);
         }
         $sql .= " ORDER BY c.date_ouverture DESC, c.id_caisse DESC";
         $stmt = $this->model->getCon()->prepare($sql);
@@ -92,8 +93,14 @@ class CaisseCommercialController extends BaseController
 
         $totalGeneral = $totalEspeces + $totalMobileMoney + $totalChequeVirement;
 
-        $stmtCheck = $db->prepare("SELECT * FROM caisses WHERE DATE(date_ouverture) = ? AND statut_caisse = 'cloture' LIMIT 1");
-        $stmtCheck->execute([$date]);
+        $sqlCheck = "SELECT * FROM caisses WHERE DATE(date_ouverture) = ? AND statut_caisse = 'cloture'";
+        $pCheck = [$date];
+        $cCheck = [];
+        Context::applyTripleFilter('', $cCheck, $pCheck, false);
+        if (!empty($cCheck)) $sqlCheck .= " AND " . implode(' AND ', $cCheck);
+        $sqlCheck .= " LIMIT 1";
+        $stmtCheck = $db->prepare($sqlCheck);
+        $stmtCheck->execute($pCheck);
         $alreadyClosed = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
         $this->json([
@@ -123,28 +130,38 @@ class CaisseCommercialController extends BaseController
         $db = $this->model->getCon();
 
         // 1. Chercher s'il y a une caisse OUVERTE aujourd'hui
-        $stmtOuv = $db->prepare("
+        $sqlOuv = "
             SELECT * FROM caisses 
             WHERE user_code = ? AND DATE(date_ouverture) = ? AND statut_caisse = 'ouverte'
-            ORDER BY id_caisse DESC LIMIT 1
-        ");
-        $stmtOuv->execute([$userCode, $dateToday]);
+        ";
+        $pOuv = [$userCode, $dateToday];
+        $cOuv = [];
+        Context::applyTripleFilter('', $cOuv, $pOuv, false);
+        if (!empty($cOuv)) $sqlOuv .= " AND " . implode(' AND ', $cOuv);
+        $sqlOuv .= " ORDER BY id_caisse DESC LIMIT 1";
+        $stmtOuv = $db->prepare($sqlOuv);
+        $stmtOuv->execute($pOuv);
         $activeSession = $stmtOuv->fetch(PDO::FETCH_ASSOC);
 
         if ($activeSession) {
             $codeCaisse = $activeSession['code_caisse'];
 
             // Calculer les totaux réels des cotisations rattachées à cette caisse ou faites aujourd'hui
-            $stmtCotis = $db->prepare("
+            $sqlCotis = "
                 SELECT c.*, cli.nom_client, cli.telephone_client
                 FROM cautisation_clients c
                 LEFT JOIN clients cli ON cli.code_client = c.client_code
                 WHERE (c.commercial_code = ? OR c.user_code = ?) 
                   AND (c.caisse_code = ? OR DATE(c.date_cautisation) = ?)
                   AND c.statut_cautisation_client != 'annule'
-                ORDER BY c.date_cautisation DESC
-            ");
-            $stmtCotis->execute([$userCode, $userCode, $codeCaisse, $dateToday]);
+            ";
+            $pCot = [$userCode, $userCode, $codeCaisse, $dateToday];
+            $cCot = [];
+            Context::applyTripleFilter('c', $cCot, $pCot, false);
+            if (!empty($cCot)) $sqlCotis .= " AND " . implode(' AND ', $cCot);
+            $sqlCotis .= " ORDER BY c.date_cautisation DESC";
+            $stmtCotis = $db->prepare($sqlCotis);
+            $stmtCotis->execute($pCot);
             $cotisations = $stmtCotis->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $totalEspeces = 0;
@@ -206,29 +223,39 @@ class CaisseCommercialController extends BaseController
         }
 
         // Aucune session active aujourd'hui : Récupérer le bilan de la dernière clôture
-        $stmtLast = $db->prepare("
+        $sqlLast = "
             SELECT c.*, val.nom_user as nom_validator, val.prenom_user as prenom_validator
             FROM caisses c
             LEFT JOIN users val ON val.code_user = c.user_confirm
             WHERE c.user_code = ? AND c.statut_caisse = 'cloture'
-            ORDER BY c.date_cloture DESC, c.id_caisse DESC LIMIT 1
-        ");
-        $stmtLast->execute([$userCode]);
+        ";
+        $pLast = [$userCode];
+        $cLast = [];
+        Context::applyTripleFilter('c', $cLast, $pLast, false);
+        if (!empty($cLast)) $sqlLast .= " AND " . implode(' AND ', $cLast);
+        $sqlLast .= " ORDER BY c.date_cloture DESC, c.id_caisse DESC LIMIT 1";
+        $stmtLast = $db->prepare($sqlLast);
+        $stmtLast->execute($pLast);
         $lastCloture = $stmtLast->fetch(PDO::FETCH_ASSOC);
 
         $lastCotisations = [];
         if ($lastCloture) {
             $dateLast = $lastCloture['date_cloture'] ? date('Y-m-d', strtotime($lastCloture['date_cloture'])) : date('Y-m-d', strtotime($lastCloture['date_ouverture']));
-            $stmtCotis = $db->prepare("
+            $sqlCotis = "
                 SELECT c.*, cli.nom_client, cli.telephone_client
                 FROM cautisation_clients c
                 LEFT JOIN clients cli ON cli.code_client = c.client_code
                 WHERE (c.commercial_code = ? OR c.user_code = ?) 
                   AND (c.caisse_code = ? OR DATE(c.date_cautisation) = ?)
                   AND c.statut_cautisation_client != 'annule'
-                ORDER BY c.date_cautisation DESC
-            ");
-            $stmtCotis->execute([$userCode, $userCode, $lastCloture['code_caisse'] ?? '', $dateLast]);
+            ";
+            $pCotis = [$userCode, $userCode, $lastCloture['code_caisse'] ?? '', $dateLast];
+            $cCotis = [];
+            Context::applyTripleFilter('c', $cCotis, $pCotis, false);
+            if (!empty($cCotis)) $sqlCotis .= " AND " . implode(' AND ', $cCotis);
+            $sqlCotis .= " ORDER BY c.date_cautisation DESC";
+            $stmtCotis = $db->prepare($sqlCotis);
+            $stmtCotis->execute($pCotis);
             $rawCotis = $stmtCotis->fetchAll(PDO::FETCH_ASSOC) ?: [];
             foreach ($rawCotis as $cot) {
                 $m = (float)($cot['montant_cautisation_client'] ?? 0);
@@ -279,8 +306,13 @@ class CaisseCommercialController extends BaseController
         $db = $this->model->getCon();
 
         // Vérifier s'il y a déjà une caisse ouverte aujourd'hui
-        $stmtCheck = $db->prepare("SELECT id_caisse FROM caisses WHERE user_code = ? AND DATE(date_ouverture) = ? AND statut_caisse = 'ouverte'");
-        $stmtCheck->execute([$userCode, $dateToday]);
+        $sqlCheck = "SELECT id_caisse FROM caisses WHERE user_code = ? AND DATE(date_ouverture) = ? AND statut_caisse = 'ouverte'";
+        $pCheck = [$userCode, $dateToday];
+        $cCheck = [];
+        Context::applyTripleFilter('', $cCheck, $pCheck, false);
+        if (!empty($cCheck)) $sqlCheck .= " AND " . implode(' AND ', $cCheck);
+        $stmtCheck = $db->prepare($sqlCheck);
+        $stmtCheck->execute($pCheck);
         if ($stmtCheck->fetch()) {
             $this->error('Vous avez déjà une caisse OUVERTE aujourd\'hui !');
             return;
@@ -297,7 +329,7 @@ class CaisseCommercialController extends BaseController
             'user_code' => $userCode,
             'annee_code' => $anneeCode,
             'etablissement_code' => $etabCode,
-            'zone_code' => Context::zone() ?? 'DEFAULT'
+            'zone_code' => Context::zone()
         ];
 
         $modelOuv = new ModelCaisse();
@@ -316,8 +348,14 @@ class CaisseCommercialController extends BaseController
         $db = $this->model->getCon();
 
         // Chercher la caisse ouverte active pour l'utilisateur
-        $stmtOuv = $db->prepare("SELECT * FROM caisses WHERE user_code = ? AND statut_caisse = 'ouverte' ORDER BY id_caisse DESC LIMIT 1");
-        $stmtOuv->execute([$userCode]);
+        $sqlOuv = "SELECT * FROM caisses WHERE user_code = ? AND statut_caisse = 'ouverte'";
+        $pOuv = [$userCode];
+        $cOuv = [];
+        Context::applyTripleFilter('', $cOuv, $pOuv, false);
+        if (!empty($cOuv)) $sqlOuv .= " AND " . implode(' AND ', $cOuv);
+        $sqlOuv .= " ORDER BY id_caisse DESC LIMIT 1";
+        $stmtOuv = $db->prepare($sqlOuv);
+        $stmtOuv->execute($pOuv);
         $activeCaisse = $stmtOuv->fetch(PDO::FETCH_ASSOC);
 
         if (!$activeCaisse) {
@@ -329,14 +367,19 @@ class CaisseCommercialController extends BaseController
         $dateOpening = date('Y-m-d', strtotime($activeCaisse['date_ouverture']));
 
         // Calculer les totaux réels des encaissements
-        $stmtCotis = $db->prepare("
+        $sqlCot = "
             SELECT c.* 
             FROM cautisation_clients c
             WHERE (c.commercial_code = ? OR c.user_code = ?) 
               AND (c.caisse_code = ? OR DATE(c.date_cautisation) = ?)
               AND c.statut_cautisation_client != 'annule'
-        ");
-        $stmtCotis->execute([$userCode, $userCode, $codeCaisse, $dateOpening]);
+        ";
+        $pCot = [$userCode, $userCode, $codeCaisse, $dateOpening];
+        $cCot = [];
+        Context::applyTripleFilter('c', $cCot, $pCot, false);
+        if (!empty($cCot)) $sqlCot .= " AND " . implode(' AND ', $cCot);
+        $stmtCotis = $db->prepare($sqlCot);
+        $stmtCotis->execute($pCot);
         $cotisations = $stmtCotis->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $totalGeneral = 0;
@@ -409,14 +452,18 @@ class CaisseCommercialController extends BaseController
     {
         $this->requireAuth();
         try {
-            $id = $this->validator->decrypter($param);
-            $stmt = $this->model->getCon()->prepare("
+            $sqlCaisse = "
                 SELECT c.*, u.nom_user, u.prenom_user
                 FROM caisses c
                 LEFT JOIN users u ON u.code_user = c.user_code
                 WHERE c.id_caisse = ?
-            ");
-            $stmt->execute([$id]);
+            ";
+            $pCaisse = [$id];
+            $cCaisse = [];
+            Context::applyTripleFilter('c', $cCaisse, $pCaisse, false);
+            if (!empty($cCaisse)) $sqlCaisse .= " AND " . implode(' AND ', $cCaisse);
+            $stmt = $this->model->getCon()->prepare($sqlCaisse);
+            $stmt->execute($pCaisse);
             $item = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$item) {
                 $this->renderNotFound("Le procès-verbal de clôture de caisse demandé est introuvable.");
@@ -429,11 +476,15 @@ class CaisseCommercialController extends BaseController
                 SELECT cc.*, cl.nom_client, cl.prenom_client, cl.telephone_client
                 FROM cautisation_clients cc
                 LEFT JOIN clients cl ON cl.code_client = cc.client_code
-                WHERE cc.caisse_code = ? OR DATE(cc.date_cautisation) = DATE(?)
-                ORDER BY cc.date_cautisation DESC
+                WHERE (cc.caisse_code = ? OR DATE(cc.date_cautisation) = DATE(?))
             ";
+            $pP = [$item['code_caisse'] ?? '', $item['date_ouverture'] ?? ''];
+            $cP = [];
+            Context::applyTripleFilter('cc', $cP, $pP, false);
+            if (!empty($cP)) $sqlP .= " AND " . implode(' AND ', $cP);
+            $sqlP .= " ORDER BY cc.date_cautisation DESC";
             $stmtP = $this->model->getCon()->prepare($sqlP);
-            $stmtP->execute([$item['code_caisse'] ?? '', $item['date_ouverture'] ?? '']);
+            $stmtP->execute($pP);
             $paiements = $stmtP->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("CaisseCommercialController::details error: " . $e->getMessage());

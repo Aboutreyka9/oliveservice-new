@@ -47,9 +47,17 @@ abstract class BaseModel
     public function getAll(): array
     {
         try {
+            $where = "";
+            $params = [];
+            if (in_array($this->table, Context::SCOPED_TABLES)) {
+                $where = " WHERE etablissement_code = ? AND zone_code = ? AND annee_code = ?";
+                $params = [Context::etablissement(), Context::zone(), Context::annee()];
+            }
             $orderBy = !empty($this->createdAtField) ? " ORDER BY {$this->createdAtField} DESC" : " ORDER BY {$this->primaryKey} DESC";
-            $sql = "SELECT * FROM {$this->table}{$orderBy}";
-            return $this->pdo->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+            $sql = "SELECT * FROM {$this->table}{$where}{$orderBy}";
+            $stmt = $this->pdo->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("Get all {$this->table}: " . $e->getMessage());
             return [];
@@ -60,8 +68,15 @@ abstract class BaseModel
     {
         try {
             $sql = "SELECT * FROM {$this->table} WHERE {$this->primaryKey} = ?";
+            $params = [$id];
+            if (in_array($this->table, Context::SCOPED_TABLES)) {
+                $sql .= " AND etablissement_code = ? AND zone_code = ? AND annee_code = ?";
+                $params[] = Context::etablissement();
+                $params[] = Context::zone();
+                $params[] = Context::annee();
+            }
             $stmt = $this->pdo->getCon()->prepare($sql);
-            $stmt->execute([$id]);
+            $stmt->execute($params);
             return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("Get by id {$this->table}: " . $e->getMessage());
@@ -72,6 +87,12 @@ abstract class BaseModel
     public function create(array $data): bool
     {
         try {
+            if (in_array($this->table, Context::SCOPED_TABLES)) {
+                if (!isset($data['etablissement_code'])) $data['etablissement_code'] = Context::etablissement();
+                if (!isset($data['zone_code'])) $data['zone_code'] = Context::zone();
+                if (!isset($data['annee_code'])) $data['annee_code'] = Context::annee();
+            }
+
             $fields = array_keys($data);
             $placeholders = array_map(fn($f) => ":$f", $fields);
             $sql = "INSERT INTO {$this->table} (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
@@ -100,9 +121,18 @@ abstract class BaseModel
                 return true;
             }
 
-            $set = implode(', ', array_map(fn($f) => "$f = :$f", array_keys($data)));
-            $sql = "UPDATE {$this->table} SET $set WHERE {$this->primaryKey} = :primary_key_id";
+            $where = "WHERE {$this->primaryKey} = :primary_key_id";
             $data['primary_key_id'] = $id;
+
+            if (in_array($this->table, Context::SCOPED_TABLES)) {
+                $where .= " AND etablissement_code = :scoped_etab AND zone_code = :scoped_zone AND annee_code = :scoped_annee";
+                $data['scoped_etab'] = Context::etablissement();
+                $data['scoped_zone'] = Context::zone();
+                $data['scoped_annee'] = Context::annee();
+            }
+
+            $set = implode(', ', array_map(fn($f) => "$f = :$f", array_keys($data)));
+            $sql = "UPDATE {$this->table} SET $set $where";
             $stmt = $this->pdo->getCon()->prepare($sql);
             return $stmt->execute($data);
         } catch (Exception $e) {
@@ -140,7 +170,14 @@ abstract class BaseModel
     {
         try {
             $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = ?";
-            return $this->pdo->getCon()->prepare($sql)->execute([$id]);
+            $params = [$id];
+            if (in_array($this->table, Context::SCOPED_TABLES)) {
+                $sql .= " AND etablissement_code = ? AND zone_code = ? AND annee_code = ?";
+                $params[] = Context::etablissement();
+                $params[] = Context::zone();
+                $params[] = Context::annee();
+            }
+            return $this->pdo->getCon()->prepare($sql)->execute($params);
         } catch (Exception $e) {
             error_log("Delete {$this->table}: " . $e->getMessage());
             return false;
@@ -151,8 +188,16 @@ abstract class BaseModel
     {
         try {
             $field = $this->statusField ?? "statut_{$this->table}";
-            $sql = "UPDATE `{$this->table}` SET `{$field}` = CASE WHEN `{$field}` = 'actif' THEN 'inactif' ELSE 'actif' END WHERE `{$this->primaryKey}` = ?";
-            return $this->pdo->getCon()->prepare($sql)->execute([$id]);
+            $where = "WHERE `{$this->primaryKey}` = ?";
+            $params = [$id];
+            if (in_array($this->table, Context::SCOPED_TABLES)) {
+                $where .= " AND etablissement_code = ? AND zone_code = ? AND annee_code = ?";
+                $params[] = Context::etablissement();
+                $params[] = Context::zone();
+                $params[] = Context::annee();
+            }
+            $sql = "UPDATE `{$this->table}` SET `{$field}` = CASE WHEN `{$field}` = 'actif' THEN 'inactif' ELSE 'actif' END $where";
+            return $this->pdo->getCon()->prepare($sql)->execute($params);
         } catch (Exception $e) {
             error_log("Toggle status {$this->table}: " . $e->getMessage());
             return false;
@@ -163,8 +208,16 @@ abstract class BaseModel
     {
         try {
             $field = $statusCol ?? ($this->statusField ?? "statut_{$this->table}");
-            $sql = "UPDATE `{$this->table}` SET `{$field}` = ? WHERE `{$this->primaryKey}` = ?";
-            return $this->pdo->getCon()->prepare($sql)->execute([$status, $id]);
+            $where = "WHERE `{$this->primaryKey}` = ?";
+            $params = [$status, $id];
+            if (in_array($this->table, Context::SCOPED_TABLES)) {
+                $where .= " AND etablissement_code = ? AND zone_code = ? AND annee_code = ?";
+                $params[] = Context::etablissement();
+                $params[] = Context::zone();
+                $params[] = Context::annee();
+            }
+            $sql = "UPDATE `{$this->table}` SET `{$field}` = ? $where";
+            return $this->pdo->getCon()->prepare($sql)->execute($params);
         } catch (Exception $e) {
             error_log("Update status {$this->table}: " . $e->getMessage());
             return false;
@@ -175,8 +228,15 @@ abstract class BaseModel
     {
         try {
             $sql = "SELECT * FROM {$this->table} WHERE $field = ?";
+            $params = [$val];
+            if (in_array($this->table, Context::SCOPED_TABLES)) {
+                $sql .= " AND etablissement_code = ? AND zone_code = ? AND annee_code = ?";
+                $params[] = Context::etablissement();
+                $params[] = Context::zone();
+                $params[] = Context::annee();
+            }
             $stmt = $this->pdo->getCon()->prepare($sql);
-            $stmt->execute([$val]);
+            $stmt->execute($params);
             return $stmt->fetch(PDO::FETCH_ASSOC) ?: false;
         } catch (Exception $e) {
             error_log("Get by element {$this->table}: " . $e->getMessage());
@@ -193,8 +253,15 @@ abstract class BaseModel
     {
         try {
             $sql = "SELECT * FROM {$this->table} WHERE $field = ? AND $pkField != ?";
+            $params = [$val, $pkVal];
+            if (in_array($this->table, Context::SCOPED_TABLES)) {
+                $sql .= " AND etablissement_code = ? AND zone_code = ? AND annee_code = ?";
+                $params[] = Context::etablissement();
+                $params[] = Context::zone();
+                $params[] = Context::annee();
+            }
             $stmt = $this->pdo->getCon()->prepare($sql);
-            $stmt->execute([$val, $pkVal]);
+            $stmt->execute($params);
             return $stmt->rowCount() > 0;
         } catch (Exception $e) {
             error_log("Exists other {$this->table}: " . $e->getMessage());
@@ -206,13 +273,19 @@ abstract class BaseModel
     {
         try {
             $field = $this->statusField ?? "statut_{$this->table}";
+            $where = "WHERE {$field} = ?";
+            $params = [$status];
+            if (in_array($this->table, Context::SCOPED_TABLES)) {
+                $where .= " AND etablissement_code = ? AND zone_code = ? AND annee_code = ?";
+                $params[] = Context::etablissement();
+                $params[] = Context::zone();
+                $params[] = Context::annee();
+            }
             $orderBy = $this->createdAtField ? " ORDER BY {$this->createdAtField} DESC" : '';
-            $sql = "SELECT * FROM {$this->table} WHERE {$field} = ?{$orderBy}";
-            error_log("[BaseModel::getByStatus] table={$this->table} field={$field} created_at={$this->createdAtField}");
+            $sql = "SELECT * FROM {$this->table} {$where}{$orderBy}";
             $stmt = $this->pdo->getCon()->prepare($sql);
-            $stmt->execute([$status]);
+            $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            error_log("[BaseModel::getByStatus] rows=" . count($rows) . " table={$this->table}");
             return $rows ?: [];
         } catch (Exception $e) {
             error_log("Get by status {$this->table}: " . $e->getMessage());

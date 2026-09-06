@@ -7,7 +7,7 @@ class ModelSouscription extends BaseModel
     protected ?string $statusField = 'statut_souscription';
     protected ?string $createdAtField = 'created_at_souscription';
 
-    public function getAllWithDetails(?string $userCode = null, ?string $zoneCode = null, ?string $anneeCode = null): array
+    public function getAllWithDetails(?string $userCode = null, ?string $zoneCode = null, ?string $anneeCode = null, ?string $etabCode = null): array
     {
         try {
             $sql = "
@@ -30,19 +30,27 @@ class ModelSouscription extends BaseModel
             ";
             $params = [];
 
+            $etab = $etabCode ?: Context::etablissement();
+            if (!empty($etab)) {
+                $sql .= " AND s.etablissement_code = ?";
+                $params[] = $etab;
+            }
+
+            $zone = $zoneCode ?: Context::zone();
+            if (!empty($zone)) {
+                $sql .= " AND s.zone_code = ?";
+                $params[] = $zone;
+            }
+
+            $annee = $anneeCode ?: Context::annee();
+            if (!empty($annee)) {
+                $sql .= " AND s.annee_code = ?";
+                $params[] = $annee;
+            }
+
             if (!empty($userCode)) {
                 $sql .= " AND s.user_code = ?";
                 $params[] = $userCode;
-            }
-
-            if (!empty($zoneCode)) {
-                $sql .= " AND s.zone_code = ?";
-                $params[] = $zoneCode;
-            }
-
-            if (!empty($anneeCode) && $anneeCode !== '0GklBk07waYoLB6pHwY') {
-                $sql .= " AND s.annee_code = ?";
-                $params[] = $anneeCode;
             }
 
             $sql .= " ORDER BY s.created_at_souscription DESC";
@@ -64,10 +72,15 @@ class ModelSouscription extends BaseModel
                 FROM pack_souscriptions ps
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code
                 WHERE ps.souscription_code = ?
-                LIMIT 1
             ";
+            $params = [$souscriptionCode];
+            $conds = [];
+            Context::applyTripleFilter('ps', $conds, $params);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $sql .= " LIMIT 1";
+
             $stmt = $this->getCon()->prepare($sql);
-            $stmt->execute([$souscriptionCode]);
+            $stmt->execute($params);
             return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         } catch (Exception $e) {
             error_log("ModelSouscription::getPackSouscrit error: " . $e->getMessage());
@@ -96,8 +109,13 @@ class ModelSouscription extends BaseModel
                  LEFT JOIN sessions sess ON sess.code_session = s.session_code
                  WHERE s.id_souscription = ?
             ";
+            $params = [$id];
+            $conds = [];
+            Context::applyTripleFilter('s', $conds, $params);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+
             $stmt = $this->getCon()->prepare($sql);
-            $stmt->execute([$id]);
+            $stmt->execute($params);
             return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         } catch (Exception $e) {
             error_log("ModelSouscription::getByIdWithDetails error: " . $e->getMessage());
@@ -116,8 +134,13 @@ class ModelSouscription extends BaseModel
                 LEFT JOIN sessions sess ON sess.code_session = p.session_code
                 WHERE ps.souscription_code = ?
             ";
+            $params = [$souscriptionCode];
+            $conds = [];
+            Context::applyTripleFilter('ps', $conds, $params);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+
             $stmt = $this->getCon()->prepare($sql);
-            $stmt->execute([$souscriptionCode]);
+            $stmt->execute($params);
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelSouscription::getPacksSouscrits error: " . $e->getMessage());
@@ -144,9 +167,16 @@ class ModelSouscription extends BaseModel
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code
                 LEFT JOIN zones z ON z.code_zone = s.zone_code
                 WHERE s.statut_souscription IN ('valide', 'reconduite')
-                ORDER BY s.created_at_souscription DESC
             ";
-            return $this->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $params = [];
+            $conds = [];
+            Context::applyTripleFilter('s', $conds, $params, true);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $sql .= " ORDER BY s.created_at_souscription DESC";
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelSouscription::getSouscriptionsEnCours error: " . $e->getMessage());
             return [];
@@ -166,9 +196,16 @@ class ModelSouscription extends BaseModel
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code
                 LEFT JOIN zones z ON z.code_zone = s.zone_code
                 WHERE s.statut_souscription = 'solde'
-                ORDER BY s.created_at_souscription DESC
             ";
-            return $this->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $params = [];
+            $conds = [];
+            Context::applyTripleFilter('s', $conds, $params, true);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $sql .= " ORDER BY s.created_at_souscription DESC";
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelSouscription::getSouscriptionsSoldees error: " . $e->getMessage());
             return [];
@@ -189,8 +226,9 @@ class ModelSouscription extends BaseModel
             $stmt = $this->getCon()->prepare("INSERT INTO souscriptions ({$colsStr}) VALUES ({$paramsStr})");
             $stmt->execute(array_values($filteredData));
 
-            $anneeCode = $souscriptionData['annee_code'] ?? ($_SESSION['annee_active_code'] ?? '0GklBk07waYoLB6pHwY');
-            $etabCode = $souscriptionData['etablissement_code'] ?? '5454544456';
+            $anneeCode = $souscriptionData['annee_code'] ?? Context::annee();
+            $etabCode = $souscriptionData['etablissement_code'] ?? Context::etablissement();
+            $zoneCode = $souscriptionData['zone_code'] ?? Context::zone();
             $stmtPack = $this->getCon()->prepare("
                 INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription, user_code, zone_code)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -202,7 +240,7 @@ class ModelSouscription extends BaseModel
                 $etabCode,
                 date('Y-m-d H:i:s'),
                 $souscriptionData['user_code'] ?? '',
-                $souscriptionData['zone_code'] ?? ''
+                $zoneCode
             ]);
 
             $this->getCon()->commit();
@@ -286,8 +324,9 @@ class ModelSouscription extends BaseModel
             $stmt = $this->getCon()->prepare("INSERT INTO souscriptions ({$colsStr}) VALUES ({$paramsStr})");
             $stmt->execute(array_values($filteredData));
 
-            $anneeCode = $souscriptionData['annee_code'] ?? ($_SESSION['annee_active_code'] ?? '0GklBk07waYoLB6pHwY');
-            $etabCode = $souscriptionData['etablissement_code'] ?? '5454544456';
+            $anneeCode = $souscriptionData['annee_code'] ?? Context::annee();
+            $etabCode = $souscriptionData['etablissement_code'] ?? Context::etablissement();
+            $zoneCode = $souscriptionData['zone_code'] ?? Context::zone();
             $stmtPack = $this->getCon()->prepare("
                 INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription, user_code, zone_code)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -301,7 +340,7 @@ class ModelSouscription extends BaseModel
                     $etabCode,
                     date('Y-m-d H:i:s'),
                     $souscriptionData['user_code'] ?? '',
-                    $souscriptionData['zone_code'] ?? ''
+                    $zoneCode
                 ]);
             }
 

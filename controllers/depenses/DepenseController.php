@@ -45,7 +45,8 @@ class DepenseController extends BaseController
 
         $userCode = Context::user() ?? '';
         $anneeCode = Context::annee();
-        $etabCode = '5454544456';
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
         $codeDepense = $this->validator->generateCode('depenses', 'code_depense', 'DEP-', 8);
 
         // Upload pièce justificative si existante
@@ -70,6 +71,7 @@ class DepenseController extends BaseController
             'periode_depense' => !empty($data['periode_depense']) ? $data['periode_depense'] : (!empty($data['date_depense']) ? $data['date_depense'] . ' ' . date('H:i:s') : date('Y-m-d H:i:s')),
             'annee_code' => $anneeCode,
             'etablissement_code' => $etabCode,
+            'zone_code' => $zoneCode,
             'user_code' => $userCode,
             'statut_depense' => $data['statut_depense'] ?? $statutInitial,
             'created_at_depense' => date('Y-m-d H:i:s')
@@ -91,6 +93,12 @@ class DepenseController extends BaseController
         $this->requireAuth();
         $id = (int)$this->post('id_depense');
         if (!$id) { $this->error('Identifiant invalide'); return; }
+        $existing = $this->model->getById($id);
+        if (!$existing || $existing['etablissement_code'] !== Context::etablissement() || $existing['zone_code'] !== Context::zone() || $existing['annee_code'] !== Context::annee()) {
+            $this->error('Dépense introuvable ou non autorisée');
+            return;
+        }
+
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -109,7 +117,11 @@ class DepenseController extends BaseController
         $this->requirePost(false);
         $this->requireAuth();
         $id = $this->post('id');
-        if ($id && $this->model->getById($id)) {
+        if ($id && ($item = $this->model->getById($id))) {
+            if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                $this->error('Dépense introuvable');
+                return;
+            }
             if ($this->model->toggleStatus($id)) {
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
@@ -126,7 +138,7 @@ class DepenseController extends BaseController
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) {
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
                 $this->renderNotFound("La dépense demandée est introuvable.");
                 return;
             }
@@ -153,7 +165,9 @@ class DepenseController extends BaseController
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) { header('Location: ' . RACINE . 'depense/list'); exit(); }
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                header('Location: ' . RACINE . 'depense/list'); exit();
+            }
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'depense/list'); exit();
