@@ -62,7 +62,7 @@
             </button>
             <div class="dropdown-panel" id="quickActionsPanel">
                 <div class="dropdown-header">
-                    <h3>Raccourcis GEICG</h3>
+                    <h3>Raccourcis Olive Service</h3>
                 </div>
                 <div class="dropdown-grid">
                     <a href="<?= RACINE ?>inscription/add" class="dropdown-card">

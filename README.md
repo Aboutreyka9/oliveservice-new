@@ -52,14 +52,14 @@ Bienvenue dans le dépôt du projet **Olive Service**. Ce document constitue la 
 | **Responsable Finance** | `ROLE_FINANCE` | Suivi des cotisations, validation/rejet des versements commerciaux, gestion des dépenses, clôtures de caisse globale. Scope par `etablissement_code`, `annee_code`. | ❌ Pas de création directe de souscriptions terrain. |
 | **Administrateur** | `ROLE_ADMIN` | Configuration système, gestion des utilisateurs, attribution dynamique des rôles/permissions, statistiques & rapports globaux. | 👁️ Accès superviseur complet. |
 
-Le fichier SQL d'initialisation des habilitations est hébergé sous [`database/rbac.sql`](file:///var/www/html/geicg/database/rbac.sql).
+Le fichier SQL d'initialisation des habilitations est hébergé sous [`database/rbac.sql`](file:///var/www/html/oliveservice/database/rbac.sql).
 
 ---
 
 ## 📂 5. Structure des Modules Actifs
 
 ```
-/var/www/html/geicg/
+/var/www/html/oliveservice/
 ├── config/                  # Configuration (Database connection, constantes)
 ├── core/                    # Moteur MVC (Router, BaseController, BaseModel, Context, Validator)
 ├── controllers/             # Contrôleurs actifs par module métier

@@ -1,11 +1,11 @@
 window.openCommandeModal = function(clientCode) {
-    const base = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+    const base = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
     window.location.href = base + 'commande/list' + (clientCode ? '?client=' + encodeURIComponent(clientCode) : '');
 };
 
 $(document).ready(function() {
     const isSuperAdmin = (typeof window.IS_SUPER_ADMIN !== 'undefined' && window.IS_SUPER_ADMIN === true);
-    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
 
     if ($('#dataTable').length) {
         const columns = [

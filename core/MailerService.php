@@ -25,8 +25,8 @@ class MailerService
             $username   = $_ENV['MAIL_USERNAME'] ?? ($_SERVER['MAIL_USERNAME'] ?? '');
             $password   = $_ENV['MAIL_PASSWORD'] ?? ($_SERVER['MAIL_PASSWORD'] ?? '');
             $encryption = $_ENV['MAIL_ENCRYPTION'] ?? ($_SERVER['MAIL_ENCRYPTION'] ?? 'ssl');
-            $fromAddr   = $_ENV['MAIL_FROM_ADDRESS'] ?? ($_SERVER['MAIL_FROM_ADDRESS'] ?? 'noreply@groupe-eicg.net');
-            $fromName   = $_ENV['MAIL_FROM_NAME'] ?? ($_SERVER['MAIL_FROM_NAME'] ?? 'GEICG - Olive Service');
+            $fromAddr   = $_ENV['MAIL_FROM_ADDRESS'] ?? ($_SERVER['MAIL_FROM_ADDRESS'] ?? 'noreply@oliveservice.net');
+            $fromName   = $_ENV['MAIL_FROM_NAME'] ?? ($_SERVER['MAIL_FROM_NAME'] ?? 'Olive Service');
 
             // Paramètres Serveur SMTP
             $mail->isSMTP();

@@ -24,7 +24,7 @@ function checkPressingActiveSub(pressingCode) {
         return;
     }
 
-    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
     $.post(baseApi + 'abonnement/checkActive', { pressing_code: pressingCode }, function(resp) {
         if (resp && resp.has_active && resp.abonnement) {
             activeSubData = resp.abonnement;
@@ -135,7 +135,7 @@ function submitCreateAbonnement(e) {
     e.preventDefault();
     const form = $(e.target);
     const btn = form.find('.btnSubmitCreateAbn');
-    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
 
     if (typeof loading === 'function') {
         loading(btn, true, '<i class="fa fa-spinner fa-spin"></i> Activation...');
@@ -180,7 +180,7 @@ function submitRenouvelerAbonnement(e) {
     e.preventDefault();
     const form = $(e.target);
     const btn = form.find('.btnSubmitRenouv');
-    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
 
     if (typeof loading === 'function') {
         loading(btn, true, '<i class="fa fa-spinner fa-spin"></i> Renouvellement...');
@@ -312,7 +312,7 @@ $(document).ready(function() {
 
         $(document).on('click', '.btnToggleAbnStatut', function() {
             const id = $(this).data('id');
-            const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+            const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
             showConfirm('Voulez-vous modifier le statut de cet abonnement ?', function() {
                 $.post(baseApi + 'abonnement/changer', { id: id }, function(rep) {
                     if (typeof showToast === 'function') showToast(rep.message || 'Statut mis à jour', rep.status ? 'success' : 'error');

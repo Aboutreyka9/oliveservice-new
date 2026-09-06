@@ -257,11 +257,15 @@ $route->addRoute('/notification/formulaire', ['NotificationController', 'formula
 // -------------------------------------------------------------
 // Extraction & Exécution de l'URL
 // -------------------------------------------------------------
-$url = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-if (strpos($url, '/geicg/public') === 0) {
-    $url = str_replace('/geicg/public', '', $url);
-} elseif (strpos($url, '/geicg') === 0) {
-    $url = str_replace('/geicg', '', $url);
+$url = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
+
+// Nettoyage flexible des préfixes éventuels (geicg, oliveservice, public)
+$prefixes = ['/geicg/public', '/geicg', '/oliveservice/public', '/oliveservice', '/public'];
+foreach ($prefixes as $prefix) {
+    if (strpos($url, $prefix) === 0) {
+        $url = substr($url, strlen($prefix));
+        break;
+    }
 }
 
 $url = rtrim($url, '/');

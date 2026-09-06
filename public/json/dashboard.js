@@ -1,6 +1,6 @@
 $(document).ready(function() {
     function loadDashboard() {
-        const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+        const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
 
         $.getJSON(baseApi + 'home/dashboardData', function(resp) {
             const s = resp.stats || {};

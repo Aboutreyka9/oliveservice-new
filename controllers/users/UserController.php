@@ -178,7 +178,7 @@ class UserController extends BaseController
             if (!empty($email)) {
                 MailerService::sendTemplate(
                     $email,
-                    "GEICG Olive Service - Activation de votre compte & Coordonnées d'accès",
+                    "Olive Service - Activation de votre compte & Coordonnées d'accès",
                     "welcome_credentials",
                     [
                         'userNom' => trim($nom . ' ' . $prenom),
@@ -497,12 +497,12 @@ class UserController extends BaseController
         // URL de réinitialisation
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $resetLink = $protocol . '://' . $host . RACINE . 'user/reset_password?token=' . $resetToken;
+        $resetLink = (strpos(RACINE, 'http') === 0 ? RACINE : ($protocol . '://' . $host . rtrim(RACINE, '/') . '/')) . 'user/reset_password?token=' . $resetToken;
 
         // Envoi de l'e-mail via MailerService
         MailerService::sendTemplate(
             $email,
-            "GEICG Olive Service - Demande de réinitialisation de votre mot de passe",
+            "Olive Service - Demande de réinitialisation de votre mot de passe",
             "reset_password",
             [
                 'userNom' => trim($user['nom_user'] . ' ' . ($user['prenom_user'] ?? '')),

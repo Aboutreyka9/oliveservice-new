@@ -3,13 +3,15 @@
 define('ROOT', dirname(__DIR__));
 
 $httpHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$isLocalEnvironment = (strpos($httpHost, 'localhost') !== false || strpos($httpHost, '127.0.0.1') !== false);
+$isLocalEnvironment = (strpos($httpHost, 'localhost') !== false || strpos($httpHost, '127.0.0.1') !== false || strpos($httpHost, '.local') !== false);
 
 // Gestion dynamique de l'URL racine (priorité à la variable d'environnement APP_URL, sinon détection automatique)
 if (!defined('RACINE')) {
     $envUrl = $_ENV['APP_URL'] ?? getenv('APP_URL');
     if (!empty($envUrl)) {
         define('RACINE', rtrim($envUrl, '/') . '/');
+    } elseif (strpos($httpHost, 'oliveservice') !== false) {
+        define('RACINE', 'http://' . $httpHost . '/');
     } else {
         define('RACINE', $isLocalEnvironment ? 'http://localhost/geicg/' : 'https://test.oliveservice.net/');
     }

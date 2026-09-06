@@ -18,20 +18,20 @@ class GeniusPayService
         $orderCode = $data['order_code'] ?? ('CMD-' . strtoupper(uniqid()));
         $amount = (float)($data['amount'] ?? 0);
         $provider = strtolower($data['provider'] ?? 'wave');
-        $customerName = trim($data['customer_name'] ?? 'Élève / Étudiant GEICG');
+        $customerName = trim($data['customer_name'] ?? 'Client Olive Service');
         $customerPhone = trim($data['customer_phone'] ?? '+2250102030405');
-        $customerEmail = trim($data['customer_email'] ?? 'contact@geicg.ci');
-        $callbackUrl = $data['callback_url'] ?? (defined('RACINE') ? RACINE : 'http://localhost/geicg/');
-        $webhookUrl = $data['webhook_url'] ?? ($config['webhook_url'] ?? 'http://localhost/geicg/webhooks/geniuspay');
+        $customerEmail = trim($data['customer_email'] ?? 'contact@oliveservice.net');
+        $callbackUrl = $data['callback_url'] ?? (defined('RACINE') ? RACINE : 'http://oliveservice.local/');
+        $webhookUrl = $data['webhook_url'] ?? ($config['webhook_url'] ?? ((defined('RACINE') ? RACINE : 'http://oliveservice.local/') . 'webhooks/geniuspay'));
 
         $payload = [
             'amount' => (int)$amount,
             'currency' => 'XOF',
             'description' => "Paiement Scolarité #{$orderCode}",
             'customer' => [
-                'name' => $customerName ?: 'Élève GEICG',
+                'name' => $customerName ?: 'Client Olive Service',
                 'phone' => $customerPhone ?: '+2250102030405',
-                'email' => $customerEmail ?: 'contact@geicg.ci'
+                'email' => $customerEmail ?: 'contact@oliveservice.net'
             ],
             'callback_url' => $callbackUrl,
             'webhook_url' => $webhookUrl,
@@ -218,7 +218,7 @@ class GeniusPayService
                     'title' => 'MTN Mobile Money CI',
                     'steps' => [
                         'Composez le *133# sur votre mobile MTN.',
-                        'Autorisez le débit de ' . $amtStr . ' pour le service GEICG.'
+                        'Autorisez le débit de ' . $amtStr . ' pour le service Olive.'
                     ]
                 ];
             case 'moov_money':

@@ -1,4 +1,8 @@
-const LINK = window.location.origin + '/geicg/';
+const LINK = (typeof window.LINK !== 'undefined' && window.LINK)
+    ? window.LINK
+    : ((typeof window.RACINE !== 'undefined' && window.RACINE)
+        ? window.RACINE
+        : (window.location.origin + (window.location.pathname.startsWith('/geicg') ? '/geicg/' : '/')));
 
 $.ajaxSetup({
     xhrFields: {
@@ -625,6 +629,7 @@ if (modalSave) {
             if (mainContent) mainContent.classList.toggle('expanded', isCollapsed);
             if (footer) footer.classList.toggle('expanded', isCollapsed);
             try {
+                localStorage.setItem('oliveservice_sidebar_collapsed', isCollapsed ? '1' : '0');
                 localStorage.setItem('geicg_sidebar_collapsed', isCollapsed ? '1' : '0');
             } catch (e) {}
             if (window.lucide) {
@@ -634,7 +639,7 @@ if (modalSave) {
     }
 
     try {
-        if (localStorage.getItem('geicg_sidebar_collapsed') === '1') {
+        if (localStorage.getItem('oliveservice_sidebar_collapsed') === '1' || localStorage.getItem('geicg_sidebar_collapsed') === '1') {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.querySelector('.main-content');
             const footer = document.getElementById('footer') || document.querySelector('.footer');
@@ -742,11 +747,11 @@ if (modalSave) {
     });
 
     function updateBottomNavActive() {
-        const path = window.location.pathname.replace(/^\/geicg\/?/, '/');
+        const path = window.location.pathname.replace(/^\/(geicg|oliveservice)\/?/, '/');
         document.querySelectorAll('.bottom-nav-item').forEach(function(item) {
             item.classList.remove('active');
             const href = item.getAttribute('href') || '';
-            const cleanHref = href.replace(/^\/geicg\/?/, '/');
+            const cleanHref = href.replace(/^\/(geicg|oliveservice)\/?/, '/');
             if (path === cleanHref || path.startsWith(cleanHref + '/')) {
                 item.classList.add('active');
             }

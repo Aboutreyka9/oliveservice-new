@@ -18,7 +18,7 @@ function handleLogin() {
                     try { rep = JSON.parse(rep); } catch(e) {}
                 }
                 if (rep && (rep.status === 1 || rep.status === true)) {
-                    showToast(rep.message || 'Bienvenue sur GEICG Admin !', 'success');
+                    showToast(rep.message || 'Bienvenue sur Olive Service !', 'success');
                     setTimeout(function() {
                         window.location.href = LINK;
                     }, 1000);

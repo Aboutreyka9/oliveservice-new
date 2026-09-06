@@ -1,6 +1,6 @@
 <footer class="footer" id="footer">
         <div class="footer-content">
-            <div>&copy; 2026 GEICG - Grande École. Tous droits réservés.</div>
+            <div>&copy; 2026 Olive Service. Tous droits réservés.</div>
             <div class="footer-links">
                 <a href="#">Documentation</a>
                 <a href="#">Support Technique</a>
