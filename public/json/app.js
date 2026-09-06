@@ -2,7 +2,7 @@ const LINK = (typeof window.LINK !== 'undefined' && window.LINK)
     ? window.LINK
     : ((typeof window.RACINE !== 'undefined' && window.RACINE)
         ? window.RACINE
-        : (window.location.origin + (window.location.pathname.startsWith('/geicg') ? '/geicg/' : '/')));
+        : (window.location.origin + (window.location.pathname.startsWith('/oliveservice/public') ? '/oliveservice/public/' : (window.location.pathname.startsWith('/oliveservice') ? '/oliveservice/' : (window.location.pathname.startsWith('/geicg') ? '/geicg/' : '/')))));
 
 $.ajaxSetup({
     xhrFields: {
@@ -738,6 +738,13 @@ if (modalSave) {
                 panel.classList.toggle('active');
             });
         }
+    });
+
+    // Empêcher la fermeture intempestive lors des clics à l'intérieur d'un panneau déroulant
+    document.querySelectorAll('.dropdown-panel').forEach(function(p) {
+        p.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
     });
 
     document.addEventListener('click', function(e) {

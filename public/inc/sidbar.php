@@ -442,55 +442,68 @@
 </aside>
 
 <script>
-$(document).ready(function() {
-  // Accordéons du sidebar
-  $(document).on('click', '.sidebar-accordion-toggle', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    var $toggle = $(this);
-    var targetId = $toggle.attr('data-bs-target');
-    var $target = $(targetId);
+(function() {
+  function initSidebarAccordions() {
+    var toggles = document.querySelectorAll('.sidebar-accordion-toggle');
+    toggles.forEach(function(toggle) {
+      // Éviter d'attacher plusieurs écouteurs
+      if (toggle._hasAccordionListener) return;
+      toggle._hasAccordionListener = true;
 
-    if ($target.length) {
-      var isExpanded = $toggle.attr('aria-expanded') === 'true';
-      if (isExpanded) {
-        $target.slideUp(200, function() {
-          $target.removeClass('show');
-        });
-        $toggle.attr('aria-expanded', 'false');
-      } else {
-        $target.slideDown(200, function() {
-          $target.addClass('show');
-        });
-        $toggle.attr('aria-expanded', 'true');
+      toggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var targetId = this.getAttribute('data-bs-target');
+        if (!targetId) return;
+        var target = document.querySelector(targetId);
+        if (!target) return;
+
+        var isExpanded = this.getAttribute('aria-expanded') === 'true';
+        if (isExpanded) {
+          target.classList.remove('show');
+          target.style.display = 'none';
+          this.setAttribute('aria-expanded', 'false');
+        } else {
+          target.classList.add('show');
+          target.style.display = 'block';
+          this.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    // Déplier automatiquement la section contenant le lien actif
+    var activeLink = document.querySelector('.sidebar-nav .nav-item.sub.active');
+    if (activeLink) {
+      var parentItems = activeLink.closest('.nav-section-items');
+      if (parentItems) {
+        parentItems.classList.add('show');
+        parentItems.style.display = 'block';
+        var parentToggle = parentItems.parentElement ? parentItems.parentElement.querySelector('.sidebar-accordion-toggle') : null;
+        if (parentToggle) {
+          parentToggle.setAttribute('aria-expanded', 'true');
+        }
+      }
+    } else {
+      var firstSection = document.querySelector('.sidebar-nav .nav-section-items');
+      if (firstSection) {
+        firstSection.classList.add('show');
+        firstSection.style.display = 'block';
+        var firstToggle = firstSection.parentElement ? firstSection.parentElement.querySelector('.sidebar-accordion-toggle') : null;
+        if (firstToggle) {
+          firstToggle.setAttribute('aria-expanded', 'true');
+        }
       }
     }
-  });
 
-  // Déplier automatiquement la section contenant le lien actif
-  var $activeLink = $('.sidebar-nav .nav-item.sub.active');
-  if ($activeLink.length) {
-    var $parentItems = $activeLink.closest('.nav-section-items');
-    if ($parentItems.length) {
-      $parentItems.addClass('show').show();
-      var $parentToggle = $parentItems.siblings('.sidebar-accordion-toggle');
-      if ($parentToggle.length) {
-        $parentToggle.attr('aria-expanded', 'true');
-      }
+    if (window.lucide) {
+      try { lucide.createIcons(); } catch(e) {}
     }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSidebarAccordions);
   } else {
-    var $firstSection = $('.sidebar-nav .nav-section-items').first();
-    if ($firstSection.length) {
-      $firstSection.addClass('show').show();
-      var $firstToggle = $firstSection.siblings('.sidebar-accordion-toggle');
-      if ($firstToggle.length) {
-        $firstToggle.attr('aria-expanded', 'true');
-      }
-    }
+    initSidebarAccordions();
   }
-
-  if (window.lucide) {
-    lucide.createIcons();
-  }
-});
+})();
 </script>

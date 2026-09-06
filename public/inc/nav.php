@@ -33,7 +33,7 @@
         <div class="search-wrapper search-wrapper--desktop">
             <div class="search-box">
                 <i data-lucide="search"></i>
-                <input type="text" id="globalSearch" placeholder="Rechercher étudiants, inscriptions, matières, cours..." autocomplete="off">
+                <input type="text" id="globalSearch" placeholder="Rechercher clients, souscriptions, packs, cotisations..." autocomplete="off">
                 <button class="search-clear" id="searchClear" type="button">
                     <i data-lucide="x" style="width:14px;height:14px;"></i>
                 </button>
@@ -65,29 +65,29 @@
                     <h3>Raccourcis Olive Service</h3>
                 </div>
                 <div class="dropdown-grid">
-                    <a href="<?= RACINE ?>inscription/add" class="dropdown-card">
-                        <i data-lucide="user-plus"></i>
-                        <span>Nouvelle Inscription</span>
+                    <a href="<?= RACINE ?>souscription/wizard" class="dropdown-card">
+                        <i data-lucide="file-plus"></i>
+                        <span>Nouvelle Souscription</span>
                     </a>
-                    <a href="<?= RACINE ?>paiement/add" class="dropdown-card">
-                        <i data-lucide="credit-card"></i>
-                        <span>Nouveau Paiement</span>
+                    <a href="<?= RACINE ?>cautisation-payment/search-form" class="dropdown-card">
+                        <i data-lucide="wallet"></i>
+                        <span>Collecter Cotisation</span>
                     </a>
-                    <a href="<?= RACINE ?>note/add" class="dropdown-card">
-                        <i data-lucide="edit-3"></i>
-                        <span>Saisir Notes</span>
+                    <a href="<?= RACINE ?>caisse_commercial/formulaire" class="dropdown-card">
+                        <i data-lucide="lock"></i>
+                        <span>Ma Caisse</span>
                     </a>
-                    <a href="<?= RACINE ?>etudiant/list" class="dropdown-card">
+                    <a href="<?= RACINE ?>client/list" class="dropdown-card">
                         <i data-lucide="users"></i>
-                        <span>Étudiants</span>
+                        <span>Clients</span>
                     </a>
-                    <a href="<?= RACINE ?>emploi/list" class="dropdown-card">
-                        <i data-lucide="calendar"></i>
-                        <span>Emplois du temps</span>
+                    <a href="<?= RACINE ?>pack/list" class="dropdown-card">
+                        <i data-lucide="boxes"></i>
+                        <span>Packs Articles</span>
                     </a>
-                    <a href="<?= RACINE ?>bulletin/list" class="dropdown-card">
-                        <i data-lucide="file-text"></i>
-                        <span>Bulletins</span>
+                    <a href="<?= RACINE ?>versement/list" class="dropdown-card">
+                        <i data-lucide="send"></i>
+                        <span>Versements</span>
                     </a>
                 </div>
             </div>
@@ -310,11 +310,13 @@
                 </div>
             </div>
         </div>
-        <div class="admin-profile" id="profileBtn">
-            <span class="avatar-circle" style="width: 32px; height: 32px; border-radius: 50%; background: #1E3A5F; color: #FFF; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">
-                <?= strtoupper(substr($currentUserName ?? 'A', 0, 1)) ?>
-            </span>
-            <span><?= htmlspecialchars($currentUserName ?? 'Utilisateur') ?> <i data-lucide="chevron-down"></i></span>
+        <div class="profile-wrapper" style="position: relative;">
+            <div class="admin-profile" id="profileBtn" style="cursor: pointer;">
+                <span class="avatar-circle" style="width: 32px; height: 32px; border-radius: 50%; background: #1E3A5F; color: #FFF; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">
+                    <?= strtoupper(substr($currentUserName ?? 'A', 0, 1)) ?>
+                </span>
+                <span><?= htmlspecialchars($currentUserName ?? 'Utilisateur') ?> <i data-lucide="chevron-down"></i></span>
+            </div>
             <div class="dropdown-panel" id="profilePanel">
                 <div class="profile-header">
                     <div>

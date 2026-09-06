@@ -5,15 +5,32 @@ define('ROOT', dirname(__DIR__));
 $httpHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $isLocalEnvironment = (strpos($httpHost, 'localhost') !== false || strpos($httpHost, '127.0.0.1') !== false || strpos($httpHost, '.local') !== false);
 
-// Gestion dynamique de l'URL racine (priorité à la variable d'environnement APP_URL, sinon détection automatique)
+// Gestion dynamique de l'URL racine (détection précise de l'hôte et du sous-dossier HTTP)
 if (!defined('RACINE')) {
-    $envUrl = $_ENV['APP_URL'] ?? getenv('APP_URL');
-    if (!empty($envUrl)) {
-        define('RACINE', rtrim($envUrl, '/') . '/');
-    } elseif (strpos($httpHost, 'oliveservice') !== false) {
-        define('RACINE', 'http://' . $httpHost . '/');
+    $httpHost = $_SERVER['HTTP_HOST'] ?? '';
+    if (!empty($httpHost)) {
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['SERVER_PORT'] ?? '') == 443) ? 'https://' : 'http://';
+        $reqUri = $_SERVER['REQUEST_URI'] ?? '';
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        
+        // Détecter si on tourne dans un sous-dossier (/oliveservice ou /geicg)
+        // ATTENTION : RACINE ne doit JAMAIS contenir /public/ car les vues et layouts préfixent déjà "public/"
+        // Exemple : RACINE . 'public/assets/css/style.css'
+        $basePath = '/';
+        if (strpos($reqUri, '/oliveservice') !== false || strpos($scriptName, '/oliveservice') !== false) {
+            $basePath = '/oliveservice/';
+        } elseif (strpos($reqUri, '/geicg') !== false || strpos($scriptName, '/geicg') !== false) {
+            $basePath = '/geicg/';
+        }
+        
+        define('RACINE', $protocol . $httpHost . $basePath);
     } else {
-        define('RACINE', $isLocalEnvironment ? 'http://localhost/geicg/' : 'https://test.oliveservice.net/');
+        $envUrl = $_ENV['APP_URL'] ?? getenv('APP_URL');
+        if (!empty($envUrl)) {
+            define('RACINE', rtrim($envUrl, '/') . '/');
+        } else {
+            define('RACINE', 'http://localhost/oliveservice/');
+        }
     }
 }
 
