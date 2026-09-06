@@ -149,8 +149,12 @@ class VersementController extends BaseController
         }
 
         $id = (int)$this->post('id_versement');
-        $statut = $this->post('statut_versement') ?? 'Valide';
-        $commentaire = $this->post('commentaire_validation') ?? 'Validé par la comptabilité';
+        $statutRaw = strtolower(trim($this->post('statut_versement') ?? 'valide'));
+        $statut = in_array($statutRaw, ['valide', 'validé'], true) ? 'valide' : (in_array($statutRaw, ['annule', 'annulé', 'rejete', 'rejeté'], true) ? 'annule' : 'valide');
+        $commentaire = trim($this->post('commentaire_validation') ?? '');
+        if (empty($commentaire)) {
+            $commentaire = ($statut === 'valide') ? 'Validé par la comptabilité' : 'Rejeté / Annulé par la comptabilité';
+        }
         $userValidateCode = Context::user() ?? '';
 
         if (!$id) {
@@ -165,8 +169,8 @@ class VersementController extends BaseController
         }
 
         // Valider le versement et basculer les cotisations associées du commercial en 'valide'
-        if ($this->model->validateVersement($id, $userValidateCode, $commentaire)) {
-            if (strtolower($statut) === 'valide' || strtolower($statut) === 'validé') {
+        if ($this->model->validateVersement($id, $userValidateCode, $commentaire, $statut)) {
+            if ($statut === 'valide') {
                 $stmtCotis = $this->model->getCon()->prepare("
                     UPDATE cautisation_clients 
                     SET statut_cautisation_client = 'valide', updated_at_cautisation_client = NOW()
@@ -180,7 +184,10 @@ class VersementController extends BaseController
                     Context::annee()
                 ]);
             }
-            $this->success('Versement validé et cotisations du commercial actualisées avec succès !', ['reload' => true]);
+            $msg = ($statut === 'valide') 
+                ? 'Versement validé et cotisations du commercial actualisées avec succès !' 
+                : 'Versement rejeté / annulé avec succès !';
+            $this->success($msg, ['reload' => true]);
         } else {
             $this->error('Erreur lors de la validation du versement');
         }
@@ -231,15 +238,25 @@ class VersementController extends BaseController
             $stmtZ->execute([$item['zone_code']]);
             $zone = $stmtZ->fetch(PDO::FETCH_ASSOC);
 
+            $validatorUser = null;
+            if (!empty($item['user_validate'])) {
+                $stmtV = $this->model->getCon()->prepare("SELECT code_user, nom_user, prenom_user FROM users WHERE code_user = ?");
+                $stmtV->execute([$item['user_validate']]);
+                $validatorUser = $stmtV->fetch(PDO::FETCH_ASSOC);
+            }
+
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             $this->renderNotFound("Le versement demandé est introuvable.");
             return;
         }
+        $canValidate = Context::isFinance() || Context::isAdmin();
         $this->loadView('../views/versements/details.php', [
             'item' => $item,
             'commercial' => $commercial,
             'zone' => $zone,
+            'validatorUser' => $validatorUser,
+            'canValidate' => $canValidate,
             'encryptedId' => $encryptedId
         ]);
     }

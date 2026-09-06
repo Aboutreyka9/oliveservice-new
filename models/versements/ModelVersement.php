@@ -36,17 +36,17 @@ class ModelVersement extends BaseModel
         }
     }
 
-    public function validateVersement(int $id, string $userValidateCode, string $commentaire = ''): bool
+    public function validateVersement(int $id, string $userValidateCode, string $commentaire = '', string $statut = 'valide'): bool
     {
         try {
             $sql = "UPDATE versements_commerciaux 
-                    SET statut_versement = 'valide', 
+                    SET statut_versement = ?, 
                         user_validate = ?, 
                         date_validation = NOW(), 
                         commentaire_validation = ?
                     WHERE id_versement = ?";
             $stmt = $this->getCon()->prepare($sql);
-            return $stmt->execute([$userValidateCode, $commentaire, $id]);
+            return $stmt->execute([$statut, $userValidateCode, $commentaire, $id]);
         } catch (Exception $e) {
             error_log("ModelVersement::validateVersement error: " . $e->getMessage());
             return false;
