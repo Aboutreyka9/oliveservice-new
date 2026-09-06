@@ -117,10 +117,18 @@ class CautisationPaymentController extends BaseController
             return;
         }
 
+        // Vérification de la caisse de l'agent connecté
+        $userCode     = $_SESSION[USERS_AUTH]['code_user'] ?? '';
+        $modelCaisse  = new ModelCaisse();
+        $caisseActive = $modelCaisse->getActiveOuvertureForToday($userCode);
+        $caisseOuverte = !empty($caisseActive);
+
         $this->loadView('../views/cautisations_payment/situation.php', [
-            'souscription' => $souscription
+            'souscription'  => $souscription,
+            'caisseOuverte' => $caisseOuverte,
         ]);
     }
+
 
     /**
      * API: Récupère les détails complets d'une souscription pour affichage

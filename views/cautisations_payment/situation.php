@@ -1,6 +1,7 @@
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
 <?php 
-$souscription = $souscription ?? [];
+$souscription   = $souscription ?? [];
+$caisseOuverte  = $caisseOuverte ?? false;
 
 $nomClient = trim($souscription['nom_client'] ?? '');
 $telephone = $souscription['telephone_client'] ?? '-';
@@ -438,12 +439,29 @@ $pourcentagePaye = $montantTotal > 0 ? min(100, round(($montantPaye / $montantTo
 </div>
 
 <script>
-const PRIX_COTISATION = <?= $prixCotisationJournaliere ?>;
-const MONTANT_RESTANT = <?= $montantRestant ?>;
-const JOURS_RESTANTS = <?= $joursRestants ?>;
+const PRIX_COTISATION  = <?= $prixCotisationJournaliere ?>;
+const MONTANT_RESTANT  = <?= $montantRestant ?>;
+const JOURS_RESTANTS   = <?= $joursRestants ?>;
 const CODE_SOUSCRIPTION = '<?= htmlspecialchars($codeSouscription) ?>';
+const CAISSE_OUVERTE   = <?= $caisseOuverte ? 'true' : 'false' ?>;
 
 function openPaymentModal() {
+    if (!CAISSE_OUVERTE) {
+        // Caisse fermée — bloquer le modal et notifier l'agent
+        const msg = 'Votre caisse est actuellement FERMÉE pour aujourd\'hui.\nVeuillez effectuer l\'ouverture de caisse avant de collecter des cotisations.';
+        if (typeof showToast === 'function') {
+            showToast(msg, 'warning');
+        } else if (window.toastr) {
+            toastr.warning(
+                'Veuillez effectuer l\'ouverture de caisse avant de collecter des cotisations.',
+                'Caisse fermée',
+                { timeOut: 6000, extendedTimeOut: 2000, closeButton: true }
+            );
+        } else {
+            alert(msg);
+        }
+        return; // ← bloquer l'ouverture du modal
+    }
     const modal = document.getElementById('paymentModal');
     if (modal) {
         modal.style.display = 'flex';
