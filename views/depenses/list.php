@@ -21,7 +21,8 @@
             <thead>
               <tr style="background: #F8FAFC; text-align: left; color: #64748B;">
                 <th style="padding: 12px;">Code</th>
-                <th style="padding: 12px;">Date</th>
+                <th style="padding: 12px;">Date Enregistrée</th>
+                <th style="padding: 12px;">Période</th>
                 <th style="padding: 12px;">Catégorie Dépense</th>
                 <th style="padding: 12px;">Motif / Description</th>
                 <th style="padding: 12px;">Montant Engagé</th>
@@ -37,5 +38,5 @@
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/depenses.js?v=1.0"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/depenses.js?v=1.1"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

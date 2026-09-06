@@ -52,7 +52,11 @@ $montant = (float)($item['montant_depense'] ?? 0);
           <div>
             <span style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase;">Statut Dépense</span>
             <div style="margin-top: 6px;">
-              <span class="badge" style="background:#DCFCE7; color:#15803D; padding:6px 14px; border-radius:10px; font-weight:800; font-size:12px;">Comptabilisée</span>
+              <?php if (($item['statut_depense'] ?? '') === 'actif'): ?>
+                <span class="badge" style="background:#DCFCE7; color:#15803D; padding:6px 14px; border-radius:10px; font-weight:800; font-size:12px;">Actif (Validée)</span>
+              <?php else: ?>
+                <span class="badge" style="background:#FEF3C7; color:#B45309; padding:6px 14px; border-radius:10px; font-weight:800; font-size:12px;">Inactif (En attente)</span>
+              <?php endif; ?>
             </div>
           </div>
         </div>
@@ -62,6 +66,21 @@ $montant = (float)($item['montant_depense'] ?? 0);
           <div style="font-size: 14px; color: #334155; line-height: 1.6; background: #F8FAFC; padding: 12px 16px; border-radius: 8px; border: 1px solid #E2E8F0;">
             <?= nl2br(htmlspecialchars($item['description_depense'] ?? ($item['motif_depense'] ?? 'Aucun motif renseigné'))) ?>
           </div>
+        </div>
+
+        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #F1F5F9;">
+          <span style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; display: block; margin-bottom: 6px;">Pièce Justificative (Optionnel)</span>
+          <?php if (!empty($item['piece_joint'])): ?>
+            <div style="display: inline-flex; align-items: center; gap: 10px; background: #EFF6FF; border: 1px solid #BFDBFE; padding: 10px 16px; border-radius: 8px;">
+              <i data-lucide="paperclip" style="width: 18px; height: 18px; color: #1D4ED8;"></i>
+              <span style="font-size: 13px; font-weight: 600; color: #1E3A5F;"><?= htmlspecialchars($item['piece_joint']) ?></span>
+              <a href="<?= RACINE ?>public/assets/images/depenses/<?= htmlspecialchars($item['piece_joint']) ?>" target="_blank" class="btn btn-sm btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; font-size: 12px; padding: 4px 12px; border-radius: 6px; text-decoration: none; margin-left: 8px;">
+                <i data-lucide="external-link" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></i> Consulter
+              </a>
+            </div>
+          <?php else: ?>
+            <span style="font-size: 13px; color: #94A3B8; font-style: italic;">Aucune pièce justificative fournie</span>
+          <?php endif; ?>
         </div>
       </div>
 

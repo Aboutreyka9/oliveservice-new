@@ -19,7 +19,16 @@ $(function() {
           width: '120px', 
           render: (d) => d ? `<code class="dep-code-badge">${d}</code>` : '-' 
         },
-        { data: 'date_depense', defaultContent: '-' },
+        { 
+          data: 'date_enregistrer', 
+          defaultContent: '-',
+          render: (d, type, row) => row.date_enregistrer || (row.created_at_depense ? row.created_at_depense.substring(0, 16) : '-')
+        },
+        { 
+          data: 'periode', 
+          defaultContent: '-',
+          render: (d, type, row) => row.periode || (row.periode_depense ? row.periode_depense.substring(0, 10) : '-')
+        },
         { 
           data: 'libelle_type_depense', 
           render: (d) => `<span class="badge bg-light text-dark" style="border:1px solid #CBD5E1; font-weight:700;">${d || '-'}</span>` 
@@ -27,7 +36,7 @@ $(function() {
         { data: 'motif_depense', defaultContent: '-' },
         { 
           data: 'montant_depense', 
-          render: (d) => `<strong style="color:#DC2626; font-size:14px;">-${Number(d || 0).toLocaleString('fr-FR')} FCFA</strong>` 
+          render: (d) => `<strong style="color:#DC2626; font-size:14px;">-${Number(Math.abs(d || 0)).toLocaleString('fr-FR')} FCFA</strong>` 
         },
         { data: 'nom_auteur_complet', defaultContent: '-' },
         { 

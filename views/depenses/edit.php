@@ -38,8 +38,8 @@ $typeDepenses = $typeDepenses ?? [];
             <h3 style="font-size: 14px; font-weight: 800; color: #1E3A5F; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px;">
               <i data-lucide="tags" style="width: 16px; height: 16px; color: #1E3A5F;"></i> Étape 1 : Catégorie & Montant Engagé
             </h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-              <div class="form-group">
+            <div class="row">
+              <div class="col-12 col-md-6 form-group" style="margin-bottom: 16px;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Catégorie de Dépense <span style="color: #EF4444;">*</span></label>
                 <select name="type_depense_code" class="form-control select2" style="width: 100%; box-sizing: border-box;" required>
                   <option value="">-- Sélectionner le type de dépense --</option>
@@ -51,9 +51,9 @@ $typeDepenses = $typeDepenses ?? [];
                 </select>
               </div>
 
-              <div class="form-group">
+              <div class="col-12 col-md-6 form-group" style="margin-bottom: 16px;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Montant Total (FCFA) <span style="color: #EF4444;">*</span></label>
-                <input type="number" name="montant_depense" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; font-weight: 800; color: #DC2626; outline: none;" value="<?= htmlspecialchars($item['montant_depense'] ?? '') ?>" required placeholder="Ex: 15000">
+                <input type="number" name="montant_depense" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; font-weight: 800; color: #DC2626; outline: none;" value="<?= htmlspecialchars($item['montant_depense'] ?? '') ?>" required placeholder="Ex: 15000" min="1" step="any" onkeydown="if(event.key === '-' || event.key === 'e' || event.key === 'E') event.preventDefault();" oninput="if(parseFloat(this.value) < 0) this.value = Math.abs(this.value);">
               </div>
             </div>
           </div>
@@ -63,13 +63,13 @@ $typeDepenses = $typeDepenses ?? [];
             <h3 style="font-size: 14px; font-weight: 800; color: #1E3A5F; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px;">
               <i data-lucide="file-text" style="width: 16px; height: 16px; color: #1E3A5F;"></i> Étape 2 : Date & Description du Frais
             </h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-              <div class="form-group">
+            <div class="row">
+              <div class="col-12 col-md-6 form-group" style="margin-bottom: 16px;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Date de la Dépense <span style="color: #EF4444;">*</span></label>
                 <input type="date" name="date_depense" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" value="<?= htmlspecialchars($item['date_depense'] ?? date('Y-m-d')) ?>" required>
               </div>
 
-              <div class="form-group">
+              <div class="col-12 col-md-6 form-group" style="margin-bottom: 16px;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Mode de Règlement</label>
                 <select name="mode_reglement" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;">
                   <option value="espece" <?= ($item['mode_reglement'] ?? 'espece') === 'espece' ? 'selected' : '' ?>>Espèce (Caisse)</option>
@@ -78,14 +78,19 @@ $typeDepenses = $typeDepenses ?? [];
                 </select>
               </div>
 
-              <div class="form-group" style="grid-column: 1 / -1;">
+              <div class="col-12 form-group" style="margin-bottom: 16px;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Motif / Description Détaillée <span style="color: #EF4444;">*</span></label>
                 <textarea name="description_depense" class="form-control" style="width: 100%; box-sizing: border-box; padding: 11px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" rows="3" required placeholder="Description explicative du besoin ou de la facture..."><?= htmlspecialchars($item['description_depense'] ?? ($item['motif_depense'] ?? '')) ?></textarea>
               </div>
 
-              <div class="form-group" style="grid-column: 1 / -1;">
-                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Pièce Justificative (Facture, Reçu)</label>
+              <div class="col-12 form-group">
+                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Pièce Justificative (Facture, Reçu) <span style="font-size: 11px; font-weight: 500; color: #64748B;">(Optionnel)</span></label>
                 <input type="file" name="piece_justificative" class="form-control" style="width: 100%; box-sizing: border-box; padding: 9px 14px; font-size: 14px; border-radius: 8px; border: 1px solid #CBD5E1; outline: none;" accept="image/*,.pdf">
+                <?php if (!empty($item['piece_joint'])): ?>
+                  <div style="margin-top: 6px; font-size: 12px; color: #15803D;">
+                    <i data-lucide="file-check" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></i> Pièce actuelle : <a href="<?= RACINE ?>public/assets/images/depenses/<?= htmlspecialchars($item['piece_joint']) ?>" target="_blank" style="color: #1E3A5F; font-weight: 600; text-decoration: underline;">Voir le document</a>
+                  </div>
+                <?php endif; ?>
               </div>
             </div>
           </div>
@@ -113,6 +118,19 @@ $(document).ready(function() {
 
   $('#form-depense').on('submit', function(e) {
     e.preventDefault();
+    var rawVal = parseFloat($('input[name="montant_depense"]').val());
+    var montantVal = isNaN(rawVal) ? 0 : Math.abs(rawVal);
+    $('input[name="montant_depense"]').val(montantVal > 0 ? montantVal : '');
+    if (montantVal <= 0) {
+      if (window.toastr) {
+        toastr.error('Le montant doit être un nombre positif strictement supérieur à zéro !');
+      } else {
+        alert('Le montant doit être un nombre positif strictement supérieur à zéro !');
+      }
+      $('input[name="montant_depense"]').focus();
+      return false;
+    }
+
     var formData = new FormData(this);
     $.ajax({
       url: $(this).attr('action'),
