@@ -9,13 +9,13 @@ class CategoriePackController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIE_PACKS');
         $this->loadView('../views/categorie_packs/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIE_PACKS');
         $items = $this->model->getAll();
         $data = [];
         foreach ($items as $i) {
@@ -32,7 +32,7 @@ class CategoriePackController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIE_PACKS');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -64,7 +64,7 @@ class CategoriePackController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIE_PACKS');
         $id = (int)$this->post('id_categorie_pack');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -87,7 +87,7 @@ class CategoriePackController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIE_PACKS');
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
@@ -102,7 +102,7 @@ class CategoriePackController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIE_PACKS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -123,7 +123,7 @@ class CategoriePackController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIE_PACKS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -137,7 +137,7 @@ class CategoriePackController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIE_PACKS');
         $this->loadView('../views/categorie_packs/edit.php', ['item' => []]);
     }
 }

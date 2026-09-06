@@ -9,13 +9,13 @@ class FonctionController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $this->loadView('../views/fonctions/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $items = $this->model->getAll();
         $data = [];
         foreach ($items as $i) {
@@ -32,7 +32,7 @@ class FonctionController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $userCode = Context::user() ?? '';
         $anneeCode = Context::annee();
         $etabCode = '5454544456';
@@ -64,7 +64,7 @@ class FonctionController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $id = (int)$this->post('id_fonction');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -85,7 +85,7 @@ class FonctionController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -121,7 +121,7 @@ class FonctionController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -135,14 +135,14 @@ class FonctionController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $this->loadView('../views/fonctions/edit.php', ['item' => []]);
     }
 
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('ADMIN_MANAGE_USERS');
         $id = (int)$this->post('id');
         $statut = $this->post('statut') ?: $this->post('status');
         if ($id && $this->model->getById($id)) {

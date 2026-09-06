@@ -28,3 +28,4 @@ Cette étape permet au client de choisir le ou les packs auxquels il souhaite so
 
 La dernière étape présente un récapitulatif de la souscription avant sa validation. 
 card avec Les informations personnelles du client. un tableau de liste des packs sélectionnés  affichés avec leurs montants respectifs et un bouton pour retirer de la liste. Le montant total de la souscription est automatiquement calculé afin de permettre au client ou à l'agent de vérifier les informations avant de confirmer définitivement la souscription.
+

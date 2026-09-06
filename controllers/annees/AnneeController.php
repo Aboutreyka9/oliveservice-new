@@ -9,13 +9,13 @@ class AnneeController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
         $this->loadView('../views/annees/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
         $items = $this->model->getAll();
         $data = [];
         foreach ($items as $i) {
@@ -32,7 +32,7 @@ class AnneeController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
         $data = $_POST;
         unset($data['csrf_token']);
         if (!empty($data['libelle_annee'])) {
@@ -62,7 +62,7 @@ class AnneeController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
         $id = (int)$this->post('id_annee');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -83,7 +83,7 @@ class AnneeController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
@@ -98,7 +98,7 @@ class AnneeController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -159,7 +159,7 @@ class AnneeController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -173,7 +173,7 @@ class AnneeController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
         $this->loadView('../views/annees/edit.php', ['item' => []]);
     }
 }

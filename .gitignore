@@ -20,6 +20,7 @@ composer.phar
 # ==== Fichiers locaux de configuration / secrets ====
 .env
 .env.*
+!.env.example
 config/.env
 *.local.php
 *.secret.php

@@ -17,44 +17,63 @@ if (empty($modules)) {
         ['code_module' => 'ADMINISTRATION', 'libelle_module' => 'Administration & Sécurité'],
     ];
 }
+$isEdit = !empty($item['id_permission']);
+$title = $isEdit ? 'Éditer la Permission Granulaire' : 'Ajouter une Permission Granulaire';
 ?>
 <div class="app-layout">
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
   <main class="main-content">
     <?php require_once __DIR__ . '/../../public/inc/nav.php'; ?>
-    <div class="content-wrapper" style="padding: 24px;">
+    <div class="content-wrapper" style="padding: 24px; width: 100%; max-width: 100%; box-sizing: border-box;">
+      
+      <!-- EN-TÊTE DE PAGE -->
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
-        <div>
-          <h1 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0;"><?= !empty($item['id_permission']) ? 'Éditer ' : 'Ajouter ' ?> une Permission Granulaire</h1>
-          <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Configuration des autorisations unitaires et des privilèges système</p>
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(30, 58, 95, 0.25);">
+            <i data-lucide="key" style="width: 24px; height: 24px; color: #FFFFFF;"></i>
+          </div>
+          <div>
+            <h1 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0; line-height: 1.2;">
+              <?= $title ?>
+            </h1>
+            <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0; font-weight: 500;">
+              Configuration des autorisations unitaires et des privilèges système
+            </p>
+          </div>
         </div>
-        <a href="<?= RACINE ?>permission/list" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px;">
-          <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> Retour à la liste
+
+        <a href="<?= RACINE ?>permission/list" class="btn" style="background: #FFFFFF; border: 1px solid #E2E8F0; color: #334155; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+          <i data-lucide="arrow-left" style="width: 16px; height: 16px; color: #64748B;"></i> Retour à la liste
         </a>
       </div>
 
-      <div class="card" style="background: #FFFFFF; border-radius: 12px; padding: 28px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box;">
-        <form action="<?= RACINE ?>permission/<?= !empty($item['id_permission']) ? 'edit' : 'add' ?>" method="POST" style="width: 100%;">
+      <!-- CARTE FORMULAIRE PRINCIPALE -->
+      <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 32px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; max-width: 800px; box-sizing: border-box;">
+        <form action="<?= RACINE ?>permission/<?= $isEdit ? 'edit' : 'add' ?>" method="POST" style="width: 100%;">
           <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
-          <?php if (!empty($item['id_permission'])): ?>
+          <?php if ($isEdit): ?>
             <input type="hidden" name="id_permission" value="<?= $item['id_permission'] ?>">
           <?php endif; ?>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; width: 100%;">
+          <div style="font-size: 14px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #F1F5F9; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="info" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Caractéristiques de l'Autorisation
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; width: 100%; margin-bottom: 28px;">
             
             <div class="form-group" style="width: 100%; box-sizing: border-box;">
-              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Libellé de la Permission <span style="color: #EF4444;">*</span></label>
-              <input type="text" class="form-control" name="libelle_permission" value="<?= htmlspecialchars($item['libelle_permission'] ?? '') ?>" placeholder="Ex: Saisie et Édition des Notes" required style="width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid #CBD5E1; font-weight: 600;">
+              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Libellé de la Permission <span style="color: #EF4444;">*</span></label>
+              <input type="text" class="form-control" name="libelle_permission" value="<?= htmlspecialchars($item['libelle_permission'] ?? '') ?>" placeholder="Ex: Saisie et Édition des Notes" required style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;">
             </div>
 
             <div class="form-group" style="width: 100%; box-sizing: border-box;">
-              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Code Système <span style="color: #EF4444;">*</span></label>
-              <input type="text" class="form-control" name="code_permission" value="<?= htmlspecialchars($item['code_permission'] ?? '') ?>" placeholder="Ex: MANAGE_GRADES" <?= !empty($item['id_permission']) ? 'readonly' : 'required' ?> style="width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid #CBD5E1; background: <?= !empty($item['id_permission']) ? '#F1F5F9' : '#FFF' ?>; font-family: monospace; font-weight: 700;">
+              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Code Système <span style="color: #EF4444;">*</span></label>
+              <input type="text" class="form-control" name="code_permission" value="<?= htmlspecialchars($item['code_permission'] ?? '') ?>" placeholder="Ex: MANAGE_GRADES" <?= $isEdit ? 'readonly' : 'required' ?> style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 800; color: #1E3A5F; border-radius: 10px; border: 1px solid #CBD5E1; background: <?= $isEdit ? '#F1F5F9' : '#F8FAFC' ?>; outline: none; font-family: monospace;">
             </div>
 
             <div class="form-group" style="width: 100%; box-sizing: border-box;">
-              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Module Métier Associé <span style="color: #EF4444;">*</span></label>
-              <div style="display: flex; gap: 8px; align-items: flex-start;">
+              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Module Métier Associé <span style="color: #EF4444;">*</span></label>
+              <div style="display: flex; gap: 8px; align-items: center;">
                 <select class="form-control select2" id="select-module-permission" name="module_permission" style="width: 100%;" required>
                   <option value="">-- Sélectionner un module --</option>
                   <?php foreach ($modules as $m): ?>
@@ -63,16 +82,16 @@ if (empty($modules)) {
                     </option>
                   <?php endforeach; ?>
                 </select>
-                <button type="button" id="btn-add-module" class="btn" style="height: 42px; min-width: 42px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; border: 2px dashed #1E3A5F; color: #1E3A5F; background: #FFFFFF;" title="Ajouter un nouveau module métier">
+                <button type="button" id="btn-add-module" class="btn" style="height: 44px; min-width: 44px; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; border: 2px dashed #1E3A5F; color: #1E3A5F; background: #F8FAFC; cursor: pointer; transition: all 0.2s ease;" title="Ajouter un nouveau module métier">
                   <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
                 </button>
               </div>
             </div>
 
-            <?php if (!empty($item['id_permission'])): ?>
+            <?php if ($isEdit): ?>
             <div class="form-group" style="width: 100%; box-sizing: border-box;">
-              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Statut</label>
-              <select class="form-control" name="statut_permission" style="width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid #CBD5E1;">
+              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Statut</label>
+              <select class="form-control" name="statut_permission" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;">
                 <option value="actif" <?= (($item['statut_permission'] ?? 'actif') === 'actif') ? 'selected' : '' ?>>Actif</option>
                 <option value="inactif" <?= (($item['statut_permission'] ?? '') === 'inactif') ? 'selected' : '' ?>>Inactif</option>
               </select>
@@ -81,33 +100,38 @@ if (empty($modules)) {
 
           </div>
 
-          <div style="display: flex; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #E2E8F0; width: 100%;">
-            <button type="submit" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; font-weight: 700; border-radius: 8px; padding: 10px 24px;">Enregistrer la Permission</button>
-            <a href="<?= RACINE ?>permission/list" class="btn btn-secondary" style="font-weight: 600; border-radius: 8px; padding: 10px 24px;">Annuler</a>
+          <!-- BOUTONS D'ACTION -->
+          <div style="display: flex; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #E2E8F0; width: 100%; flex-wrap: wrap;">
+            <button type="submit" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
+              <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> Enregistrer la Permission
+            </button>
+            <a href="<?= RACINE ?>permission/list" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 10px; padding: 12px 24px; text-decoration: none; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 6px;">
+              Annuler
+            </a>
           </div>
         </form>
       </div>
 
       <!-- Modal Ajout Module Métier -->
       <div class="modal-overlay" id="modalAddModule">
-        <div class="modal" style="max-width: 420px;">
-          <div class="modal-header">
-            <h3 class="modal-title">Nouveau Module Métier</h3>
-            <button class="modal-close" id="modalAddModuleClose"><i data-lucide="x"></i></button>
+        <div class="modal" style="max-width: 440px; border-radius: 16px; padding: 24px;">
+          <div class="modal-header" style="border-bottom: 2px solid #F1F5F9; padding-bottom: 12px; margin-bottom: 16px;">
+            <h3 class="modal-title" style="font-size: 16px; font-weight: 800; color: #0F172A;">Nouveau Module Métier</h3>
+            <button class="modal-close" id="modalAddModuleClose" style="background: transparent; border: none; cursor: pointer; color: #64748B;"><i data-lucide="x"></i></button>
           </div>
           <div class="modal-body">
             <form id="form-add-module">
               <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
               <div class="form-group">
-                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px;">Libellé du Module <span style="color: #EF4444;">*</span></label>
-                <input type="text" id="input-libelle-module" class="form-control" placeholder="Ex: Logistique & Distributions" required style="width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid #CBD5E1;">
-                <small style="color: #64748B; font-size: 11px; margin-top: 4px; display: block;">Le code système sera généré automatiquement.</small>
+                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Libellé du Module <span style="color: #EF4444;">*</span></label>
+                <input type="text" id="input-libelle-module" class="form-control" placeholder="Ex: Logistique & Distributions" required style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none;">
+                <small style="color: #64748B; font-size: 11px; margin-top: 6px; display: block; font-weight: 500;">Le code système sera généré automatiquement.</small>
               </div>
             </form>
           </div>
-          <div class="modal-footer">
-            <button class="btn-secondary" id="modalAddModuleCancel">Annuler</button>
-            <button class="btn-primary" id="modalAddModuleSave" style="background: #1E3A5F; border-color: #1E3A5F;">Créer le Module</button>
+          <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #E2E8F0;">
+            <button class="btn" id="modalAddModuleCancel" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 8px; padding: 10px 18px; border: 1px solid #CBD5E1;">Annuler</button>
+            <button class="btn" id="modalAddModuleSave" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 8px; padding: 10px 20px; border: none; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);">Créer le Module</button>
           </div>
         </div>
       </div>
@@ -121,6 +145,20 @@ $(document).ready(function() {
   if ($.fn.select2) {
     $('.select2').select2({ width: '100%' });
   }
+
+  $('.form-control').on('focus', function() {
+    $(this).css({
+      'background': '#FFFFFF',
+      'border-color': '#1E3A5F',
+      'box-shadow': '0 0 0 3px rgba(30, 58, 95, 0.12)'
+    });
+  }).on('blur', function() {
+    $(this).css({
+      'background': '#F8FAFC',
+      'border-color': '#CBD5E1',
+      'box-shadow': 'none'
+    });
+  });
 
   var $modalModule = $('#modalAddModule');
   var $selectModule = $('#select-module-permission');
@@ -152,7 +190,6 @@ $(document).ready(function() {
       },
       dataType: 'json',
       success: function(res) {
-        console.log('AJAX addModule response:', res);
         if (res.status === 1 || res.success) {
           if (window.toastr) toastr.success(res.message || 'Module créé avec succès');
           var newOption = new Option(res.libelle_module, res.code_module, true, true);
@@ -164,7 +201,6 @@ $(document).ready(function() {
         }
       },
       error: function(xhr, status, error) {
-        console.error('AJAX addModule error:', status, error, xhr.responseText);
         if (window.toastr) toastr.error('Erreur réseau');
       }
     });

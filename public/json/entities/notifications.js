@@ -1,5 +1,5 @@
 $(document).ready(function() {
-    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
 
     if ($('#dataTable').length) {
         const columns = [
@@ -243,7 +243,7 @@ function closeSendModal() {
 }
 
 function markAllNotificationsRead() {
-    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
     showConfirm('Voulez-vous marquer toutes les notifications comme lues ?', function() {
         $.post(baseApi + 'notification/marquerToutLu', {}, function(rep) {
             if (rep.status) {

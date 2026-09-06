@@ -18,7 +18,7 @@ function handleLogin() {
                     try { rep = JSON.parse(rep); } catch(e) {}
                 }
                 if (rep && (rep.status === 1 || rep.status === true)) {
-                    showToast(rep.message || 'Bienvenue sur GEICG Admin !', 'success');
+                    showToast(rep.message || 'Bienvenue sur Olive Service !', 'success');
                     setTimeout(function() {
                         window.location.href = LINK;
                     }, 1000);
@@ -55,6 +55,21 @@ $(document).ready(function() {
             if (window.lucide) lucide.createIcons();
 
             this.setAttribute('aria-label', isPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+        });
+    }
+    const showPasswordCheckbox = document.getElementById('show-password');
+    if (showPasswordCheckbox) {
+        showPasswordCheckbox.addEventListener('change', function() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (passwordInput) {
+                const show = this.checked;
+                passwordInput.type = show ? 'text' : 'password';
+                if (eyeIcon) {
+                    eyeIcon.setAttribute('data-lucide', show ? 'eye-off' : 'eye');
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
         });
     }
 });

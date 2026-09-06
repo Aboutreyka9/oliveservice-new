@@ -7,29 +7,57 @@ class ModelSouscription extends BaseModel
     protected ?string $statusField = 'statut_souscription';
     protected ?string $createdAtField = 'created_at_souscription';
 
-    public function getAllWithDetails(): array
+    public function getAllWithDetails(?string $userCode = null, ?string $zoneCode = null, ?string $anneeCode = null, ?string $etabCode = null): array
     {
         try {
             $sql = "
                 SELECT s.*, 
                        c.nom_client, c.telephone_client, c.sexe_client,
-                       p.libelle_pack, p.code_pack, p.prix_cotisation_pack,
                        z.libelle_zone,
                        sess.libelle_session,
                        sess.nombre_jour_session,
-                       (SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as montant_total_prevu,
+                       (SELECT GROUP_CONCAT(DISTINCT p2.libelle_pack SEPARATOR ', ') FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as libelle_pack,
+                       (SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as sum_prix_cotisation_pack,
+                       ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) * COALESCE(sess.nombre_jour_session, 0)) as totale_souscription,
                        (SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND mc.statut_cautisation_client = 'valide') as montant_total_cotise,
                        (SELECT COALESCE(SUM(mc.nombre_jour), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND mc.statut_cautisation_client = 'valide') as nombre_jour_cotise,
                        sess.nombre_jour_session as nombre_jour_total
                  FROM souscriptions s
                  LEFT JOIN clients c ON c.code_client = s.client_code
-                 LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription
-                 LEFT JOIN packs p ON p.code_pack = ps.pack_code
                  LEFT JOIN zones z ON z.code_zone = s.zone_code
                  LEFT JOIN sessions sess ON sess.code_session = s.session_code
-                 ORDER BY s.created_at_souscription DESC
+                 WHERE 1=1
             ";
-            return $this->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $params = [];
+
+            $etab = $etabCode ?: Context::etablissement();
+            if (!empty($etab)) {
+                $sql .= " AND s.etablissement_code = ?";
+                $params[] = $etab;
+            }
+
+            $zone = $zoneCode ?: Context::zone();
+            if (!empty($zone)) {
+                $sql .= " AND s.zone_code = ?";
+                $params[] = $zone;
+            }
+
+            $annee = $anneeCode ?: Context::annee();
+            if (!empty($annee)) {
+                $sql .= " AND s.annee_code = ?";
+                $params[] = $annee;
+            }
+
+            if (!empty($userCode)) {
+                $sql .= " AND s.user_code = ?";
+                $params[] = $userCode;
+            }
+
+            $sql .= " ORDER BY s.created_at_souscription DESC";
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelSouscription::getAllWithDetails error: " . $e->getMessage());
             return [];
@@ -44,14 +72,79 @@ class ModelSouscription extends BaseModel
                 FROM pack_souscriptions ps
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code
                 WHERE ps.souscription_code = ?
-                LIMIT 1
             ";
+            $params = [$souscriptionCode];
+            $conds = [];
+            Context::applyTripleFilter('ps', $conds, $params);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $sql .= " LIMIT 1";
+
             $stmt = $this->getCon()->prepare($sql);
-            $stmt->execute([$souscriptionCode]);
+            $stmt->execute($params);
             return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         } catch (Exception $e) {
             error_log("ModelSouscription::getPackSouscrit error: " . $e->getMessage());
             return null;
+        }
+    }
+
+    public function getByIdWithDetails(int $id): ?array
+    {
+        try {
+            $sql = "
+                SELECT s.*, 
+                       c.nom_client, c.telephone_client, c.sexe_client, c.lieu_residence_client, c.email_client, c.profession_client,
+                       z.libelle_zone,
+                       sess.libelle_session,
+                       sess.nombre_jour_session,
+                       (SELECT GROUP_CONCAT(DISTINCT p2.libelle_pack SEPARATOR ', ') FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as libelle_pack,
+                       (SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as sum_prix_cotisation_pack,
+                       ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) * COALESCE(sess.nombre_jour_session, 0)) as totale_souscription,
+                       (SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND mc.statut_cautisation_client = 'valide') as montant_total_cotise,
+                       (SELECT COALESCE(SUM(mc.nombre_jour), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND mc.statut_cautisation_client = 'valide') as nombre_jour_cotise,
+                       sess.nombre_jour_session as nombre_jour_total
+                 FROM souscriptions s
+                 LEFT JOIN clients c ON c.code_client = s.client_code
+                 LEFT JOIN zones z ON z.code_zone = s.zone_code
+                 LEFT JOIN sessions sess ON sess.code_session = s.session_code
+                 WHERE s.id_souscription = ?
+            ";
+            $params = [$id];
+            $conds = [];
+            Context::applyTripleFilter('s', $conds, $params);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (Exception $e) {
+            error_log("ModelSouscription::getByIdWithDetails error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function getPacksSouscrits(string $souscriptionCode): array
+    {
+        try {
+            $sql = "
+                SELECT p.code_pack, p.libelle_pack, p.prix_cotisation_pack, p.nombre_articles, cp.libelle_categorie_pack, sess.nombre_jour_session
+                FROM pack_souscriptions ps
+                JOIN packs p ON p.code_pack = ps.pack_code
+                LEFT JOIN categorie_packs cp ON cp.code_categorie_pack = p.categorie_pack_code
+                LEFT JOIN sessions sess ON sess.code_session = p.session_code
+                WHERE ps.souscription_code = ?
+            ";
+            $params = [$souscriptionCode];
+            $conds = [];
+            Context::applyTripleFilter('ps', $conds, $params);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            error_log("ModelSouscription::getPacksSouscrits error: " . $e->getMessage());
+            return [];
         }
     }
 
@@ -74,9 +167,16 @@ class ModelSouscription extends BaseModel
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code
                 LEFT JOIN zones z ON z.code_zone = s.zone_code
                 WHERE s.statut_souscription IN ('valide', 'reconduite')
-                ORDER BY s.created_at_souscription DESC
             ";
-            return $this->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $params = [];
+            $conds = [];
+            Context::applyTripleFilter('s', $conds, $params, true);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $sql .= " ORDER BY s.created_at_souscription DESC";
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelSouscription::getSouscriptionsEnCours error: " . $e->getMessage());
             return [];
@@ -96,9 +196,16 @@ class ModelSouscription extends BaseModel
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code
                 LEFT JOIN zones z ON z.code_zone = s.zone_code
                 WHERE s.statut_souscription = 'solde'
-                ORDER BY s.created_at_souscription DESC
             ";
-            return $this->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $params = [];
+            $conds = [];
+            Context::applyTripleFilter('s', $conds, $params, true);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $sql .= " ORDER BY s.created_at_souscription DESC";
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelSouscription::getSouscriptionsSoldees error: " . $e->getMessage());
             return [];
@@ -119,18 +226,21 @@ class ModelSouscription extends BaseModel
             $stmt = $this->getCon()->prepare("INSERT INTO souscriptions ({$colsStr}) VALUES ({$paramsStr})");
             $stmt->execute(array_values($filteredData));
 
-            $anneeCode = $souscriptionData['annee_code'] ?? ($_SESSION['annee_active_code'] ?? '0GklBk07waYoLB6pHwY');
-            $etabCode = $souscriptionData['etablissement_code'] ?? '5454544456';
+            $anneeCode = $souscriptionData['annee_code'] ?? Context::annee();
+            $etabCode = $souscriptionData['etablissement_code'] ?? Context::etablissement();
+            $zoneCode = $souscriptionData['zone_code'] ?? Context::zone();
             $stmtPack = $this->getCon()->prepare("
-                INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription, user_code, zone_code)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
             $stmtPack->execute([
                 $souscriptionData['code_souscription'],
                 $packCode,
                 $anneeCode,
                 $etabCode,
-                date('Y-m-d H:i:s')
+                date('Y-m-d H:i:s'),
+                $souscriptionData['user_code'] ?? '',
+                $zoneCode
             ]);
 
             $this->getCon()->commit();
@@ -169,12 +279,18 @@ class ModelSouscription extends BaseModel
     public function getSoldeRestant(string $souscriptionCode): float
     {
         try {
-            $sql = "SELECT montant_total_prevu, montant_total_cotise FROM souscriptions WHERE code_souscription = ? LIMIT 1";
+            $sql = "
+                SELECT ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) * COALESCE(sess.nombre_jour_session, 0)) as totale_souscription,
+                       (SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND mc.statut_cautisation_client = 'valide') as montant_total_cotise
+                FROM souscriptions s
+                LEFT JOIN sessions sess ON sess.code_session = s.session_code
+                WHERE s.code_souscription = ? LIMIT 1
+            ";
             $stmt = $this->getCon()->prepare($sql);
             $stmt->execute([$souscriptionCode]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$row) return 0;
-            return max(0, (float)($row['montant_total_prevu'] ?? 0) - (float)($row['montant_total_cotise'] ?? 0));
+            return max(0, (float)($row['totale_souscription'] ?? 0) - (float)($row['montant_total_cotise'] ?? 0));
         } catch (Exception $e) {
             error_log("ModelSouscription::getSoldeRestant error: " . $e->getMessage());
             return 0;
@@ -208,11 +324,12 @@ class ModelSouscription extends BaseModel
             $stmt = $this->getCon()->prepare("INSERT INTO souscriptions ({$colsStr}) VALUES ({$paramsStr})");
             $stmt->execute(array_values($filteredData));
 
-            $anneeCode = $souscriptionData['annee_code'] ?? ($_SESSION['annee_active_code'] ?? '0GklBk07waYoLB6pHwY');
-            $etabCode = $souscriptionData['etablissement_code'] ?? '5454544456';
+            $anneeCode = $souscriptionData['annee_code'] ?? Context::annee();
+            $etabCode = $souscriptionData['etablissement_code'] ?? Context::etablissement();
+            $zoneCode = $souscriptionData['zone_code'] ?? Context::zone();
             $stmtPack = $this->getCon()->prepare("
-                INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription, user_code, zone_code)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
 
             foreach ($packCodes as $packCode) {
@@ -221,7 +338,9 @@ class ModelSouscription extends BaseModel
                     $packCode,
                     $anneeCode,
                     $etabCode,
-                    date('Y-m-d H:i:s')
+                    date('Y-m-d H:i:s'),
+                    $souscriptionData['user_code'] ?? '',
+                    $zoneCode
                 ]);
             }
 

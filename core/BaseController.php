@@ -199,23 +199,77 @@ abstract class BaseController
         return $this->validator->generateCode($table, $field, $prefix, $len);
     }
 
-    protected function loadView(string $path, array $data = []): void
+    /**
+     * Rendu d'une vue avec gestion dual-layout :
+     * - 'main' (par défaut) : Layout application d'administration (avec Header, Sidebar, Nav, Footer)
+     * - 'guest' : Layout visiteur/auth (sans Sidebar ni Nav, uniquement Header et Footer)
+     * - false : Aucun layout (rendu brut)
+     * 
+     * @param string $viewPath Chemin relatif ou absolu de la vue
+     * @param array $data Données transmises à la vue
+     * @param string|bool $layout 'main', 'guest', ou false
+     */
+    protected function render(string $viewPath, array $data = [], $layout = 'main'): void
     {
         $data['isSuperAdmin'] = $this->isSuperAdmin();
         $data['currentUserName'] = $data['currentUserName'] ?? ($_SESSION[USERS_AUTH]['nom'] ?? ($_SESSION[USERS_AUTH]['nom_user'] ?? 'Utilisateur'));
         $data['currentUserEmail'] = $data['currentUserEmail'] ?? ($_SESSION[USERS_AUTH]['email'] ?? ($_SESSION[USERS_AUTH]['email_user'] ?? ''));
         $data['currentUserRole'] = $_SESSION[USERS_AUTH]['role_code'] ?? 'ROLE_USER';
 
-        if (!file_exists($path)) {
-            $candidate = __DIR__ . '/../' . ltrim(str_replace('../', '', $path), '/\\');
-            if (file_exists($candidate)) {
-                $path = $candidate;
+        $file = $viewPath;
+        if (!file_exists($file)) {
+            if (strpos($viewPath, 'views/') === false && strpos($viewPath, '../views/') === false) {
+                $file = __DIR__ . '/../views/' . ltrim($viewPath, '/\\');
+            } else {
+                $file = __DIR__ . '/../' . ltrim(str_replace('../', '', $viewPath), '/\\');
+            }
+            if (substr($file, -4) !== '.php') {
+                $file .= '.php';
             }
         }
-        foreach ($data as $key => $value) {
-            $$key = $value;
+
+        if (!file_exists($file)) {
+            $this->renderNotFound("La vue [$viewPath] est introuvable.");
+            return;
         }
-        require $path;
+
+        // Vérifier si la vue source inclut déjà manuellement header.php
+        $rawSource = file_get_contents($file);
+        $hasManualHeader = (strpos($rawSource, 'header.php') !== false);
+
+        extract($data);
+
+        // Si $layout === false ou si la vue gère déjà son propre header
+        if ($layout === false || $hasManualHeader) {
+            require $file;
+            return;
+        }
+
+        // Layout 1: 'guest' (Connexion, etc. - SANS Sidebar ni Nav)
+        if ($layout === 'guest' || $layout === 'auth') {
+            require_once __DIR__ . '/../public/inc/header.php';
+            require $file;
+            require_once __DIR__ . '/../public/inc/footer-link.php';
+            return;
+        }
+
+        // Layout 2: 'main' (Pages d'administration - AVEC Sidebar et Nav)
+        require_once __DIR__ . '/../public/inc/header.php';
+        echo '<div class="app-layout">';
+        require_once __DIR__ . '/../public/inc/sidbar.php';
+        echo '<main class="main-content">';
+        require_once __DIR__ . '/../public/inc/nav.php';
+        echo '<div class="content-wrapper" style="padding: 24px; width: 100%; max-width: 100%; box-sizing: border-box;">';
+        require $file;
+        echo '</div>';
+        echo '</main>';
+        echo '</div>';
+        require_once __DIR__ . '/../public/inc/footer-link.php';
+    }
+
+    protected function loadView(string $path, array $data = []): void
+    {
+        $this->render($path, $data, 'main');
     }
 
     protected function post(string $key, $default = '')
@@ -335,45 +389,23 @@ abstract class BaseController
      */
     protected function getUserPermissions(): array
     {
-        if ($this->isSuperAdmin()) {
-            return ['*'];
-        }
-
-        $roles = $this->getCurrentUserRoles();
-        if (empty($roles)) {
-            return [];
-        }
-
-        try {
-            $pdo = ($this->model && method_exists($this->model, 'getCon')) ? $this->model->getCon() : (new Database())->getCon();
-            $inClause = implode(',', array_fill(0, count($roles), '?'));
-            $sql = "
-                SELECT DISTINCT rp.permission_code 
-                FROM role_permissions rp
-                JOIN permissions p ON rp.permission_code = p.code_permission
-                WHERE rp.role_code IN ($inClause)
-                  AND p.statut_permission = 'actif'
-            ";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($roles);
-            return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
-        } catch (Exception $e) {
-            error_log("Error fetching user permissions: " . $e->getMessage());
-            return [];
-        }
+        return Context::permissions();
     }
 
     /**
-     * Vérifie si l'utilisateur possède une permission métier donnée
+     * Vérifie si l'utilisateur possède une permission métier donnée (ou au moins une parmi une liste)
      */
-    protected function hasPermission(string $permissionCode): bool
+    protected function hasPermission(string|array $permissionCode): bool
     {
         if ($this->isSuperAdmin()) {
             return true;
         }
 
-        $perms = $this->getUserPermissions();
-        return in_array('*', $perms, true) || in_array($permissionCode, $perms, true);
+        if (is_array($permissionCode)) {
+            return Context::hasAnyPermission($permissionCode);
+        }
+
+        return Context::hasPermission($permissionCode);
     }
 
     /**
@@ -389,16 +421,43 @@ abstract class BaseController
     }
 
     /**
-     * Bloque la requête avec une page complète 403 si l'utilisateur ne possède pas la permission requise
+     * Bloque la requête avec une page complète 403 (ou JSON 403 si AJAX) si l'utilisateur ne possède pas la permission requise
      */
-    protected function requirePermission(string $permissionCode, string $customMessage = ''): void
+    protected function requirePermission(string|array $permissionCode, string $customMessage = ''): void
     {
         $this->requireAuth();
 
         if (!$this->hasPermission($permissionCode)) {
-            $msg = !empty($customMessage) ? $customMessage : "Accès refusé : vous ne possédez pas le privilège [{$permissionCode}] requis pour accéder à cette section.";
-            $this->renderForbidden($msg, $permissionCode);
+            $codeStr = is_array($permissionCode) ? implode(' / ', $permissionCode) : $permissionCode;
+            $msg = !empty($customMessage) ? $customMessage : "Accès refusé : vous ne possédez pas le privilège [{$codeStr}] requis pour accéder à cette section.";
+            $this->renderForbidden($msg, $codeStr);
         }
+    }
+
+    /**
+     * Bloque la requête si l'utilisateur ne possède aucun des rôles spécifiés
+     */
+    protected function requireAnyRole(array $roles, string $customMessage = ''): void
+    {
+        $this->requireAuth();
+
+        if ($this->isSuperAdmin()) {
+            return;
+        }
+
+        if (!$this->hasAnyRole($roles)) {
+            $rolesStr = implode(', ', $roles);
+            $msg = !empty($customMessage) ? $customMessage : "Accès refusé : cette action est réservée aux profils [{$rolesStr}].";
+            $this->renderForbidden($msg, $rolesStr);
+        }
+    }
+
+    /**
+     * Bloque la requête si l'utilisateur ne possède pas le rôle spécifié
+     */
+    protected function requireRole(string $role, string $customMessage = ''): void
+    {
+        $this->requireAnyRole([$role], $customMessage);
     }
 
     /**

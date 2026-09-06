@@ -1,25 +1,48 @@
 <?php
-define('ROOT', $_SERVER['DOCUMENT_ROOT'] ?? 'C:/wamp64/www');
+// Définition portable du répertoire racine absolu du projet
+define('ROOT', dirname(__DIR__));
 
 $httpHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$isLocalEnvironment = (strpos($httpHost, 'localhost') !== false || strpos($httpHost, '127.0.0.1') !== false);
+$isLocalEnvironment = (strpos($httpHost, 'localhost') !== false || strpos($httpHost, '127.0.0.1') !== false || strpos($httpHost, '.local') !== false);
 
+// Gestion dynamique de l'URL racine (détection précise de l'hôte et du sous-dossier HTTP)
 if (!defined('RACINE')) {
-    define('RACINE', $isLocalEnvironment ? 'http://localhost/geicg/' : 'https://app.groupe-eicg.net/');
+    $httpHost = $_SERVER['HTTP_HOST'] ?? '';
+    if (!empty($httpHost)) {
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['SERVER_PORT'] ?? '') == 443) ? 'https://' : 'http://';
+        $reqUri = $_SERVER['REQUEST_URI'] ?? '';
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        
+        // Détecter si on tourne dans un sous-dossier (/oliveservice ou /geicg)
+        // ATTENTION : RACINE ne doit JAMAIS contenir /public/ car les vues et layouts préfixent déjà "public/"
+        // Exemple : RACINE . 'public/assets/css/style.css'
+        $basePath = '/';
+        if (strpos($reqUri, '/oliveservice') !== false || strpos($scriptName, '/oliveservice') !== false) {
+            $basePath = '/oliveservice/';
+        } elseif (strpos($reqUri, '/geicg') !== false || strpos($scriptName, '/geicg') !== false) {
+            $basePath = '/geicg/';
+        }
+        
+        define('RACINE', $protocol . $httpHost . $basePath);
+    } else {
+        $envUrl = $_ENV['APP_URL'] ?? getenv('APP_URL');
+        if (!empty($envUrl)) {
+            define('RACINE', rtrim($envUrl, '/') . '/');
+        } else {
+            define('RACINE', 'http://localhost/oliveservice/');
+        }
+    }
 }
 
 if (!defined('ONESIGNAL_APP_ID')) {
-    define('ONESIGNAL_APP_ID', '54d8db10-a446-4542-9b2c-2d49d1433d59');
+    define('ONESIGNAL_APP_ID', $_ENV['ONESIGNAL_APP_ID'] ?? getenv('ONESIGNAL_APP_ID') ?: '54d8db10-a446-4542-9b2c-2d49d1433d59');
 }
 if (!defined('ONESIGNAL_REST_API_KEY')) {
-    define('ONESIGNAL_REST_API_KEY', getenv('ONESIGNAL_REST_API_KEY') ?: '');
+    define('ONESIGNAL_REST_API_KEY', $_ENV['ONESIGNAL_REST_API_KEY'] ?? getenv('ONESIGNAL_REST_API_KEY') ?: '');
 }
 
-
 define('LOGO', '<span class="fw-bold fs-4 text-success" style="letter-spacing: 1px;">OLIVE SERVICE</span>');
-
 define('ICON', '<span class="fw-bold fs-4 text-success">O</span>');
-
 define('TITLE', 'Olive Service - Administration & Souscriptions');
 
 const USERS_AUTH = 'users_auth';
@@ -31,7 +54,6 @@ class TABLES
     public const ANNEES                 = 'annees';
     public const SESSIONS               = 'sessions';
     public const ZONES                  = 'zones';
-    public const ZONE_COMMERCIALS       = 'zone_commercials';
     public const FONCTIONS              = 'fonctions';
     public const USERS                  = 'users';
     public const ROLES                  = 'roles';
@@ -69,6 +91,13 @@ class ROLES
 
 class STATUTS
 {
+    // Constantes de statuts génériques
+    public const ACTIF      = 'actif';
+    public const INACTIF    = 'inactif';
+    public const VALIDE     = 'valide';
+    public const ANNULE     = 'annule';
+    public const EN_ATTENTE = 'En attente';
+
     // PRESSINGS
     public const PRESSINGS           = ['actif','inactif','suspendu'];
 
@@ -103,7 +132,6 @@ class STATUTS
     public const CAUTISATIONS        = ['En attente','valide','ennule'];
     public const DISTRIBUTIONS       = ['En attente','valide','ennule'];
     public const ZONES               = ['actif','inactif'];
-    public const ZONE_COMMERCIALS    = ['actif','inactif'];
 
     // FINANCES
     public const PAIEMENTS           = ['valide','annule','en_attente'];

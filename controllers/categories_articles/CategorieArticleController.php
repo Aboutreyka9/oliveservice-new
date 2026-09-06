@@ -11,13 +11,13 @@ class CategorieArticleController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIES_ARTICLES');
         $this->loadView('../views/categories_articles/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIES_ARTICLES');
         $categories = $this->model->getAll();
         $data = [];
 
@@ -86,7 +86,7 @@ class CategorieArticleController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIES_ARTICLES');
         $this->requireActiveAbonnement(null, 'créer des catégories');
 
         $notEmpty = Validator::validateRequiredFields(['libelle_categorie_article' => $_POST['libelle_categorie_article'] ?? '']);
@@ -131,7 +131,7 @@ class CategorieArticleController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIES_ARTICLES');
         $this->requireActiveAbonnement(null, 'modifier des catégories');
 
         $notEmpty = Validator::validateRequiredFields(['libelle_categorie_article' => $_POST['libelle_categorie_article'] ?? '', 'id_categorie_article' => $_POST['id_categorie_article'] ?? '']);
@@ -176,7 +176,7 @@ class CategorieArticleController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIES_ARTICLES');
         $this->requireActiveAbonnement(null, 'activer ou désactiver des catégories');
 
         $id = $this->post('id');
@@ -193,7 +193,7 @@ class CategorieArticleController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIES_ARTICLES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -215,7 +215,7 @@ class CategorieArticleController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIES_ARTICLES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -235,7 +235,7 @@ class CategorieArticleController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_CATEGORIES_ARTICLES');
         $this->loadView('../views/categories_articles/edit.php', [
             'categorie' => []
         ]);

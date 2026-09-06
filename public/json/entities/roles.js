@@ -51,7 +51,7 @@ $(document).ready(function() {
                 title: 'Actions',
                 className: 'text-center',
                 render: function(data, type, row) {
-                    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+                    const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
                     const isActive = (row.statut === 'actif');
                     return `
                         <div class="table-actions">
@@ -76,9 +76,9 @@ $(document).ready(function() {
             entity: 'role',
             primary: [{ key: 'code', label: 'Code' }, { key: 'libelle', label: 'Libellé' }],
             secondary: [{ key: 'permissions_count', label: 'Permissions' }, { key: 'statut', label: 'Statut' }],
-            detailUrl: function(r) { return (typeof LINK !== 'undefined' ? LINK : '/geicg/') + 'role/edition/' + r.editId; },
+            detailUrl: function(r) { return (typeof LINK !== 'undefined' ? LINK : '/') + 'role/edition/' + r.editId; },
             actions: [
-                { id: 'modifier', label: 'Modifier', icon: 'edit', href: function(r) { return (typeof LINK !== 'undefined' ? LINK : '/geicg/') + 'role/edition/' + r.editId; } }
+                { id: 'modifier', label: 'Modifier', icon: 'edit', href: function(r) { return (typeof LINK !== 'undefined' ? LINK : '/') + 'role/edition/' + r.editId; } }
             ]
         };
         renderMobileCards('dataTable', rolesMobileConfig);
@@ -89,7 +89,7 @@ $(document).ready(function() {
         e.preventDefault();
         const form = $(this);
         const btn = form.find('.btn_actions');
-        const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+        const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
 
         if (typeof loading === 'function') loading(btn, true, 'Sauvegarde...');
 
@@ -120,7 +120,7 @@ $(document).ready(function() {
         e.preventDefault();
         const form = $(this);
         const btn = form.find('.btn_actions');
-        const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/geicg/');
+        const baseApi = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
 
         if (typeof loading === 'function') loading(btn, true, 'Mise à jour des permissions...');
 

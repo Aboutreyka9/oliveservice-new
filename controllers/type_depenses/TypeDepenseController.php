@@ -9,13 +9,13 @@ class TypeDepenseController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_TYPE_DEPENSES');
         $this->loadView('../views/type_depenses/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_TYPE_DEPENSES');
         $items = $this->model->getAll();
         $data = [];
 
@@ -33,7 +33,7 @@ class TypeDepenseController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_TYPE_DEPENSES');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -63,7 +63,7 @@ class TypeDepenseController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_TYPE_DEPENSES');
         $id = (int)$this->post('id_type_depense');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -82,7 +82,7 @@ class TypeDepenseController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_TYPE_DEPENSES');
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
@@ -97,7 +97,7 @@ class TypeDepenseController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_TYPE_DEPENSES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -111,7 +111,7 @@ class TypeDepenseController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_TYPE_DEPENSES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -125,7 +125,7 @@ class TypeDepenseController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_TYPE_DEPENSES');
         $this->loadView('../views/type_depenses/edit.php', ['item' => []]);
     }
 }

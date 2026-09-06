@@ -9,14 +9,45 @@ class ClientController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         $this->loadView('../views/clients/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
-        $clients = $this->model->getAllWithZone();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
+        $anneeCode = Context::annee();
+        $zoneCode = Context::zone();
+        $userCode = Context::user();
+        $etabCode = Context::etablissement();
+
+        $sql = "
+            SELECT DISTINCT c.*, z.libelle_zone
+            FROM clients c
+            LEFT JOIN zones z ON z.code_zone = c.zone_code
+            LEFT JOIN souscriptions s ON s.client_code = c.code_client 
+                 AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
+            WHERE (c.etablissement_code = ? OR c.etablissement_code IS NULL)
+        ";
+        $params = [$etabCode, $zoneCode, $anneeCode, $etabCode];
+
+        // Application du filtrage strict selon le rôle RBAC (Context)
+        if (Context::isCommercial()) {
+            // Le commercial ne voit que ses propres clients créés par lui ou rattachés à ses souscriptions
+            $sql .= " AND (c.user_code = ? OR s.user_code = ?)";
+            $params[] = $userCode;
+            $params[] = $userCode;
+        } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
+            $sql .= " AND (c.zone_code = ? OR s.zone_code = ?)";
+            $params[] = $zoneCode;
+            $params[] = $zoneCode;
+        }
+
+        $sql .= " ORDER BY c.created_at_client DESC";
+
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $clients = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $data = [];
 
         foreach ($clients as $c) {
@@ -25,7 +56,7 @@ class ClientController extends BaseController
             $data[] = array_merge($c, [
                 'id' => $id,
                 'editId' => $idCrypte,
-                'nom_complet' => trim(($c['nom_client'] ?? '') . ' ' . ($c['prenom_client'] ?? ''))
+                'nom_complet' => trim($c['nom_client'] ?? '')
             ]);
         }
 
@@ -35,17 +66,62 @@ class ClientController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_ADD_CLIENT');
         $data = $_POST;
         unset($data['csrf_token']);
 
+        // Nettoyage préalable des formats téléphoniques (+225 / 225)
+        $this->cleanPhoneFields($data);
+
+        // 1. Contrôle par téléphone (si renseigné)
         if (!empty($data['telephone_client'])) {
-            if (!$this->checkUnique('clients', 'telephone_client', $data['telephone_client'], 'Téléphone client')) return;
+            $telClean = $data['telephone_client'];
+            $stmtCheck = $this->model->getCon()->prepare("SELECT code_client, nom_client FROM clients WHERE telephone_client = ? LIMIT 1");
+            $stmtCheck->execute([$telClean]);
+            $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+            if ($existing) {
+                $this->error("Un client existe déjà avec ce numéro de téléphone ({$telClean}) : {$existing['nom_client']} (Code: {$existing['code_client']}).");
+                return;
+            }
+        }
+
+        // 2. Contrôle par numéro CNI (si renseigné)
+        $cniVal = trim($data['numero_cni'] ?? ($data['cni_client'] ?? ''));
+        if (!empty($cniVal)) {
+            $stmtCheckCni = $this->model->getCon()->prepare("SELECT code_client, nom_client FROM clients WHERE numero_cni = ? LIMIT 1");
+            $stmtCheckCni->execute([$cniVal]);
+            $existingCni = $stmtCheckCni->fetch(PDO::FETCH_ASSOC);
+
+            if ($existingCni) {
+                $this->error("Un client existe déjà avec ce numéro de CNI ({$cniVal}) : {$existingCni['nom_client']} (Code: {$existingCni['code_client']}).");
+                return;
+            }
+        }
+
+        // 3. Contrôle anti-doublon par Nom complet + Lieu de résidence
+        if (!empty($data['nom_client']) && !empty($data['lieu_residence_client'])) {
+            $nom = trim($data['nom_client']);
+            $residence = trim($data['lieu_residence_client']);
+
+            $stmtCheckNom = $this->model->getCon()->prepare("SELECT code_client, nom_client, telephone_client FROM clients WHERE LOWER(nom_client) = LOWER(?) AND LOWER(lieu_residence_client) = LOWER(?) LIMIT 1");
+            $stmtCheckNom->execute([$nom, $residence]);
+            $existingNom = $stmtCheckNom->fetch(PDO::FETCH_ASSOC);
+
+            if ($existingNom) {
+                $this->error("Un client nommé '$nom' résidant à '$residence' existe déjà (Contact: {$existingNom['telephone_client']}, Code: {$existingNom['code_client']}).");
+                return;
+            }
         }
 
         $userCode = Context::user() ?? '';
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
+        if (empty($zoneCode)) {
+            $stmtDefaultZone = $this->model->getCon()->query("SELECT code_zone FROM zones LIMIT 1");
+            $defaultZone = $stmtDefaultZone->fetch(PDO::FETCH_ASSOC);
+            $zoneCode = $defaultZone['code_zone'] ?? '6QIlVfXP0LiXE9tBzHownYLAAqDi2';
+        }
 
         if (empty($data['code_client'])) {
             $data['code_client'] = $this->validator->generateCode('clients', 'code_client', 'CLI-', 8);
@@ -56,6 +132,7 @@ class ClientController extends BaseController
         $cols = $this->model->getCon()->query("DESCRIBE clients")->fetchAll(PDO::FETCH_COLUMN);
         if (in_array('user_code', $cols)) $data['user_code'] = $userCode;
         if (in_array('etablissement_code', $cols)) $data['etablissement_code'] = $etabCode;
+        if (in_array('zone_code', $cols) && empty($data['zone_code'])) $data['zone_code'] = $zoneCode;
 
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->create($filteredData)) {
@@ -68,7 +145,14 @@ class ClientController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_EDIT_CLIENT');
+
+        // RÈGLE STRICTE RBAC : Les commerciaux ne peuvent pas modifier les fiches clients
+        if (Context::isCommercial()) {
+            $this->error('Action non autorisée. Les commerciaux ne peuvent pas modifier les fiches clients.');
+            return;
+        }
+
         $id = (int)$this->post('id_client');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -91,7 +175,13 @@ class ClientController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_EDIT_CLIENT');
+
+        if (Context::isCommercial()) {
+            $this->error('Action non autorisée. Les commerciaux ne peuvent pas changer le statut d\'un client.');
+            return;
+        }
+
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
@@ -106,7 +196,7 @@ class ClientController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -115,18 +205,62 @@ class ClientController extends BaseController
                 return;
             }
 
-            // Récupérer les souscriptions de ce client
-            $stmtSous = $this->model->getCon()->prepare("
+            $etabCode = Context::etablissement();
+            $zoneCode = Context::zone();
+            $anneeCode = Context::annee();
+
+            // Récupérer les souscriptions de ce client avec filtrage par rôle
+            $sql = "
                 SELECT s.*, p.libelle_pack, z.libelle_zone
                 FROM souscriptions s
-                LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription
-                LEFT JOIN packs p ON p.code_pack = ps.pack_code
+                LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription AND ps.etablissement_code = ? AND ps.zone_code = ? AND ps.annee_code = ?
+                LEFT JOIN packs p ON p.code_pack = ps.pack_code AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
                 LEFT JOIN zones z ON z.code_zone = s.zone_code
-                WHERE s.client_code = ?
-                ORDER BY s.created_at_souscription DESC
-            ");
-            $stmtSous->execute([$item['code_client']]);
+                WHERE s.client_code = ? AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
+            ";
+            $params = [
+                $etabCode, $zoneCode, $anneeCode,
+                $etabCode, $zoneCode, $anneeCode,
+                $item['code_client'],
+                $etabCode, $zoneCode, $anneeCode
+            ];
+
+            if (Context::isCommercial()) {
+                $sql .= " AND s.user_code = ?";
+                $params[] = Context::user();
+            }
+
+            $sql .= " ORDER BY s.created_at_souscription DESC";
+
+            $stmtSous = $this->model->getCon()->prepare($sql);
+            $stmtSous->execute($params);
             $souscriptions = $stmtSous->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            // Récupérer la liste des cotisations (versements) effectuées par ce client
+            $sqlCot = "
+                SELECT cc.*, s.code_souscription
+                FROM cautisation_clients cc
+                LEFT JOIN souscriptions s ON s.code_souscription = cc.souscription_code AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
+                WHERE (cc.client_code = ? OR s.client_code = ?)
+                  AND cc.etablissement_code = ? AND cc.zone_code = ? AND cc.annee_code = ?
+            ";
+            $paramsCot = [
+                $etabCode, $zoneCode, $anneeCode,
+                $item['code_client'], $item['code_client'],
+                $etabCode, $zoneCode, $anneeCode
+            ];
+
+            if (Context::isCommercial()) {
+                $sqlCot .= " AND (cc.user_code = ? OR cc.commercial_code = ?)";
+                $paramsCot[] = Context::user();
+                $paramsCot[] = Context::user();
+            }
+
+            $sqlCot .= " ORDER BY cc.created_at_cautisation_client DESC";
+
+            $stmtCot = $this->model->getCon()->prepare($sqlCot);
+            $stmtCot->execute($paramsCot);
+            $cotisations = $stmtCot->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
@@ -136,13 +270,19 @@ class ClientController extends BaseController
         $this->loadView('../views/clients/details.php', [
             'item' => $item,
             'souscriptions' => $souscriptions,
+            'cotisations' => $cotisations,
             'encryptedId' => $encryptedId
         ]);
     }
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_EDIT_CLIENT');
+        if (Context::isCommercial()) {
+            header('Location: ' . RACINE . 'client/list');
+            exit();
+        }
+
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -151,14 +291,12 @@ class ClientController extends BaseController
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'client/list'); exit();
         }
-        $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
-        $this->loadView('../views/clients/edit.php', ['item' => $item, 'zones' => $zones, 'encryptedId' => $encryptedId]);
+        $this->loadView('../views/clients/edit.php', ['item' => $item, 'encryptedId' => $encryptedId]);
     }
 
     public function formulaire()
     {
-        $this->requireAuth();
-        $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
-        $this->loadView('../views/clients/edit.php', ['item' => [], 'zones' => $zones]);
+        $this->requirePermission('COMMERCIAL_ADD_CLIENT');
+        $this->loadView('../views/clients/edit.php', ['item' => []]);
     }
 }

@@ -1,6 +1,6 @@
 <footer class="footer" id="footer">
         <div class="footer-content">
-            <div>&copy; 2026 GEICG - Grande École. Tous droits réservés.</div>
+            <div>&copy; 2026 Olive Service. Tous droits réservés.</div>
             <div class="footer-links">
                 <a href="#">Documentation</a>
                 <a href="#">Support Technique</a>
@@ -13,17 +13,17 @@
             <i data-lucide="layout-dashboard"></i>
             <span>Accueil</span>
         </a>
-        <a href="<?= RACINE ?>inscription/list" class="bottom-nav-item">
-            <i data-lucide="user-plus"></i>
-            <span>Inscriptions</span>
+        <a href="<?= RACINE ?>souscription/list" class="bottom-nav-item">
+            <i data-lucide="file-text"></i>
+            <span>Souscriptions</span>
         </a>
-        <a href="<?= RACINE ?>paiement/list" class="bottom-nav-item">
+        <a href="<?= RACINE ?>cautisation-payment/search-form" class="bottom-nav-item">
             <i data-lucide="credit-card"></i>
-            <span>Caisse</span>
+            <span>Cotisations</span>
         </a>
-        <a href="<?= RACINE ?>note/list" class="bottom-nav-item">
-            <i data-lucide="edit-3"></i>
-            <span>Notes</span>
+        <a href="<?= RACINE ?>versement/list" class="bottom-nav-item">
+            <i data-lucide="send"></i>
+            <span>Versements</span>
         </a>
 
         <button type="button" class="bottom-nav-item" id="bnProfil">

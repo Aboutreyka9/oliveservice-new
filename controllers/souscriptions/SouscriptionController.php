@@ -9,28 +9,111 @@ class SouscriptionController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
-        $this->loadView('../views/souscriptions/list.php');
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_SOUSCRIPTIONS', 'GESTIONNAIRE_VIEW_ALL_SOUSCRIPTIONS']);
+
+        $userScopeFilter = Context::isCommercial() ? Context::user() : null;
+        $zoneScopeFilter = Context::isGestionnaire() ? Context::zone() : null;
+        $anneeScopeFilter = Context::annee();
+
+        $items = $this->model->getAllWithDetails($userScopeFilter, $zoneScopeFilter, $anneeScopeFilter);
+
+        $totalSouscriptions = count($items);
+        $totalEngage = 0;
+        $totalCotise = 0;
+        $totalSoldeCount = 0;
+        $totalEnCoursCount = 0;
+
+        foreach ($items as $s) {
+            $sumPrixCotisation = (float)($s['sum_prix_cotisation_pack'] ?? 0);
+            $nombreJourSession = (int)($s['nombre_jour_session'] ?? 0);
+            $totaleSouscription = (float)($s['totale_souscription'] ?? ($sumPrixCotisation * $nombreJourSession));
+            $montantCotise = (float)($s['montant_total_cotise'] ?? 0);
+
+            $totalEngage += $totaleSouscription;
+            $totalCotise += $montantCotise;
+
+            if (($s['statut_souscription'] ?? '') === 'solde') {
+                $totalSoldeCount++;
+            } else {
+                $totalEnCoursCount++;
+            }
+        }
+
+        $resteARecouvrer = max(0, $totalEngage - $totalCotise);
+        $tauxRecouvrement = $totalEngage > 0 ? round(($totalCotise / $totalEngage) * 100, 1) : 0;
+
+        $stats = [
+            'total_souscriptions' => $totalSouscriptions,
+            'total_engage' => $totalEngage,
+            'total_cotise' => $totalCotise,
+            'reste_a_recouvrer' => $resteARecouvrer,
+            'taux_recouvrement' => $tauxRecouvrement,
+            'total_encours_count' => $totalEnCoursCount,
+            'total_solde_count' => $totalSoldeCount,
+        ];
+
+        $this->loadView('../views/souscriptions/list.php', [
+            'stats' => $stats
+        ]);
     }
 
     public function apiList()
     {
-        $this->requireAuth();
-        $items = $this->model->getAllWithDetails();
-        $data = [];
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_SOUSCRIPTIONS', 'GESTIONNAIRE_VIEW_ALL_SOUSCRIPTIONS']);
 
+        // Récupération sécurisée du périmètre d'accès selon le rôle connecté
+        $userScopeFilter = Context::isCommercial() ? Context::user() : null;
+        $zoneScopeFilter = Context::isGestionnaire() ? Context::zone() : null;
+        $anneeScopeFilter = Context::annee();
+
+        $items = $this->model->getAllWithDetails($userScopeFilter, $zoneScopeFilter, $anneeScopeFilter);
+
+        $grouped = [];
         foreach ($items as $s) {
+            $code = $s['code_souscription'];
+            if (!isset($grouped[$code])) {
+                $grouped[$code] = $s;
+                $grouped[$code]['packs'] = [];
+            }
+            if (!empty($s['libelle_pack'])) {
+                $grouped[$code]['packs'][] = $s['libelle_pack'];
+            }
+        }
+
+        $data = [];
+        foreach ($grouped as $s) {
             $id = $s['id_souscription'];
             $idCrypte = $this->validator->crypter($id);
-            $soldeRestant = (float)($s['montant_total_prevu'] ?? 0) - (float)($s['montant_total_cotise'] ?? 0);
-            $joursRestants = max(0, (int)($s['nombre_jour_total'] ?? 0) - (int)($s['nombre_jour_cotise'] ?? 0));
+            
+            $sumPrixCotisation = (float)($s['sum_prix_cotisation_pack'] ?? 0);
+            $nombreJourSession = (int)($s['nombre_jour_session'] ?? 0);
+            $totaleSouscription = (float)($s['totale_souscription'] ?? ($sumPrixCotisation * $nombreJourSession));
+            $montantCotise = (float)($s['montant_total_cotise'] ?? 0);
+            $soldeRestant = max(0, $totaleSouscription - $montantCotise);
+            $joursRestants = max(0, $nombreJourSession - (int)($s['nombre_jour_cotise'] ?? 0));
+
+            $nbPacks = count($s['packs'] ?? []);
+            if ($nbPacks > 1) {
+                $packLabel = $s['packs'][0] . ' <small style="color:#64748B;">+' . ($nbPacks - 1) . ' autre(s)</small>';
+            } elseif ($nbPacks === 1) {
+                $packLabel = $s['packs'][0];
+            } else {
+                $packLabel = '-';
+            }
             $data[] = array_merge($s, [
                 'id' => $id,
                 'editId' => $idCrypte,
                 'nom_client_complet' => trim($s['nom_client'] ?? ''),
-                'solde_restant' => max(0, $soldeRestant),
+                'date_souscription' => isset($s['created_at_souscription']) && !empty($s['created_at_souscription'])
+                    ? date('d-m-Y', strtotime($s['created_at_souscription']))
+                    : '-',
+                'libelle_pack' => $packLabel,
+                'nombre_packs' => $nbPacks,
+                'sum_prix_cotisation_pack' => $sumPrixCotisation,
+                'totale_souscription' => $totaleSouscription,
+                'solde_restant' => $soldeRestant,
                 'jours_restants' => $joursRestants,
-                'progression' => $s['nombre_jour_total'] > 0 ? round((($s['nombre_jour_cotise'] ?? 0) / $s['nombre_jour_total']) * 100) : 0
+                'progression' => $nombreJourSession > 0 ? round((($s['nombre_jour_cotise'] ?? 0) / $nombreJourSession) * 100) : 0
             ]);
         }
         $this->json(['data' => $data]);
@@ -39,7 +122,7 @@ class SouscriptionController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -48,8 +131,15 @@ class SouscriptionController extends BaseController
             return;
         }
 
-        $stmtPack = $this->model->getCon()->prepare("SELECT * FROM packs WHERE code_pack = ?");
-        $stmtPack->execute([$data['pack_code']]);
+        $etabCode = Context::etablissement();
+        $anneeCode = Context::annee();
+        $zoneCode = $data['zone_code'] ?? Context::zone();
+
+        $stmtPack = $this->model->getCon()->prepare("
+            SELECT * FROM packs 
+            WHERE code_pack = ? AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtPack->execute([$data['pack_code'], $etabCode, $zoneCode, $anneeCode]);
         $pack = $stmtPack->fetch(PDO::FETCH_ASSOC);
 
         if (!$pack) {
@@ -58,8 +148,6 @@ class SouscriptionController extends BaseController
         }
 
         $userCode = Context::user() ?? '';
-        $etabCode = '5454544456';
-        $anneeCode = Context::annee();
         $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
 
         $nbJours = (int)($data['nombre_jour_total'] ?: ($pack['nombre_jour_pack'] ?: 170));
@@ -70,7 +158,7 @@ class SouscriptionController extends BaseController
             'code_souscription' => $codeSouscription,
             'client_code' => $data['client_code'],
             'session_code' => $data['session_code'] ?: ($pack['session_code'] ?: null),
-            'zone_code' => $data['zone_code'] ?: ($pack['zone_code'] ?: null),
+            'zone_code' => $zoneCode,
             'date_debut_souscription' => $data['date_debut_souscription'] ?: date('Y-m-d'),
             'montant_total_prevu' => $montantTotal,
             'montant_cotisation_journaliere' => $cotisJour,
@@ -95,9 +183,22 @@ class SouscriptionController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_EDIT_SOUSCRIPTION');
+
+        // RÈGLE STRICTE RBAC : Les commerciaux ne peuvent pas modifier les souscriptions
+        if (Context::isCommercial()) {
+            $this->error('Action non autorisée. Les commerciaux ne peuvent pas modifier une souscription.');
+            return;
+        }
+
         $id = (int)$this->post('id_souscription');
         if (!$id) { $this->error('Identifiant invalide'); return; }
+        $existing = $this->model->getById($id);
+        if (!$existing || $existing['etablissement_code'] !== Context::etablissement() || $existing['zone_code'] !== Context::zone() || $existing['annee_code'] !== Context::annee()) {
+            $this->error('Souscription introuvable ou non autorisée');
+            return;
+        }
+
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -114,9 +215,19 @@ class SouscriptionController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_EDIT_SOUSCRIPTION');
+
+        if (Context::isCommercial()) {
+            $this->error('Action non autorisée. Les commerciaux ne peuvent pas changer le statut d\'une souscription.');
+            return;
+        }
+
         $id = $this->post('id');
-        if ($id && $this->model->getById($id)) {
+        if ($id && ($item = $this->model->getById($id))) {
+            if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                $this->error('Souscription introuvable');
+                return;
+            }
             if ($this->model->toggleStatus($id)) {
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
@@ -129,16 +240,22 @@ class SouscriptionController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_SOUSCRIPTIONS', 'GESTIONNAIRE_VIEW_ALL_SOUSCRIPTIONS']);
         try {
             $id = $this->validator->decrypter($details);
-            $item = $this->model->getById($id);
+            $item = $this->model->getByIdWithDetails($id);
             if (!$item) {
                 $this->renderNotFound("La souscription demandée est introuvable.");
                 return;
             }
 
+            if (Context::isCommercial() && $item['user_code'] !== Context::user()) {
+                $this->renderForbidden("Vous n'êtes pas autorisé à consulter cette souscription.");
+                return;
+            }
+
             $packSouscrit = $this->model->getPackSouscrit($item['code_souscription']);
+            $allPacks = $this->model->getPacksSouscrits($item['code_souscription']);
             $soldeRestant = $this->model->getSoldeRestant($item['code_souscription']);
             $joursRestants = $this->model->getJoursRestants($item['code_souscription']);
 
@@ -151,9 +268,10 @@ class SouscriptionController extends BaseController
                 FROM cautisation_clients c
                 LEFT JOIN users u ON u.code_user = c.commercial_code
                 WHERE c.souscription_code = ?
+                  AND c.etablissement_code = ? AND c.zone_code = ? AND c.annee_code = ?
                 ORDER BY c.date_cautisation DESC
             ");
-            $stmtCotis->execute([$item['code_souscription']]);
+            $stmtCotis->execute([$item['code_souscription'], Context::etablissement(), Context::zone(), Context::annee()]);
             $cotisations = $stmtCotis->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $encryptedId = $this->validator->crypter($id);
@@ -165,61 +283,72 @@ class SouscriptionController extends BaseController
             'item' => $item,
             'client' => $client,
             'packSouscrit' => $packSouscrit,
-            'cotisations' => $cotisations,
+            'allPacks' => $allPacks,
             'soldeRestant' => $soldeRestant,
             'joursRestants' => $joursRestants,
+            'cotisations' => $cotisations,
             'encryptedId' => $encryptedId
         ]);
     }
 
-    public function edition($details)
+    public function edition($edition)
     {
-        $this->requireAuth();
-        try {
-            $id = $this->validator->decrypter($details);
-            $item = $this->model->getById($id);
-            if (!$item) { header('Location: ' . RACINE . 'souscription/list'); exit(); }
-            $encryptedId = $this->validator->crypter($id);
-        } catch (Exception $e) {
-            header('Location: ' . RACINE . 'souscription/list'); exit();
+        $this->requirePermission('GESTIONNAIRE_EDIT_SOUSCRIPTION');
+
+        if (Context::isCommercial()) {
+            $this->renderNotFound("Action non autorisée. Les commerciaux ne peuvent pas modifier les souscriptions.");
+            return;
         }
-        $clients = $this->model->getCon()->query("SELECT code_client, nom_client, telephone_client FROM clients")->fetchAll(PDO::FETCH_ASSOC);
-        $packs = $this->model->getCon()->query("SELECT code_pack, libelle_pack, prix_cotisation_pack, nombre_jour_pack FROM packs WHERE statut_pack='actif'")->fetchAll(PDO::FETCH_ASSOC);
-        $sessions = $this->model->getCon()->query("SELECT code_session, libelle_session FROM sessions WHERE statut_session='actif'")->fetchAll(PDO::FETCH_ASSOC);
-        $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
+
+        try {
+            $id = $this->validator->decrypter($edition);
+            $item = $this->model->getById($id);
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                $this->renderNotFound("La souscription demandée est introuvable.");
+                return;
+            }
+
+            $modelClient = new ModelClient();
+            $clients = $modelClient->getAll();
+
+            $etabCode = Context::etablissement();
+            $zoneCode = Context::zone();
+            $anneeCode = Context::annee();
+
+            $stmtP = $this->model->getCon()->prepare("SELECT * FROM packs WHERE statut_pack='actif' AND etablissement_code = ? AND zone_code = ? AND annee_code = ?");
+            $stmtP->execute([$etabCode, $zoneCode, $anneeCode]);
+            $packs = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+
+            $stmtS = $this->model->getCon()->prepare("SELECT * FROM sessions WHERE statut_session='actif' AND etablissement_code = ? AND zone_code = ? AND annee_code = ?");
+            $stmtS->execute([$etabCode, $zoneCode, $anneeCode]);
+            $sessions = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+
+        } catch (Exception $e) {
+            $this->renderNotFound("La souscription demandée est introuvable.");
+            return;
+        }
 
         $this->loadView('../views/souscriptions/edit.php', [
             'item' => $item,
             'clients' => $clients,
             'packs' => $packs,
-            'sessions' => $sessions,
-            'zones' => $zones,
-            'encryptedId' => $encryptedId
-        ]);
-    }
-
-    public function formulaire()
-    {
-        $this->requireAuth();
-        $clients = $this->model->getCon()->query("SELECT code_client, nom_client, telephone_client FROM clients")->fetchAll(PDO::FETCH_ASSOC);
-        $packs = $this->model->getCon()->query("SELECT code_pack, libelle_pack, prix_cotisation_pack, nombre_jour_pack FROM packs WHERE statut_pack='actif'")->fetchAll(PDO::FETCH_ASSOC);
-        $sessions = $this->model->getCon()->query("SELECT code_session, libelle_session FROM sessions WHERE statut_session='actif'")->fetchAll(PDO::FETCH_ASSOC);
-        $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
-
-        $this->loadView('../views/souscriptions/edit.php', [
-            'item' => [],
-            'clients' => $clients,
-            'packs' => $packs,
-            'sessions' => $sessions,
-            'zones' => $zones
+            'sessions' => $sessions
         ]);
     }
 
     public function wizard()
     {
-        $this->requireAuth();
-        $sessions = $this->model->getCon()->query("SELECT code_session, libelle_session FROM sessions WHERE statut_session='actif'")->fetchAll(PDO::FETCH_ASSOC);
-        $categories = $this->model->getCon()->query("SELECT code_categorie_pack, libelle_categorie_pack FROM categorie_packs WHERE statut_categorie_pack='actif'")->fetchAll(PDO::FETCH_ASSOC);
+        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
+        $stmtS = $this->model->getCon()->prepare("SELECT * FROM sessions WHERE statut_session='actif' AND etablissement_code = ? AND zone_code = ? AND annee_code = ?");
+        $stmtS->execute([$etabCode, $zoneCode, $anneeCode]);
+        $sessions = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+
+        $modelCat = new ModelCategoriePack();
+        $categories = $modelCat->getAll();
 
         $this->loadView('../views/souscriptions/wizard.php', [
             'sessions' => $sessions,
@@ -229,101 +358,104 @@ class SouscriptionController extends BaseController
 
     public function wizardData()
     {
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
         $sessionCode = $_GET['session_code'] ?? '';
         $categorieCode = $_GET['categorie_code'] ?? '';
 
-        $sql = "SELECT p.code_pack, p.libelle_pack, p.prix_cotisation_pack, p.image_pack,
-                       c.libelle_categorie_pack, c.code_categorie_pack,
-                       COUNT(pa.article_code) as nombre_articles,
-                       (SELECT COUNT(*) FROM pack_souscriptions ps WHERE ps.pack_code = p.code_pack) as nombre_souscriptions
-                FROM packs p
-                LEFT JOIN categorie_packs c ON c.code_categorie_pack = p.categorie_pack_code
-                LEFT JOIN pack_articles pa ON pa.pack_code = p.code_pack
-                WHERE p.statut_pack='actif'";
-        $params = [];
-        if ($sessionCode !== '') {
-            $sql .= " AND p.session_code = ?";
-            $params[] = $sessionCode;
+        if (empty($sessionCode)) {
+            $this->json(['status' => 0, 'data' => []]);
+            return;
         }
-        if ($categorieCode !== '') {
+
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
+        $sql = "
+            SELECT p.*, c.libelle_categorie_pack, s.nombre_jour_session,
+                   (SELECT COUNT(*) FROM pack_articles pa WHERE pa.pack_code = p.code_pack AND pa.etablissement_code = ? AND pa.zone_code = ? AND pa.annee_code = ?) as nombre_articles,
+                   (SELECT COUNT(*) FROM pack_souscriptions ps WHERE ps.pack_code = p.code_pack AND ps.etablissement_code = ? AND ps.zone_code = ? AND ps.annee_code = ?) as nombre_souscriptions
+            FROM packs p
+            LEFT JOIN categorie_packs c ON c.code_categorie_pack = p.categorie_pack_code
+            LEFT JOIN sessions s ON s.code_session = p.session_code AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
+            WHERE p.session_code = ? AND p.statut_pack = 'actif'
+              AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
+        ";
+        $params = [
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode,
+            $sessionCode,
+            $etabCode, $zoneCode, $anneeCode
+        ];
+
+        if (!empty($categorieCode)) {
             $sql .= " AND p.categorie_pack_code = ?";
             $params[] = $categorieCode;
         }
-        $sql .= " GROUP BY p.code_pack, p.libelle_pack, p.prix_cotisation_pack, p.image_pack, c.libelle_categorie_pack, c.code_categorie_pack
-                  ORDER BY c.libelle_categorie_pack, p.libelle_pack";
 
-        $stmt = $this->model->getCon()->prepare($sql);
+        $sql .= " ORDER BY p.libelle_pack ASC";
+
+        $db = $this->model->getCon();
+        $stmt = $db->prepare($sql);
         $stmt->execute($params);
-        $packs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $packs = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $this->json(['status' => 1, 'data' => $packs]);
     }
 
-    public function wizardSubmit()
+    public function createWizard()
     {
         $this->requirePost(false);
-        $this->requireAuth();
-        $data = $_POST;
-        unset($data['csrf_token']);
+        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
 
-        if (empty($data['nom_client']) || empty($data['telephone_client']) || empty($data['sexe_client']) || empty($data['lieu_residence_client'])) {
-            $this->error('Veuillez remplir tous les champs obligatoires du client.');
-            return;
-        }
+        $rawInput = file_get_contents('php://input');
+        $data = json_decode($rawInput, true);
 
-        $packs = json_decode($data['packs'] ?? '[]', true);
-        if (empty($packs) || !is_array($packs) || empty($packs)) {
-            $this->error('Veuillez sélectionner au moins un pack.');
+        if (!$data || empty($data['client_code']) || empty($data['pack_codes']) || !is_array($data['pack_codes'])) {
+            $this->error('Données de souscription incomplètes (client ou packs manquants)');
             return;
         }
 
         $userCode = Context::user() ?? '';
-        $etabCode = '5454544456';
+        $etabCode = Context::etablissement();
         $anneeCode = Context::annee();
-
-        $clientCode = $this->validator->generateCode('clients', 'code_client', 'CLI-', 8);
-        $clientData = [
-            'code_client' => $clientCode,
-            'nom_client' => $data['nom_client'],
-            'sexe_client' => $data['sexe_client'],
-            'lieu_residence_client' => $data['lieu_residence_client'],
-            'profession_client' => $data['profession_client'] ?? '',
-            'telephone_client' => $data['telephone_client'],
-            'email_client' => $data['email_client'] ?? '',
-            'user_code' => $userCode,
-            'zone_code' => $data['zone_code'] ?? '',
-            'etablissement_code' => $etabCode,
-            'statut_client' => 'actif',
-            'created_at_client' => date('Y-m-d H:i:s')
-        ];
-        $this->model->getCon()->prepare("INSERT INTO clients (" . implode(',', array_keys($clientData)) . ") VALUES (" . implode(',', array_fill(0, count($clientData), '?')) . ")")->execute(array_values($clientData));
-
-        $montantTotal = 0;
-        $nbJoursTotal = 0;
+        $zoneCode = $data['zone_code'] ?? Context::zone();
         $sessionCode = $data['session_code'] ?? '';
-        $zoneCode = $data['zone_code'] ?? '';
-
         $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
-        foreach ($packs as $packCode) {
-            $stmtPack = $this->model->getCon()->prepare("SELECT prix_cotisation_pack FROM packs WHERE code_pack = ?");
-            $stmtPack->execute([$packCode]);
-            $pack = $stmtPack->fetch(PDO::FETCH_ASSOC);
-            if ($pack) {
-                $montantTotal += (float)($pack['prix_cotisation_pack'] ?? 0);
-                $nbJoursTotal += (int)($pack['nombre_jour_pack'] ?? 0);
-            }
-        }
+
+        $packCodes = $data['pack_codes'];
+
+        $inClause = implode(',', array_fill(0, count($packCodes), '?'));
+        $stmtP = $this->model->getCon()->prepare("
+            SELECT SUM(prix_cotisation_pack) as total_prix 
+            FROM packs 
+            WHERE code_pack IN ($inClause) AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtP->execute(array_merge($packCodes, [$etabCode, $zoneCode, $anneeCode]));
+        $resP = $stmtP->fetch(PDO::FETCH_ASSOC);
+        $cotisJour = (float)($resP['total_prix'] ?? 0);
+
+        $stmtS = $this->model->getCon()->prepare("
+            SELECT nombre_jour_session 
+            FROM sessions 
+            WHERE code_session = ? AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtS->execute([$sessionCode, $etabCode, $zoneCode, $anneeCode]);
+        $resS = $stmtS->fetch(PDO::FETCH_ASSOC);
+        $nbJours = (int)($resS['nombre_jour_session'] ?? 170);
+
+        $montantTotalPrevu = $cotisJour * $nbJours;
 
         $souscriptionData = [
             'code_souscription' => $codeSouscription,
-            'client_code' => $clientCode,
+            'client_code' => $data['client_code'],
             'session_code' => $sessionCode,
             'zone_code' => $zoneCode,
             'date_debut_souscription' => date('Y-m-d'),
-            'montant_total_prevu' => $montantTotal,
-            'montant_cotisation_journaliere' => $montantTotal > 0 && $nbJoursTotal > 0 ? round($montantTotal / $nbJoursTotal, 2) : 0,
-            'nombre_jour_total' => $nbJoursTotal,
+            'montant_total_prevu' => $montantTotalPrevu,
+            'montant_cotisation_journaliere' => $cotisJour,
+            'nombre_jour_total' => $nbJours,
             'nombre_jour_cotise' => 0,
             'montant_total_cotise' => 0,
             'statut_distribution' => 'En attente',
@@ -334,7 +466,165 @@ class SouscriptionController extends BaseController
             'created_at_souscription' => date('Y-m-d H:i:s')
         ];
 
-        $this->model->createSouscriptionWithMultiplePacks($souscriptionData, $packs);
-        $this->success('Souscription créée avec succès !', ['code_souscription' => $codeSouscription]);
+        if ($this->model->createSouscriptionWithMultiplePacks($souscriptionData, $packCodes)) {
+            $this->success('Souscription enregistrée avec succès !', [
+                'code_souscription' => $codeSouscription,
+                'redirect' => RACINE . 'souscription/list'
+            ]);
+        } else {
+            $this->error('Erreur lors de la validation de la souscription.');
+        }
+    }
+
+    public function wizardSubmit()
+    {
+        $this->requirePost(false);
+        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
+        $data = $_POST;
+        unset($data['csrf_token']);
+
+        $nomClient = trim($data['nom_client'] ?? '');
+        $telClient = Validator::cleanPhone($data['telephone_client'] ?? '');
+        $emailClient = trim($data['email_client'] ?? '');
+        $sexeClient = trim($data['sexe_client'] ?? '');
+        $lieuClient = trim($data['lieu_residence_client'] ?? '');
+        $professionClient = trim($data['profession_client'] ?? '');
+        $sessionCode = $data['session_code'] ?? '';
+        $zoneCode = $data['zone_code'] ?? Context::zone();
+
+        $rawPacks = $data['packs'] ?? '[]';
+        $packCodes = is_array($rawPacks) ? $rawPacks : json_decode($rawPacks, true);
+
+        if (empty($nomClient) || empty($telClient) || empty($sexeClient) || empty($lieuClient)) {
+            $this->error('Veuillez remplir toutes les informations du client (Nom, Téléphone, Genre, Lieu de résidence).');
+            return;
+        }
+
+        if (empty($sessionCode)) {
+            $this->error('Veuillez sélectionner une session d\'activité.');
+            return;
+        }
+
+        if (empty($packCodes) || !is_array($packCodes)) {
+            $this->error('Veuillez sélectionner au moins un pack.');
+            return;
+        }
+
+        $db = $this->model->getCon();
+
+        // 1. DÉTECTION ET ANTI-DOUBLON CLIENT : Vérification si le client existe déjà
+        $existingClient = null;
+        if (!empty($telClient)) {
+            $stmtCheck = $db->prepare("SELECT * FROM clients WHERE telephone_client = ? LIMIT 1");
+            $stmtCheck->execute([$telClient]);
+            $existingClient = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if (!$existingClient && !empty($nomClient) && !empty($lieuClient)) {
+            $stmtCheckNom = $db->prepare("SELECT * FROM clients WHERE LOWER(nom_client) = LOWER(?) AND LOWER(lieu_residence_client) = LOWER(?) LIMIT 1");
+            $stmtCheckNom->execute([$nomClient, $lieuClient]);
+            $existingClient = $stmtCheckNom->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if ($existingClient) {
+            // REUTILISATION DU CLIENT EXISTANT (Pas de création de doublon)
+            $clientCode = $existingClient['code_client'];
+
+            // Mettre à jour les informations secondaires si manquantes
+            $updateFields = [];
+            if (empty($existingClient['email_client']) && !empty($emailClient)) $updateFields['email_client'] = $emailClient;
+            if (empty($existingClient['profession_client']) && !empty($professionClient)) $updateFields['profession_client'] = $professionClient;
+            if (!empty($updateFields)) {
+                $updateFields['updated_at_client'] = date('Y-m-d H:i:s');
+                $modelClient = new ModelClient();
+                $modelClient->update($updateFields, (int)$existingClient['id_client']);
+            }
+        } else {
+            // NOUVEAU CLIENT : Création d'une fiche client unique
+            $clientCode = $this->validator->generateCode('clients', 'code_client', 'CLI-', 8);
+            if (empty($zoneCode)) {
+                $stmtDZ = $db->query("SELECT code_zone FROM zones LIMIT 1");
+                $dz = $stmtDZ->fetch(PDO::FETCH_ASSOC);
+                $zoneCode = $dz['code_zone'] ?? Context::zone();
+            }
+
+            $clientData = [
+                'code_client' => $clientCode,
+                'nom_client' => $nomClient,
+                'telephone_client' => $telClient,
+                'email_client' => $emailClient,
+                'sexe_client' => $sexeClient,
+                'lieu_residence_client' => $lieuClient,
+                'profession_client' => $professionClient,
+                'statut_client' => 'actif',
+                'created_at_client' => date('Y-m-d H:i:s'),
+                'user_code' => Context::user() ?? '',
+                'etablissement_code' => Context::etablissement(),
+                'zone_code' => $zoneCode
+            ];
+            $modelClient = new ModelClient();
+            if (!$modelClient->create($clientData)) {
+                $this->error('Erreur lors de la création de la fiche client.');
+                return;
+            }
+        }
+
+        // 2. CRÉATION DE LA SOUSCRIPTION
+        $userCode = Context::user() ?? '';
+        $etabCode = Context::etablissement();
+        $anneeCode = Context::annee();
+        $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
+
+        $inClause = implode(',', array_fill(0, count($packCodes), '?'));
+        $stmtP = $db->prepare("
+            SELECT SUM(prix_cotisation_pack) as total_prix 
+            FROM packs 
+            WHERE code_pack IN ($inClause) AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtP->execute(array_merge($packCodes, [$etabCode, $zoneCode, $anneeCode]));
+        $resP = $stmtP->fetch(PDO::FETCH_ASSOC);
+        $cotisJour = (float)($resP['total_prix'] ?? 0);
+
+        $stmtS = $db->prepare("
+            SELECT nombre_jour_session 
+            FROM sessions 
+            WHERE code_session = ? AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtS->execute([$sessionCode, $etabCode, $zoneCode, $anneeCode]);
+        $resS = $stmtS->fetch(PDO::FETCH_ASSOC);
+        $nbJours = (int)($resS['nombre_jour_session'] ?? 170);
+
+        $montantTotalPrevu = $cotisJour * $nbJours;
+
+        $souscriptionData = [
+            'code_souscription' => $codeSouscription,
+            'client_code' => $clientCode,
+            'session_code' => $sessionCode,
+            'zone_code' => $zoneCode ?: (Context::zone() ?? ''),
+            'date_debut_souscription' => date('Y-m-d'),
+            'montant_total_prevu' => $montantTotalPrevu,
+            'montant_cotisation_journaliere' => $cotisJour,
+            'nombre_jour_total' => $nbJours,
+            'nombre_jour_cotise' => 0,
+            'montant_total_cotise' => 0,
+            'statut_distribution' => 'En attente',
+            'statut_souscription' => 'valide',
+            'user_code' => $userCode,
+            'etablissement_code' => $etabCode,
+            'annee_code' => $anneeCode,
+            'created_at_souscription' => date('Y-m-d H:i:s')
+        ];
+
+        if ($this->model->createSouscriptionWithMultiplePacks($souscriptionData, $packCodes)) {
+            $msgSuccess = $existingClient 
+                ? "Souscription rattachée au client existant '{$existingClient['nom_client']}' ($clientCode) avec succès !"
+                : "Nouveau client créé ($clientCode) et souscription enregistrée avec succès !";
+            $this->success($msgSuccess, [
+                'code_souscription' => $codeSouscription,
+                'redirect' => RACINE . 'souscription/list'
+            ]);
+        } else {
+            $this->error('Erreur lors de la validation de la souscription.');
+        }
     }
 }

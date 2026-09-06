@@ -16,8 +16,13 @@ class ModelPack extends BaseModel
                 LEFT JOIN articles a ON a.code_article = pa.article_code
                 WHERE pa.pack_code = ?
             ";
+            $params = [$packCode];
+            $conds = [];
+            Context::applyTripleFilter('pa', $conds, $params, false);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+
             $stmt = $this->getCon()->prepare($sql);
-            $stmt->execute([$packCode]);
+            $stmt->execute($params);
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelPack::getArticles error: " . $e->getMessage());
@@ -25,19 +30,23 @@ class ModelPack extends BaseModel
         }
     }
 
-    public function syncArticles(string $packCode, array $articlesData, string $anneeCode = '0GklBk07waYoLB6pHwY', string $etabCode = '5454544456'): bool
+    public function syncArticles(string $packCode, array $articlesData, ?string $anneeCode = null, ?string $etabCode = null, ?string $zoneCode = null): bool
     {
         try {
             $this->getCon()->beginTransaction();
             
+            $annee = $anneeCode ?: Context::annee();
+            $etab = $etabCode ?: Context::etablissement();
+            $zone = $zoneCode ?: Context::zone();
+
             // Purger les anciens articles du pack
             $stmtDel = $this->getCon()->prepare("DELETE FROM pack_articles WHERE pack_code = ?");
             $stmtDel->execute([$packCode]);
 
             // Réinsérer les nouveaux articles
             $stmtIns = $this->getCon()->prepare("
-                INSERT INTO pack_articles (pack_code, article_code, quantite_article, annee_code, etablissement_code, created_at_pack_article)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO pack_articles (pack_code, article_code, quantite_article, annee_code, etablissement_code, zone_code, created_at_pack_article)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
 
             $now = date('Y-m-d H:i:s');
@@ -47,8 +56,9 @@ class ModelPack extends BaseModel
                         $packCode,
                         $item['article_code'],
                         (int)$item['quantite_article'],
-                        $anneeCode,
-                        $etabCode,
+                        $annee,
+                        $etab,
+                        $zone,
                         $now
                     ]);
                 }

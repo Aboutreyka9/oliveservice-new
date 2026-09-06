@@ -97,6 +97,28 @@
     <script>
         window.RACINE = '<?= RACINE ?>';
         window.LINK = '<?= RACINE ?>';
+        window.AppConfig = {
+            racine: '<?= RACINE ?>',
+            link: '<?= RACINE ?>',
+            userCode: '<?= Context::user() ?>',
+            role: '<?= Context::role() ?>',
+            roles: <?= json_encode(Context::roles()) ?>,
+            permissions: <?= json_encode(Context::permissions()) ?>,
+            isCommercial: <?= Context::isCommercial() ? 'true' : 'false' ?>,
+            isGestionnaire: <?= Context::isGestionnaire() ? 'true' : 'false' ?>,
+            isFinance: <?= Context::isFinance() ? 'true' : 'false' ?>,
+            isAdmin: <?= Context::isAdmin() ? 'true' : 'false' ?>,
+            can: function(perm) {
+                if (this.isAdmin || (this.permissions && this.permissions.indexOf('*') !== -1)) return true;
+                if (Array.isArray(perm)) {
+                    for (var i = 0; i < perm.length; i++) {
+                        if (this.permissions && this.permissions.indexOf(perm[i]) !== -1) return true;
+                    }
+                    return false;
+                }
+                return this.permissions && this.permissions.indexOf(perm) !== -1;
+            }
+        };
     </script>
 
     <?php

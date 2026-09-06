@@ -9,13 +9,13 @@ class DepenseController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $this->loadView('../views/depenses/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $items = $this->model->getAllWithDetails();
         $data = [];
 
@@ -34,7 +34,7 @@ class DepenseController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -45,7 +45,8 @@ class DepenseController extends BaseController
 
         $userCode = Context::user() ?? '';
         $anneeCode = Context::annee();
-        $etabCode = '5454544456';
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
         $codeDepense = $this->validator->generateCode('depenses', 'code_depense', 'DEP-', 8);
 
         // Upload pièce justificative si existante
@@ -60,6 +61,8 @@ class DepenseController extends BaseController
             move_uploaded_file($_FILES['piece_justificative']['tmp_name'], $uploadDir . $filename);
         }
 
+        $statutInitial = Context::isCommercial() ? 'inactif' : 'actif';
+
         $depenseData = [
             'code_depense' => $codeDepense,
             'type_depense_code' => $data['type_depense_code'],
@@ -68,8 +71,9 @@ class DepenseController extends BaseController
             'periode_depense' => !empty($data['periode_depense']) ? $data['periode_depense'] : (!empty($data['date_depense']) ? $data['date_depense'] . ' ' . date('H:i:s') : date('Y-m-d H:i:s')),
             'annee_code' => $anneeCode,
             'etablissement_code' => $etabCode,
+            'zone_code' => $zoneCode,
             'user_code' => $userCode,
-            'statut_depense' => $data['statut_depense'] ?? 'actif',
+            'statut_depense' => $data['statut_depense'] ?? $statutInitial,
             'created_at_depense' => date('Y-m-d H:i:s')
         ];
 
@@ -86,9 +90,15 @@ class DepenseController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $id = (int)$this->post('id_depense');
         if (!$id) { $this->error('Identifiant invalide'); return; }
+        $existing = $this->model->getById($id);
+        if (!$existing || $existing['etablissement_code'] !== Context::etablissement() || $existing['zone_code'] !== Context::zone() || $existing['annee_code'] !== Context::annee()) {
+            $this->error('Dépense introuvable ou non autorisée');
+            return;
+        }
+
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -105,9 +115,13 @@ class DepenseController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         $id = $this->post('id');
-        if ($id && $this->model->getById($id)) {
+        if ($id && ($item = $this->model->getById($id))) {
+            if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                $this->error('Dépense introuvable');
+                return;
+            }
             if ($this->model->toggleStatus($id)) {
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
@@ -120,11 +134,11 @@ class DepenseController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) {
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
                 $this->renderNotFound("La dépense demandée est introuvable.");
                 return;
             }
@@ -147,16 +161,18 @@ class DepenseController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) { header('Location: ' . RACINE . 'depense/list'); exit(); }
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                header('Location: ' . RACINE . 'depense/list'); exit();
+            }
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'depense/list'); exit();
         }
-        $typeDepenses = $this->model->getCon()->query("SELECT code_type_depense, libelle_type_depense FROM type_depenses WHERE statut_type_depense='actif'")->fetchAll(PDO::FETCH_ASSOC);
+        $typeDepenses = $this->model->getCon()->query("SELECT code_type_depense, libelle_type_depense FROM type_depenses ORDER BY libelle_type_depense ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         $this->loadView('../views/depenses/edit.php', [
             'item' => $item,
@@ -167,8 +183,8 @@ class DepenseController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
-        $typeDepenses = $this->model->getCon()->query("SELECT code_type_depense, libelle_type_depense FROM type_depenses WHERE statut_type_depense='actif'")->fetchAll(PDO::FETCH_ASSOC);
+        $this->requirePermission('FINANCE_MANAGE_DEPENSES');
+        $typeDepenses = $this->model->getCon()->query("SELECT code_type_depense, libelle_type_depense FROM type_depenses ORDER BY libelle_type_depense ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         $this->loadView('../views/depenses/edit.php', [
             'item' => [],

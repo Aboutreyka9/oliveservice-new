@@ -9,13 +9,13 @@ class DistributionController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         $this->loadView('../views/distributions/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         $items = $this->model->getAllWithDetails();
         $data = [];
 
@@ -35,7 +35,7 @@ class DistributionController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -44,8 +44,15 @@ class DistributionController extends BaseController
             return;
         }
 
-        $stmtSous = $this->model->getCon()->prepare("SELECT * FROM souscriptions WHERE code_souscription = ?");
-        $stmtSous->execute([$data['souscription_code']]);
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
+        $stmtSous = $this->model->getCon()->prepare("
+            SELECT * FROM souscriptions 
+            WHERE code_souscription = ? AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtSous->execute([$data['souscription_code'], $etabCode, $zoneCode, $anneeCode]);
         $sous = $stmtSous->fetch(PDO::FETCH_ASSOC);
 
         if (!$sous) {
@@ -59,8 +66,6 @@ class DistributionController extends BaseController
         }
 
         $userCode = Context::user() ?? '';
-        $anneeCode = Context::annee();
-        $etabCode = '5454544456';
         $codeDistribution = $this->validator->generateCode('distributions', 'code_distribution', 'DST-', 8);
 
         $filename = null;
@@ -77,7 +82,7 @@ class DistributionController extends BaseController
         $distributionData = [
             'code_distribution' => $codeDistribution,
             'souscription_code' => $data['souscription_code'],
-            'zone_code' => $sous['zone_code'] ?? ($data['zone_code'] ?? ''),
+            'zone_code' => $sous['zone_code'] ?? $zoneCode,
             'client_code' => $sous['client_code'],
             'date_distribution_effectuee' => $data['date_distribution_effectuee'] ?: date('Y-m-d H:i:s'),
             'agent_livreur_code' => $data['agent_livreur_code'] ?: $userCode,
@@ -100,9 +105,15 @@ class DistributionController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         $id = (int)$this->post('id_distribution');
         if (!$id) { $this->error('Identifiant invalide'); return; }
+        $existing = $this->model->getById($id);
+        if (!$existing || $existing['etablissement_code'] !== Context::etablissement() || $existing['zone_code'] !== Context::zone() || $existing['annee_code'] !== Context::annee()) {
+            $this->error('Distribution introuvable ou non autorisée');
+            return;
+        }
+
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -119,9 +130,13 @@ class DistributionController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         $id = $this->post('id');
-        if ($id && $this->model->getById($id)) {
+        if ($id && ($item = $this->model->getById($id))) {
+            if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                $this->error('Distribution introuvable');
+                return;
+            }
             if ($this->model->toggleStatus($id)) {
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
@@ -134,24 +149,33 @@ class DistributionController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) {
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
                 $this->renderNotFound("La distribution demandée est introuvable.");
                 return;
             }
+
+            $etabCode = Context::etablissement();
+            $zoneCode = Context::zone();
+            $anneeCode = Context::annee();
 
             $stmtSous = $this->model->getCon()->prepare("
                 SELECT s.*, c.nom_client, c.prenom_client, p.libelle_pack 
                 FROM souscriptions s 
                 LEFT JOIN clients c ON c.code_client = s.client_code 
-                LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
-                LEFT JOIN packs p ON p.code_pack = ps.pack_code 
-                WHERE s.code_souscription = ?
+                LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription AND ps.etablissement_code = ? AND ps.zone_code = ? AND ps.annee_code = ?
+                LEFT JOIN packs p ON p.code_pack = ps.pack_code AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
+                WHERE s.code_souscription = ? AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
             ");
-            $stmtSous->execute([$item['souscription_code']]);
+            $stmtSous->execute([
+                $etabCode, $zoneCode, $anneeCode,
+                $etabCode, $zoneCode, $anneeCode,
+                $item['souscription_code'],
+                $etabCode, $zoneCode, $anneeCode
+            ]);
             $souscription = $stmtSous->fetch(PDO::FETCH_ASSOC);
 
             $stmtLivreur = $this->model->getCon()->prepare("SELECT * FROM users WHERE code_user = ?");
@@ -173,23 +197,37 @@ class DistributionController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) { header('Location: ' . RACINE . 'distribution/list'); exit(); }
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
+                header('Location: ' . RACINE . 'distribution/list'); exit();
+            }
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'distribution/list'); exit();
         }
-        $souscriptions = $this->model->getCon()->query("
+
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
+        $stmtSous = $this->model->getCon()->prepare("
             SELECT s.code_souscription, c.nom_client, c.prenom_client, p.libelle_pack, s.statut_souscription 
             FROM souscriptions s 
             LEFT JOIN clients c ON c.code_client = s.client_code 
-            LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
-            LEFT JOIN packs p ON p.code_pack = ps.pack_code
-            WHERE s.statut_souscription = 'solde'
-        ")->fetchAll(PDO::FETCH_ASSOC);
+            LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription AND ps.etablissement_code = ? AND ps.zone_code = ? AND ps.annee_code = ?
+            LEFT JOIN packs p ON p.code_pack = ps.pack_code AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
+            WHERE s.statut_souscription = 'solde' AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
+        ");
+        $stmtSous->execute([
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode
+        ]);
+        $souscriptions = $stmtSous->fetchAll(PDO::FETCH_ASSOC);
+
         $agents = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user FROM users WHERE statut_user='actif'")->fetchAll(PDO::FETCH_ASSOC);
         $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -204,15 +242,27 @@ class DistributionController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
-        $souscriptions = $this->model->getCon()->query("
+        $this->requirePermission('GESTIONNAIRE_MANAGE_DISTRIBUTIONS');
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
+        $stmtSous = $this->model->getCon()->prepare("
             SELECT s.code_souscription, c.nom_client, c.prenom_client, p.libelle_pack, s.statut_souscription, s.statut_distribution
             FROM souscriptions s 
             LEFT JOIN clients c ON c.code_client = s.client_code 
-            LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
-            LEFT JOIN packs p ON p.code_pack = ps.pack_code 
+            LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription AND ps.etablissement_code = ? AND ps.zone_code = ? AND ps.annee_code = ?
+            LEFT JOIN packs p ON p.code_pack = ps.pack_code AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
             WHERE s.statut_souscription = 'solde' AND s.statut_distribution != 'valide'
-        ")->fetchAll(PDO::FETCH_ASSOC);
+              AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
+        ");
+        $stmtSous->execute([
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode
+        ]);
+        $souscriptions = $stmtSous->fetchAll(PDO::FETCH_ASSOC);
+
         $agents = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user FROM users WHERE statut_user='actif'")->fetchAll(PDO::FETCH_ASSOC);
         $zones = $this->model->getCon()->query("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone='actif'")->fetchAll(PDO::FETCH_ASSOC);
 

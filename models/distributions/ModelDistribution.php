@@ -24,9 +24,17 @@ class ModelDistribution extends BaseModel
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code
                 LEFT JOIN users u ON u.code_user = d.agent_livreur_code
                 LEFT JOIN zones z ON z.code_zone = d.zone_code
-                ORDER BY d.created_at_distribution DESC
+                WHERE 1=1
             ";
-            return $this->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $params = [];
+            $conds = [];
+            Context::applyTripleFilter('d', $conds, $params, false);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $sql .= " ORDER BY d.created_at_distribution DESC";
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelDistribution::getAllWithDetails error: " . $e->getMessage());
             return [];
@@ -37,6 +45,10 @@ class ModelDistribution extends BaseModel
     {
         try {
             $this->getCon()->beginTransaction();
+
+            $data['etablissement_code'] = $data['etablissement_code'] ?? Context::etablissement();
+            $data['zone_code'] = $data['zone_code'] ?? Context::zone();
+            $data['annee_code'] = $data['annee_code'] ?? Context::annee();
 
             $cols = $this->getCon()->query("DESCRIBE distributions")->fetchAll(PDO::FETCH_COLUMN);
             $filteredData = array_intersect_key($data, array_flip($cols));
@@ -73,9 +85,15 @@ class ModelDistribution extends BaseModel
     public function getBySouscription(string $souscriptionCode): ?array
     {
         try {
-            $sql = "SELECT * FROM distributions WHERE souscription_code = ? ORDER BY created_at_distribution DESC LIMIT 1";
+            $sql = "SELECT * FROM distributions WHERE souscription_code = ?";
+            $params = [$souscriptionCode];
+            $conds = [];
+            Context::applyTripleFilter('', $conds, $params, false);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+            $sql .= " ORDER BY created_at_distribution DESC LIMIT 1";
+
             $stmt = $this->getCon()->prepare($sql);
-            $stmt->execute([$souscriptionCode]);
+            $stmt->execute($params);
             return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         } catch (Exception $e) {
             error_log("ModelDistribution::getBySouscription error: " . $e->getMessage());

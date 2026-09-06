@@ -9,14 +9,35 @@ class CotisationController extends BaseController
 
     public function list()
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS']);
         $this->loadView('../views/cotisations/list.php');
     }
 
     public function apiList()
     {
-        $this->requireAuth();
-        $items = $this->model->getAllWithDetails();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS']);
+        
+        $sql = "
+            SELECT c.*, 
+                   cl.nom_client, cl.telephone_client,
+                   u.nom_user as nom_commercial, u.prenom_user as prenom_commercial
+            FROM cautisation_clients c
+            LEFT JOIN clients cl ON cl.code_client = c.client_code
+            LEFT JOIN users u ON u.code_user = c.commercial_code
+            WHERE 1=1
+        ";
+        $params = [];
+        $conds = [];
+        Context::applyTripleFilter('c', $conds, $params, true, false);
+        if (!empty($conds)) {
+            $sql .= " AND " . implode(' AND ', $conds);
+        }
+
+        $sql .= " ORDER BY c.date_cautisation DESC, c.id_cautisation_client DESC";
+
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $data = [];
 
         foreach ($items as $c) {
@@ -25,7 +46,7 @@ class CotisationController extends BaseController
             $data[] = array_merge($c, [
                 'id' => $id,
                 'editId' => $idCrypte,
-                'nom_client_complet' => trim(($c['nom_client'] ?? '') . ' ' . ($c['prenom_client'] ?? '')),
+                'nom_client_complet' => trim(($c['nom_client'] ?? '')),
                 'nom_commercial_complet' => trim(($c['nom_commercial'] ?? '') . ' ' . ($c['prenom_commercial'] ?? ''))
             ]);
         }
@@ -35,7 +56,7 @@ class CotisationController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -65,7 +86,7 @@ class CotisationController extends BaseController
 
         $userCode = Context::user() ?? '';
         $anneeCode = Context::annee();
-        $etabCode = '5454544456';
+        $etabCode = Context::etablissement();
         $codeCotisation = $this->validator->generateCode('cautisation_clients', 'code_cautisation_client', 'COT-', 8);
 
         $cotisJour = (float)($sous['montant_cotisation_journaliere'] ?: 1000);
@@ -83,6 +104,9 @@ class CotisationController extends BaseController
             move_uploaded_file($_FILES['photo_recu']['tmp_name'], $uploadDir . $filename);
         }
 
+        // RÈGLE STRICTE RBAC : Les cotisations saisies par un commercial restent 'en_attente' jusqu'à validation caisse
+        $statutInitial = Context::isCommercial() ? 'en_attente' : 'valide';
+
         $cotisationData = [
             'code_cautisation_client' => $codeCotisation,
             'souscription_code' => $data['souscription_code'],
@@ -91,20 +115,28 @@ class CotisationController extends BaseController
             'nombre_jour' => $nbJours,
             'mode_paiement' => $data['mode_paiement'] ?? 'espece',
             'date_cautisation' => $data['date_cautisation'] ?: date('Y-m-d'),
-            'commercial_code' => $data['commercial_code'] ?: $userCode,
+            'commercial_code' => $userCode,
             'reference_paiement' => $data['reference_paiement'] ?? '',
             'recu_numero' => $data['recu_numero'] ?? $codeCotisation,
             'photo_recu' => $filename,
-            'statut_cautisation' => 'valide',
+            'statut_cautisation_client' => $statutInitial,
             'annee_code' => $anneeCode,
             'etablissement_code' => $etabCode,
+            'zone_code' => Context::zone(),
             'user_code' => $userCode,
             'created_at_cautisation_client' => date('Y-m-d H:i:s'),
             'updated_at_cautisation_client' => date('Y-m-d H:i:s')
         ];
 
         if ($this->model->createCotisation($cotisationData)) {
-            $this->success('Cotisation enregistrée avec succès !', ['code' => $codeCotisation]);
+            if ($statutInitial === 'valide') {
+                $modelSouscription = new ModelSouscription();
+                $modelSouscription->updateTotals($data['souscription_code'], $montant, $nbJours);
+            }
+            $msg = Context::isCommercial() 
+                ? 'Cotisation enregistrée avec succès (En attente de validation de la caisse/comptabilité).' 
+                : 'Cotisation enregistrée et validée avec succès !';
+            $this->success($msg, ['code' => $codeCotisation]);
         } else {
             $this->error('Erreur lors de l\'enregistrement de la cotisation');
         }
@@ -113,7 +145,14 @@ class CotisationController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_EDIT_COTISATION');
+
+        // RÈGLE STRICTE RBAC : Un commercial ne peut PAS modifier les cotisations
+        if (Context::isCommercial()) {
+            $this->error('Action non autorisée. Les commerciaux ne peuvent pas modifier les cotisations.');
+            return;
+        }
+
         $id = (int)$this->post('id_cautisation_client');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $data = $_POST;
@@ -132,7 +171,13 @@ class CotisationController extends BaseController
     public function changer()
     {
         $this->requirePost(false);
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_EDIT_COTISATION');
+
+        if (Context::isCommercial()) {
+            $this->error('Action non autorisée. Les commerciaux ne peuvent pas changer le statut d\'une cotisation.');
+            return;
+        }
+
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
@@ -147,7 +192,7 @@ class CotisationController extends BaseController
 
     public function details($details)
     {
-        $this->requireAuth();
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS']);
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -156,15 +201,25 @@ class CotisationController extends BaseController
                 return;
             }
 
-            $stmtSous = $this->model->getCon()->prepare("
-                SELECT s.*, c.nom_client, c.prenom_client, p.libelle_pack 
+            if (Context::isCommercial() && ($item['commercial_code'] ?? '') !== Context::user() && ($item['user_code'] ?? '') !== Context::user()) {
+                $this->renderForbidden("Vous n'êtes pas autorisé à consulter cette cotisation.");
+                return;
+            }
+
+            $sqlSous = "
+                SELECT s.*, c.nom_client, p.libelle_pack 
                 FROM souscriptions s 
                 LEFT JOIN clients c ON c.code_client = s.client_code 
                 LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code 
                 WHERE s.code_souscription = ?
-            ");
-            $stmtSous->execute([$item['souscription_code']]);
+            ";
+            $pSous = [$item['souscription_code']];
+            $cSous = [];
+            Context::applyTripleFilter('s', $cSous, $pSous, false);
+            if (!empty($cSous)) $sqlSous .= " AND " . implode(' AND ', $cSous);
+            $stmtSous = $this->model->getCon()->prepare($sqlSous);
+            $stmtSous->execute($pSous);
             $souscription = $stmtSous->fetch(PDO::FETCH_ASSOC);
 
             $stmtCommercial = $this->model->getCon()->prepare("SELECT * FROM users WHERE code_user = ?");
@@ -186,7 +241,12 @@ class CotisationController extends BaseController
 
     public function edition($details)
     {
-        $this->requireAuth();
+        $this->requirePermission('FINANCE_EDIT_COTISATION');
+        if (Context::isCommercial()) {
+            header('Location: ' . RACINE . 'cotisation/list');
+            exit();
+        }
+
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
@@ -195,14 +255,21 @@ class CotisationController extends BaseController
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'cotisation/list'); exit();
         }
-        $souscriptions = $this->model->getCon()->query("
-            SELECT s.code_souscription, c.nom_client, c.prenom_client, p.libelle_pack 
+        $sqlSous = "
+            SELECT s.code_souscription, c.nom_client, p.libelle_pack 
             FROM souscriptions s 
             LEFT JOIN clients c ON c.code_client = s.client_code 
             LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
             LEFT JOIN packs p ON p.code_pack = ps.pack_code 
             WHERE s.statut_souscription IN ('valide', 'reconduite')
-        ")->fetchAll(PDO::FETCH_ASSOC);
+        ";
+        $pS = [];
+        $cS = [];
+        Context::applyTripleFilter('s', $cS, $pS, false);
+        if (!empty($cS)) $sqlSous .= " AND " . implode(' AND ', $cS);
+        $stmtS = $this->model->getCon()->prepare($sqlSous);
+        $stmtS->execute($pS);
+        $souscriptions = $stmtS->fetchAll(PDO::FETCH_ASSOC);
         $commerciaux = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user FROM users WHERE statut_user='actif'")->fetchAll(PDO::FETCH_ASSOC);
 
         $this->loadView('../views/cotisations/edit.php', [
@@ -215,15 +282,22 @@ class CotisationController extends BaseController
 
     public function formulaire()
     {
-        $this->requireAuth();
-        $souscriptions = $this->model->getCon()->query("
-            SELECT s.code_souscription, s.montant_cotisation_journaliere, s.montant_total_cotise, s.montant_total_prevu, s.nombre_jour_total, s.nombre_jour_cotise, c.nom_client, c.prenom_client, p.libelle_pack 
+        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
+        $sqlSous = "
+            SELECT s.code_souscription, s.montant_cotisation_journaliere, s.montant_total_cotise, s.montant_total_prevu, s.nombre_jour_total, s.nombre_jour_cotise, c.nom_client, p.libelle_pack 
             FROM souscriptions s 
             LEFT JOIN clients c ON c.code_client = s.client_code 
             LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
             LEFT JOIN packs p ON p.code_pack = ps.pack_code 
             WHERE s.statut_souscription IN ('valide', 'reconduite')
-        ")->fetchAll(PDO::FETCH_ASSOC);
+        ";
+        $pS = [];
+        $cS = [];
+        Context::applyTripleFilter('s', $cS, $pS, false);
+        if (!empty($cS)) $sqlSous .= " AND " . implode(' AND ', $cS);
+        $stmtS = $this->model->getCon()->prepare($sqlSous);
+        $stmtS->execute($pS);
+        $souscriptions = $stmtS->fetchAll(PDO::FETCH_ASSOC);
         $commerciaux = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user FROM users WHERE statut_user='actif'")->fetchAll(PDO::FETCH_ASSOC);
 
         $selectedSouscription = $_GET['souscription'] ?? '';

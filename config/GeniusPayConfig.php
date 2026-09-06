@@ -17,7 +17,7 @@ class GeniusPayConfig
             'api_secret' => $mode === 'sandbox'
                 ? (getenv('GENIUSPAY_API_SECRET_SANDBOX') ?: 'ss_sandbox_npYoZWl2BvIbwGpPBwAuZ9GW1TcDiQyDC0tTPHMgfZukbujY')
                 : (getenv('GENIUSPAY_API_SECRET_LIVE') ?: ''),
-            'webhook_url' => 'http://localhost/geicg/webhooks/geniuspay',
+            'webhook_url' => (defined('RACINE') ? RACINE : 'http://oliveservice.local/') . 'webhooks/geniuspay',
             'api_url' => 'https://pay.genius.ci/api/v1/merchant',
             'wallet_id' => '67d8e536-0afc-46df-b786-3f55d8980bc3', // API Disponible
             'commission_rate' => 0.00,
