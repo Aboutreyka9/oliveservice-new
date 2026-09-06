@@ -657,51 +657,76 @@ class UserController extends BaseController
                     $stmtPerms->execute($roleCodes);
                     $allPermissions = $stmtPerms->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
+                    // ─── VÉRIFICATION D'ACCÈS PRINCIPAL (MAIN_ACCESS) ────────────────────
+                    // L'utilisateur doit avoir cette permission pour accéder à l'application.
+                    // Si elle est absente ou inactive sur son rôle, connexion refusée.
+                    if (!in_array('MAIN_ACCESS', $allPermissions, true)) {
+                        $this->error("Votre compte ne dispose pas des droits d'accès à l'application. Veuillez contacter l'administrateur.");
+                        return;
+                    }
+
                     $sessionData = [
-                        'id_user' => $user['id_user'],
-                        'code_user' => $user['code_user'],
-                        'nom' => $user['nom_user'],
-                        'prenom' => $user['prenom_user'] ?? '',
-                        'email' => $user['email_user'] ?? '',
-                        'tel' => $user['telephone_user'] ?? '',
-                        'role_code' => $roleCode,
-                        'roles' => $roleCodes,
+                        'id_user'       => $user['id_user'],
+                        'code_user'     => $user['code_user'],
+                        'nom'           => $user['nom_user'],
+                        'prenom'        => $user['prenom_user'] ?? '',
+                        'email'         => $user['email_user'] ?? '',
+                        'tel'           => $user['telephone_user'] ?? '',
+                        'role_code'     => $roleCode,
+                        'roles'         => $roleCodes,
                         'roles_details' => $userRoles,
                         'code_commercial' => $user['code_user'],
-                        'permissions' => [
+                        'permissions'   => [
                             'create' => $createPerm,
-                            'edit' => $editPerm,
-                            'show' => $showPerm,
+                            'edit'   => $editPerm,
+                            'show'   => $showPerm,
                             'delete' => $deletePerm
                         ]
                     ];
 
+                    // ─── VALIDATION STRICTE DU CONTEXTE AVANT OUVERTURE DE SESSION ───────
+                    // 1. Établissement : doit être renseigné dans le profil utilisateur
+                    $etabCode = $user['etablissement_code'] ?? null;
+                    if (empty($etabCode)) {
+                        $this->error("Votre compte n'est associé à aucun établissement. Veuillez contacter l'administrateur.");
+                        return;
+                    }
+
+                    // 2. Zone : doit être renseignée dans le profil utilisateur
+                    $zoneCode = $user['zone_code'] ?? null;
+                    if (empty($zoneCode)) {
+                        $this->error("Votre compte n'est associé à aucune zone. Veuillez contacter l'administrateur.");
+                        return;
+                    }
+
+                    // 3. Année active : doit exister dans la table annees (statut = actif)
+                    $stmtAnnee = $this->model->getCon()->query("SELECT code_annee, libelle_annee FROM annees WHERE statut_annee = 'actif' ORDER BY id_annee DESC LIMIT 1");
+                    $activeAnnee = $stmtAnnee ? $stmtAnnee->fetch(PDO::FETCH_ASSOC) : null;
+                    if (empty($activeAnnee)) {
+                        $this->error("Aucune année scolaire active n'est configurée. Veuillez contacter l'administrateur.");
+                        return;
+                    }
+
+                    // ─── PEUPLEMENT DE SESSION ────────────────────────────────────────────
                     Validator::saveSesion(USERS_AUTH, $sessionData);
                     $_SESSION['permissions'] = $allPermissions;
-                    $_SESSION['roles'] = $roleCodes;
-                    $_SESSION['etablissement_active_code'] = $user['etablissement_code'] ?? '5454544456';
-                    $_SESSION['zone_active_code'] = $user['zone_code'] ?? null;
+                    $_SESSION['roles']       = $roleCodes;
 
-                    $etabCode = $_SESSION['etablissement_active_code'];
+                    // Établissement
+                    $_SESSION['etablissement_active_code'] = $etabCode;
                     $stmtEtab = $this->model->getCon()->prepare("SELECT libelle_etablissement FROM etablissements WHERE code_etablissement = ? LIMIT 1");
                     $stmtEtab->execute([$etabCode]);
-                    $_SESSION['etablissement_active_libelle'] = $stmtEtab->fetchColumn() ?: 'Établissement';
+                    $_SESSION['etablissement_active_libelle'] = $stmtEtab->fetchColumn() ?: $etabCode;
 
-                    $zoneCode = $_SESSION['zone_active_code'];
-                    if ($zoneCode) {
-                        $stmtZone = $this->model->getCon()->prepare("SELECT libelle_zone FROM zones WHERE code_zone = ? LIMIT 1");
-                        $stmtZone->execute([$zoneCode]);
-                        $_SESSION['zone_active_libelle'] = $stmtZone->fetchColumn() ?: null;
-                    } else {
-                        $_SESSION['zone_active_libelle'] = null;
-                    }
+                    // Zone
+                    $_SESSION['zone_active_code'] = $zoneCode;
+                    $stmtZone = $this->model->getCon()->prepare("SELECT libelle_zone FROM zones WHERE code_zone = ? LIMIT 1");
+                    $stmtZone->execute([$zoneCode]);
+                    $_SESSION['zone_active_libelle'] = $stmtZone->fetchColumn() ?: $zoneCode;
 
-                    $anneeCode = $_SESSION['annee_active_code'] ?? '';
-                    if ($anneeCode) {
-                        $stmtAnnee = $this->model->getCon()->prepare("SELECT libelle_annee FROM annees WHERE code_annee = ? LIMIT 1");
-                        $stmtAnnee->execute([$anneeCode]);
-                        $_SESSION['annee_active_libelle'] = $stmtAnnee->fetchColumn() ?: 'Année';
-                    }
+                    // Année active
+                    $_SESSION['annee_active_code']    = $activeAnnee['code_annee'];
+                    $_SESSION['annee_active_libelle'] = $activeAnnee['libelle_annee'];
 
                     $this->success('Connexion réussie ! Bienvenue sur Olive Service.');
                     return;
