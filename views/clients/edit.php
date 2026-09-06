@@ -51,6 +51,7 @@ $title = $isEdit ? 'Éditer le Profil Client' : 'Nouveau Client';
                 </label>
                 <input type="text" name="nom_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A; transition: all 0.2s ease;" value="<?= htmlspecialchars($item['nom_client'] ?? '') ?>" required placeholder="Ex: KOUASSI Jean">
               </div>
+              
 
               <div class="form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
@@ -67,22 +68,22 @@ $title = $isEdit ? 'Éditer le Profil Client' : 'Nouveau Client';
               <i data-lucide="map-pin" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Coordonnées & Localisation
             </h3>
             
-            <div class="row g-3">
-              <div class="col-md-4 form-group">
+           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+              <div class="form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Téléphone Principal <span style="color: #EF4444;">*</span>
                 </label>
                 <input type="text" name="telephone_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A; transition: all 0.2s ease;" value="<?= htmlspecialchars($item['telephone_client'] ?? '') ?>" required placeholder="Ex: 0701020304">
               </div>
 
-              <div class="col-md-4 form-group">
+              <div class="form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Adresse Email
                 </label>
                 <input type="email" name="email_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A; transition: all 0.2s ease;" value="<?= htmlspecialchars($item['email_client'] ?? '') ?>" placeholder="Ex: client@gmail.com">
               </div>
 
-              <div class="col-md-4 form-group">
+              <div class="form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Quartier / Repère de Résidence
                 </label>

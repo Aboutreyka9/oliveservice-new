@@ -58,14 +58,31 @@ class ModelHome extends BaseModel
                 }
             }
 
-            $userCodeFilter = Context::isCommercial() ? Context::user() : ($userCode ?? null);
-
             // ── 1. Clients ────────────────────────────────────────────────────
-            $sqlClients = "SELECT COUNT(*) FROM clients WHERE 1=1";
+            $sqlClients = "SELECT COUNT(*) FROM clients c WHERE 1=1";
             $pClients = [];
-            if (Context::etablissement()) { $sqlClients .= " AND etablissement_code = ?"; $pClients[] = Context::etablissement(); }
-            if (Context::zone())          { $sqlClients .= " AND zone_code = ?";          $pClients[] = Context::zone(); }
-            if ($userCodeFilter)          { $sqlClients .= " AND user_code = ?";          $pClients[] = $userCodeFilter; }
+
+            if (Context::etablissement()) {
+                $sqlClients .= " AND c.etablissement_code = ?";
+                $pClients[] = Context::etablissement();
+            }
+
+            if (Context::isCommercial()) {
+                $sqlClients .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.user_code = ? AND sub.etablissement_code = ? AND sub.annee_code = ?))";
+                $pClients[] = Context::user();
+                $pClients[] = Context::user();
+                $pClients[] = Context::etablissement();
+                $pClients[] = Context::annee();
+            } elseif (Context::isGestionnaire() && Context::zone()) {
+                $sqlClients .= " AND (c.zone_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.zone_code = ? AND sub.etablissement_code = ? AND sub.annee_code = ?))";
+                $pClients[] = Context::zone();
+                $pClients[] = Context::zone();
+                $pClients[] = Context::etablissement();
+                $pClients[] = Context::annee();
+            } elseif (!empty(Context::zone()) && !Context::isSuperAdmin() && !Context::isAdmin()) {
+                $sqlClients .= " AND c.zone_code = ?";
+                $pClients[] = Context::zone();
+            }
             $totalClients = $this->safeCount($db, $sqlClients, $pClients);
 
             // ── 2. Packs & Articles ───────────────────────────────────────────
@@ -97,9 +114,8 @@ class ModelHome extends BaseModel
             if (!empty($condsCotis)) $sqlCotis .= " AND " . implode(' AND ', $condsCotis);
             $totalCotisations = $this->safeSum($db, $sqlCotis, $pCotis);
 
-            // Table paiements : optionnelle (peut ne pas encore exister)
-            $totalPaiements = $this->safeSum($db, "SELECT COALESCE(SUM(montant_paiement), 0) FROM paiements WHERE statut_paiement = 'confirme'");
-            $caEncaisse = $totalCotisations + $totalPaiements;
+            $totalPaiements = 0.0;
+            $caEncaisse = $totalCotisations;
 
             // ── 5. Versements ─────────────────────────────────────────────────
             $sqlVersVal = "SELECT COALESCE(SUM(montant_versement), 0) FROM versements_commerciaux WHERE statut_versement = 'valide'";

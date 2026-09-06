@@ -454,6 +454,13 @@ class CautisationPaymentController extends BaseController
         $totalCotise = (float) ($totaux['total_cotise'] ?? 0);
         $nombreJoursPayes = (int) ($totaux['nombre_jours_payes'] ?? 0);
 
+        if ($totalCotise <= 0 && !empty($souscription['montant_total_cotise'])) {
+            $totalCotise = (float) $souscription['montant_total_cotise'];
+        }
+        if ($nombreJoursPayes <= 0 && !empty($souscription['nombre_jour_cotise'])) {
+            $nombreJoursPayes = (int) $souscription['nombre_jour_cotise'];
+        }
+
         $soldeRestant = max(0, $montantTotalPrevu - $totalCotise);
         $joursRestants = max(0, $nombreJourSession - $nombreJoursPayes);
         $progression = CautisationValidator::calculateProgressPercentage($totalCotise, $montantTotalPrevu);
@@ -505,13 +512,14 @@ class CautisationPaymentController extends BaseController
         $con = $this->model->getCon();
         $stmt = $con->prepare("
             SELECT 
-                COALESCE(SUM(montant_cautisation_client), 0) as total_cotise,
-                COALESCE(SUM(nombre_jour), 0) as nombre_jours_payes
+                COALESCE(SUM(CASE WHEN (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL) THEN montant_cautisation_client ELSE 0 END), 0) as total_cotise,
+                COALESCE(SUM(CASE WHEN (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL) THEN nombre_jour ELSE 0 END), 0) as nombre_jours_payes,
+                COALESCE(SUM(CASE WHEN statut_cautisation_client = 'valide' THEN montant_cautisation_client ELSE 0 END), 0) as total_valide,
+                COALESCE(SUM(CASE WHEN statut_cautisation_client = 'valide' THEN nombre_jour ELSE 0 END), 0) as nombre_jours_valides
             FROM cautisation_clients
-            WHERE souscription_code = ? AND statut_cautisation_client = 'valide'
-              AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+            WHERE souscription_code = ? AND (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL)
         ");
-        $stmt->execute([$codeSouscription, Context::etablissement(), Context::zone(), Context::annee()]);
+        $stmt->execute([$codeSouscription]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['total_cotise' => 0, 'nombre_jours_payes' => 0];
     }
 
