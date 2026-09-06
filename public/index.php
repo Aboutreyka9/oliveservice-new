@@ -151,6 +151,9 @@ $route->addRoute('/souscription/formulaire', ['SouscriptionController', 'formula
 $route->addRoute('/souscription/wizard', ['SouscriptionController', 'wizard']);
 $route->addRoute('/souscription/wizardData', ['SouscriptionController', 'wizardData']);
 $route->addRoute('/souscription/wizardSubmit', ['SouscriptionController', 'wizardSubmit']);
+$route->addRoute('/souscription/ressouscription', ['SouscriptionController', 'ressouscription']);
+$route->addRoute('/souscription/apiClientsSearch', ['SouscriptionController', 'apiClientsSearch']);
+$route->addRoute('/souscription/processRessouscription', ['SouscriptionController', 'processRessouscription']);
 
 $route->addRoute('/cotisation/list', ['CotisationController', 'list']);
 $route->addRoute('/cotisation/apiList', ['CotisationController', 'apiList']);

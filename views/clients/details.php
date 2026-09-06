@@ -74,6 +74,9 @@ $dernierVersement = !empty($cotisations) ? $cotisations[0] : null;
           <a href="<?= RACINE ?>client/edition/<?= $encryptedId ?>" class="btn" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #1E3A5F; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; text-decoration: none;">
             <i data-lucide="edit" style="width: 16px; height: 16px;"></i> Modifier le Profil
           </a>
+          <a href="<?= RACINE ?>souscription/ressouscription?client_code=<?= urlencode($item['code_client'] ?? '') ?>" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #FFFFFF; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; text-decoration: none; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
+            <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Ressouscription
+          </a>
           <a href="<?= RACINE ?>souscription/wizard" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 20px; text-decoration: none; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);">
             <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Nouvelle Souscription
           </a>
@@ -197,9 +200,7 @@ $dernierVersement = !empty($cotisations) ? $cotisations[0] : null;
               <i data-lucide="layers" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Souscriptions de Packs (<?= $nbSouscriptions ?>)
             </h3>
           </div>
-          <a href="<?= RACINE ?>souscription/wizard" class="btn btn-sm" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; font-weight: 700; border-radius: 8px; font-size: 12px; padding: 8px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-            <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Nouvelle Souscription
-          </a>
+         
         </div>
 
         <?php if (empty($souscriptions)): ?>
