@@ -266,10 +266,16 @@ class CautisationPaymentController extends BaseController
             return;
         }
 
-        $userCode = Context::user() ?? '';
+        $userCode = Context::user();
         $anneeCode = Context::annee();
         $etabCode = Context::etablissement();
-        $zoneCode = Context::zone() ?? ($souscription['zone_code'] ?? '');
+        $zoneCode = Context::zone() ?: ($souscription['zone_code'] ?? '');
+
+        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
+
         $codeCautisation = $this->validator->generateCode('cautisation_clients', 'code_cautisation_client', 'COT-', 8);
 
         $caisse = $this->getOpenCaisse($zoneCode, $etabCode);

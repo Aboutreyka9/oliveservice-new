@@ -88,9 +88,19 @@ abstract class BaseModel
     {
         try {
             if (in_array($this->table, Context::SCOPED_TABLES)) {
-                if (!isset($data['etablissement_code'])) $data['etablissement_code'] = Context::etablissement();
-                if (!isset($data['zone_code'])) $data['zone_code'] = Context::zone();
-                if (!isset($data['annee_code'])) $data['annee_code'] = Context::annee();
+                if (!isset($data['etablissement_code']) || $data['etablissement_code'] === '') {
+                    $data['etablissement_code'] = Context::etablissement();
+                }
+                if (!isset($data['zone_code']) || $data['zone_code'] === '') {
+                    $data['zone_code'] = Context::zone();
+                }
+                if (!isset($data['annee_code']) || $data['annee_code'] === '') {
+                    $data['annee_code'] = Context::annee();
+                }
+
+                if (empty($data['etablissement_code']) || empty($data['zone_code']) || empty($data['annee_code'])) {
+                    throw new Exception("Erreur d'insertion dans {$this->table} : L'établissement, la zone et l'année sont obligatoires et ne peuvent pas être null ou vides.");
+                }
             }
 
             $fields = array_keys($data);

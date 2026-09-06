@@ -47,6 +47,12 @@ class DistributionController extends BaseController
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
         $anneeCode = Context::annee();
+        $userCode = Context::user();
+
+        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
 
         $stmtSous = $this->model->getCon()->prepare("
             SELECT * FROM souscriptions 
@@ -65,7 +71,6 @@ class DistributionController extends BaseController
             return;
         }
 
-        $userCode = Context::user() ?? '';
         $codeDistribution = $this->validator->generateCode('distributions', 'code_distribution', 'DST-', 8);
 
         $filename = null;

@@ -67,10 +67,16 @@ class VersementController extends BaseController
         $data = $_POST;
         unset($data['csrf_token']);
 
-        $userCode = Context::user() ?? '';
+        $userCode = Context::user();
         $etabCode = Context::etablissement();
         $anneeCode = Context::annee();
-        $zoneCode = $data['zone_code'] ?? Context::zone();
+        $zoneCode = !empty($data['zone_code']) ? $data['zone_code'] : Context::zone();
+
+        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
+
         $codeVersement = $this->validator->generateCode('versements_commerciaux', 'code_versement_commercial', 'VRS-', 8);
 
         $commercialCode = !empty($data['commercial_code']) ? $data['commercial_code'] : $userCode;

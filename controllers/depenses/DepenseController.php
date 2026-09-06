@@ -112,10 +112,15 @@ class DepenseController extends BaseController
             return;
         }
 
-        $userCode = Context::user() ?? '';
+        $userCode = Context::user();
         $anneeCode = Context::annee();
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
+
+        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
 
         // Validation de la catégorie de dépense en fonction de l'établissement, la zone et le statut actif
         $sqlCheckTd = "SELECT id_type_depense FROM type_depenses WHERE code_type_depense = ? AND statut_typedepense = 'actif'";

@@ -228,6 +228,12 @@ class ModelSouscription extends BaseModel
             $anneeCode = $souscriptionData['annee_code'] ?? Context::annee();
             $etabCode = $souscriptionData['etablissement_code'] ?? Context::etablissement();
             $zoneCode = $souscriptionData['zone_code'] ?? Context::zone();
+            $userCode = $souscriptionData['user_code'] ?? Context::user();
+
+            if (empty($anneeCode) || empty($etabCode) || empty($zoneCode) || empty($userCode)) {
+                throw new Exception("Champs obligatoires manquants pour l'insertion de la souscription (zone, année, établissement ou utilisateur null).");
+            }
+
             $stmtPack = $this->getCon()->prepare("
                 INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription, user_code, zone_code)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -238,7 +244,7 @@ class ModelSouscription extends BaseModel
                 $anneeCode,
                 $etabCode,
                 date('Y-m-d H:i:s'),
-                $souscriptionData['user_code'] ?? '',
+                $userCode,
                 $zoneCode
             ]);
 
@@ -326,6 +332,12 @@ class ModelSouscription extends BaseModel
             $anneeCode = $souscriptionData['annee_code'] ?? Context::annee();
             $etabCode = $souscriptionData['etablissement_code'] ?? Context::etablissement();
             $zoneCode = $souscriptionData['zone_code'] ?? Context::zone();
+            $userCode = $souscriptionData['user_code'] ?? Context::user();
+
+            if (empty($anneeCode) || empty($etabCode) || empty($zoneCode) || empty($userCode)) {
+                throw new Exception("Champs obligatoires manquants pour l'insertion de la souscription (zone, année, établissement ou utilisateur null).");
+            }
+
             $stmtPack = $this->getCon()->prepare("
                 INSERT INTO pack_souscriptions (souscription_code, pack_code, annee_code, etablissement_code, created_at_pack_souscription, user_code, zone_code)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -338,7 +350,7 @@ class ModelSouscription extends BaseModel
                     $anneeCode,
                     $etabCode,
                     date('Y-m-d H:i:s'),
-                    $souscriptionData['user_code'] ?? '',
+                    $userCode,
                     $zoneCode
                 ]);
             }

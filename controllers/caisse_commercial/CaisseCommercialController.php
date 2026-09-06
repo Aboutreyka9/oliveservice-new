@@ -297,10 +297,16 @@ class CaisseCommercialController extends BaseController
     public function ouvrirMaCaisse()
     {
         $this->requirePost(false);
-        $this->requirePermission('COMMERCIAL_MANAGE_OWN_CAISSE');
-        $userCode = Context::user() ?? '';
+        $userCode = Context::user();
         $anneeCode = Context::annee();
         $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+
+        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
+
         $dateToday = date('Y-m-d');
         $fondInitial = (float)($this->post('fond_initial') ?? 0);
         $db = $this->model->getCon();

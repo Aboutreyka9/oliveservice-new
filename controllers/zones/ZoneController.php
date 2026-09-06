@@ -40,8 +40,13 @@ class ZoneController extends BaseController
             if (!$this->checkUnique('zones', 'libelle_zone', $data['libelle_zone'], 'Zone commerciale')) return;
         }
 
-        $userCode = Context::user() ?? '';
-        $etabCode = '5454544456';
+        $userCode = Context::user();
+        $etabCode = Context::etablissement() ?: '5454544456';
+
+        if (empty($userCode) || empty($etabCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté ou l'établissement est obligatoire et ne peut pas être null.");
+            return;
+        }
 
         if (empty($data['code_zone'])) {
             $data['code_zone'] = $this->validator->generateCode('zones', 'code_zone', 'ZON-', 8);

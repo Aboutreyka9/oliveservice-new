@@ -134,6 +134,12 @@ class SouscriptionController extends BaseController
         $etabCode = Context::etablissement();
         $anneeCode = Context::annee();
         $zoneCode = $data['zone_code'] ?? Context::zone();
+        $userCode = Context::user();
+
+        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
 
         $stmtPack = $this->model->getCon()->prepare("
             SELECT * FROM packs 
@@ -147,7 +153,6 @@ class SouscriptionController extends BaseController
             return;
         }
 
-        $userCode = Context::user() ?? '';
         $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
 
         $nbJours = (int)($data['nombre_jour_total'] ?: ($pack['nombre_jour_pack'] ?: 170));
@@ -504,6 +509,15 @@ class SouscriptionController extends BaseController
             $zoneCode = Context::zone();
         }
 
+        $userCode = Context::user();
+        $etabCode = Context::etablissement();
+        $anneeCode = Context::annee();
+
+        if (empty($userCode) || empty($zoneCode) || empty($etabCode) || empty($anneeCode)) {
+            $this->error("Erreur d'enregistrement : La zone, l'année d'exercice, l'utilisateur connecté et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
+
         $rawPacks = $data['packs'] ?? '[]';
         $packCodes = is_array($rawPacks) ? $rawPacks : json_decode($rawPacks, true);
 
@@ -570,8 +584,8 @@ class SouscriptionController extends BaseController
                 'profession_client' => $professionClient,
                 'statut_client' => 'actif',
                 'created_at_client' => date('Y-m-d H:i:s'),
-                'user_code' => Context::user() ?? '',
-                'etablissement_code' => Context::etablissement(),
+                'user_code' => $userCode,
+                'etablissement_code' => $etabCode,
                 'zone_code' => $zoneCode
             ];
             $modelClient = new ModelClient();
@@ -582,9 +596,6 @@ class SouscriptionController extends BaseController
         }
 
         // 2. CRÉATION DE LA SOUSCRIPTION
-        $userCode = Context::user() ?? '';
-        $etabCode = Context::etablissement();
-        $anneeCode = Context::annee();
         $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
 
         $inClause = implode(',', array_fill(0, count($packCodes), '?'));
@@ -612,7 +623,7 @@ class SouscriptionController extends BaseController
             'code_souscription' => $codeSouscription,
             'client_code' => $clientCode,
             'session_code' => $sessionCode,
-            'zone_code' => $zoneCode ?: (Context::zone() ?? ''),
+            'zone_code' => $zoneCode,
             'date_debut_souscription' => date('Y-m-d'),
             'montant_total_prevu' => $montantTotalPrevu,
             'montant_cotisation_journaliere' => $cotisJour,

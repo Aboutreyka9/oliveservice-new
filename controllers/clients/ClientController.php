@@ -14,7 +14,7 @@ class ClientController extends BaseController
         $userCode = Context::user();
         $etabCode = Context::etablissement();
 
-        $whereClause = "WHERE (c.etablissement_code = ? OR c.etablissement_code IS NULL)";
+        $whereClause = "WHERE c.etablissement_code = ?";
         $params = [$etabCode];
 
         if (Context::isCommercial()) {
@@ -128,7 +128,7 @@ class ClientController extends BaseController
                       AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)) as total_cotise
             FROM clients c
             LEFT JOIN zones z ON z.code_zone = c.zone_code
-            WHERE (c.etablissement_code = ? OR c.etablissement_code IS NULL)
+            WHERE c.etablissement_code = ?
         ";
         $params = [
             $etabCode, $zoneCode, $anneeCode,
@@ -266,13 +266,13 @@ class ClientController extends BaseController
             }
         }
 
-        $userCode = Context::user() ?? '';
+        $userCode = Context::user();
         $etabCode = Context::etablissement();
-        $zoneCode = Context::zone();
-        if (empty($zoneCode)) {
-            $stmtDefaultZone = $this->model->getCon()->query("SELECT code_zone FROM zones LIMIT 1");
-            $defaultZone = $stmtDefaultZone->fetch(PDO::FETCH_ASSOC);
-            $zoneCode = $defaultZone['code_zone'] ?? '6QIlVfXP0LiXE9tBzHownYLAAqDi2';
+        $zoneCode = !empty($data['zone_code']) ? $data['zone_code'] : Context::zone();
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
         }
 
         if (empty($data['code_client'])) {

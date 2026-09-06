@@ -71,10 +71,15 @@ class PackController extends BaseController
         $data = $_POST;
         unset($data['csrf_token']);
 
-        $userCode = Context::user() ?? '';
+        $userCode = Context::user();
         $anneeCode = Context::annee();
         $etabCode = Context::etablissement();
         $zoneCode = !empty($data['zone_code']) ? $data['zone_code'] : Context::zone();
+
+        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
 
         if (!empty($data['libelle_pack'])) {
             $conditions = [

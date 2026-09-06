@@ -60,6 +60,11 @@ class TypeDepenseController extends BaseController
         $zoneCode = Context::zone();
         $userCode = Context::user();
 
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
+            return;
+        }
+
         if (empty($data['code_type_depense'])) {
             $data['code_type_depense'] = $this->validator->generateCode('type_depenses', 'code_type_depense', 'TDP-', 6);
         }

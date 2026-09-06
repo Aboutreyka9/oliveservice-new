@@ -70,6 +70,11 @@ class ModelCotisation extends BaseModel
             $data['etablissement_code'] = $data['etablissement_code'] ?? Context::etablissement();
             $data['zone_code'] = $data['zone_code'] ?? Context::zone();
             $data['annee_code'] = $data['annee_code'] ?? Context::annee();
+            $data['user_code'] = $data['user_code'] ?? Context::user();
+
+            if (empty($data['etablissement_code']) || empty($data['zone_code']) || empty($data['annee_code']) || empty($data['user_code'])) {
+                throw new Exception("Champs obligatoires manquants pour l'insertion de la cotisation (zone, année, établissement ou utilisateur null).");
+            }
 
             $cols = $this->getCon()->query("DESCRIBE cautisation_clients")->fetchAll(PDO::FETCH_COLUMN);
             $filteredData = array_intersect_key($data, array_flip($cols));
