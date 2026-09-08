@@ -69,7 +69,7 @@ class ModelUser extends BaseModel
             $stmtDel->execute([$userCode]);
 
             if (empty($rolesData)) {
-                $rolesData = ['ROLE_SCOLARITE' => ['create' => 1, 'edit' => 1, 'show' => 1, 'delete' => 0]];
+                $rolesData = ['ROLE_COMMERCIAL' => ['create' => 1, 'edit' => 1, 'show' => 1, 'delete' => 0]];
             }
 
             $maxId = (int)($pdo->query("SELECT MAX(id) FROM user_roles")->fetchColumn() ?: 0);

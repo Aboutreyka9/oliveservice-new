@@ -69,13 +69,13 @@ class UserController extends BaseController
         $email = trim($_POST['email'] ?? '');
         
         // Multi-rôles : supporte tableau roles[] ou role_code simple
-        $postedRoles = $_POST['roles'] ?? ($_POST['role_code'] ?? ['ROLE_SCOLARITE']);
+        $postedRoles = $_POST['roles'] ?? ($_POST['role_code'] ?? ['ROLE_COMMERCIAL']);
         if (!is_array($postedRoles)) {
             $postedRoles = [$postedRoles];
         }
         $postedRoles = array_values(array_unique(array_filter(array_map('trim', $postedRoles))));
         if (empty($postedRoles)) {
-            $postedRoles = ['ROLE_SCOLARITE'];
+            $postedRoles = ['ROLE_COMMERCIAL'];
         }
 
         $fonctionCode = $_POST['fonction_code'] ?? null;
@@ -707,7 +707,7 @@ class UserController extends BaseController
                     $stmtAnnee = $this->model->getCon()->query("SELECT code_annee, libelle_annee FROM annees WHERE statut_annee = 'actif' ORDER BY id_annee DESC LIMIT 1");
                     $activeAnnee = $stmtAnnee ? $stmtAnnee->fetch(PDO::FETCH_ASSOC) : null;
                     if (empty($activeAnnee)) {
-                        $this->error("Aucune année scolaire active n'est configurée. Veuillez contacter l'administrateur.");
+                        $this->error("Aucune année d'activité n'est configurée. Veuillez contacter l'administrateur.");
                         return;
                     }
 

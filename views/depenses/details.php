@@ -839,7 +839,7 @@ $isPdf = ($pjExt === 'pdf');
             <img src="<?= htmlspecialchars($logoEtabSrc) ?>" alt="Logo" class="print-etab-logo">
           <?php endif; ?>
           <div class="print-etab-info">
-            <h2><?= htmlspecialchars($item['libelle_etablissement'] ?? 'ÉTABLISSEMENT SCOLAIRE') ?></h2>
+            <h2><?= htmlspecialchars($item['libelle_etablissement'] ?? 'ÉTABLISSEMENT OLIVE SERVICE') ?></h2>
             <?php if (!empty($item['adresse_etablissement'])): ?>
               <p><i data-lucide="map-pin" style="width:11px;height:11px;"></i> <?= htmlspecialchars($item['adresse_etablissement']) ?></p>
             <?php endif; ?>
