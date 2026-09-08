@@ -39,6 +39,7 @@
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Année Académique</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Date Début</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Date Fin</th>
+                <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Pénalité Rec. (%)</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; text-align: center;">Statut</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; text-align: right;">Actions</th>
               </tr>
@@ -74,6 +75,10 @@ $(document).ready(function() {
       { data: 'date_fin_annee', render: function(d) {
         if (!d) return '-';
         return '<span style="font-size:12px; color:#475569; font-weight:600;">' + d + '</span>';
+      }},
+      { data: 'penalite_annee', render: function(d) {
+        var val = parseFloat(d || 0);
+        return '<span style="font-size:12px; font-weight:700; color:#D97706; background:#FEF3C7; padding:2px 8px; border-radius:6px; border:1px solid #FDE68A;">' + val + ' %</span>';
       }},
       { data: 'statut_annee', width: '90px', className: 'text-center', render: function(d, type, row) {
         var isActif = (d === 'actif');

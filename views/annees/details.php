@@ -72,6 +72,7 @@ $semestres = isset($semestres) ? $semestres : [];
         <div style="display: flex; gap: 24px; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid #F1F5F9; font-size: 13px;">
           <div><strong style="color: #64748B;">Date de Début :</strong> <span style="font-weight: 700; color: #0F172A;"><?= !empty($item['date_debut_annee']) ? date('d/m/Y', strtotime($item['date_debut_annee'])) : 'Non définie' ?></span></div>
           <div><strong style="color: #64748B;">Date de Fin :</strong> <span style="font-weight: 700; color: #0F172A;"><?= !empty($item['date_fin_annee']) ? date('d/m/Y', strtotime($item['date_fin_annee'])) : 'Non définie' ?></span></div>
+          <div><strong style="color: #64748B;">Pénalité Reconduction :</strong> <span style="font-weight: 800; color: #D97706; background:#FEF3C7; padding:2px 8px; border-radius:6px; border:1px solid #FDE68A;"><?= (float)($item['penalite_annee'] ?? 0) ?> %</span></div>
           <div><strong style="color: #64748B;">Statut :</strong> 
             <?php if (($item['statut_annee'] ?? '') === 'actif'): ?>
               <span style="display: inline-flex; align-items: center; gap: 4px; background:#ECFDF5; color:#059669; padding:3px 10px; border-radius:20px; font-weight:800; font-size:12px; border:1px solid #A7F3D0;">Actif</span>

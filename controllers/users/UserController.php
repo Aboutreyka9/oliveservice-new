@@ -218,6 +218,19 @@ class UserController extends BaseController
         }
         $activationToken = bin2hex(random_bytes(32));
 
+        $hasJoker = Context::hasJoker();
+        $userZone = Context::zone();
+
+        if (!$hasJoker) {
+            $zoneCodeTarget = $userZone;
+            if (empty($zoneCodeTarget)) {
+                $this->error("Erreur d'insertion : La zone active est obligatoire et ne peut pas être nulle.");
+                return;
+            }
+        } else {
+            $zoneCodeTarget = !empty($_POST['zone_code']) ? trim($_POST['zone_code']) : (!empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null);
+        }
+
         $data = [
             'id_user' => $id_user,
             'code_user' => $code_user,
@@ -229,7 +242,7 @@ class UserController extends BaseController
             'password_user' => $password,
             'token_user' => $activationToken,
             'fonction_code' => $fonctionCode,
-            'zone_code' => !empty($_POST['zone_code']) ? trim($_POST['zone_code']) : (!empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null),
+            'zone_code' => $zoneCodeTarget,
             'etablissement_code' => $etabCode,
             'statut_user' => 'inactif',
             'created_at_user' => date('Y-m-d H:i:s')
@@ -249,7 +262,7 @@ class UserController extends BaseController
                 }
             }
 
-            $this->model->syncUserRoles($code_user, $rolesData);
+            $this->model->syncUserRoles($code_user, $rolesData, [], $zoneCodeTarget);
 
             // Construction de l'URL d'activation unique
             $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
@@ -353,6 +366,15 @@ class UserController extends BaseController
             }
         }
 
+        $hasJoker = Context::hasJoker();
+        $userZone = Context::zone();
+
+        if (!$hasJoker) {
+            $zoneCodeTarget = !empty($user['zone_code']) ? $user['zone_code'] : $userZone;
+        } else {
+            $zoneCodeTarget = !empty($_POST['zone_code']) ? trim($_POST['zone_code']) : (!empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null);
+        }
+
         $data = [
             'id_user' => $id,
             'nom_user' => $nom,
@@ -361,7 +383,7 @@ class UserController extends BaseController
             'email_user' => $email ?: null,
             'sexe_user' => $_POST['sexe_user'] ?? 'M',
             'fonction_code' => $fonctionCode,
-            'zone_code' => !empty($_POST['zone_code']) ? trim($_POST['zone_code']) : (!empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null),
+            'zone_code' => $zoneCodeTarget,
             'statut_user' => $statut,
             'updated_at_user' => date('Y-m-d H:i:s')
         ];
@@ -385,7 +407,7 @@ class UserController extends BaseController
                     }
                 }
 
-                $this->model->syncUserRoles($user['code_user'], $rolesData);
+                $this->model->syncUserRoles($user['code_user'], $rolesData, [], $zoneCodeTarget);
             }
             $this->success('Utilisateur et permissions par rôle mis à jour avec succès !');
         } else {
@@ -461,9 +483,18 @@ class UserController extends BaseController
     public function formulaire()
     {
         $this->requirePermission('ADMIN_MANAGE_USERS');
+        $hasJoker = Context::hasJoker();
+        $userZoneCode = Context::zone();
         $roles = (new ModelRole())->getAll();
         $fonctions = (new ModelFonction())->getAll();
-        $zones = $this->model->getCon()->query("SELECT * FROM zones WHERE statut_zone = 'actif' ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
+        if ($hasJoker) {
+            $zones = $this->model->getCon()->query("SELECT * FROM zones WHERE statut_zone = 'actif' ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $etabCode = Context::etablissement();
+            $stmtZ = $this->model->getCon()->prepare("SELECT * FROM zones WHERE etablissement_code = ? AND statut_zone = 'actif' ORDER BY libelle_zone ASC");
+            $stmtZ->execute([$etabCode]);
+            $zones = $stmtZ->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
         $this->loadView('../views/users/edit.php', [
             'user' => [],
             'role' => [],
@@ -471,13 +502,17 @@ class UserController extends BaseController
             'userRoleCodes' => [],
             'roles' => $roles,
             'fonctions' => $fonctions,
-            'zones' => $zones
+            'zones' => $zones,
+            'hasJoker' => $hasJoker,
+            'userZoneCode' => $userZoneCode
         ]);
     }
 
     public function edition($details)
     {
         $this->requirePermission('ADMIN_MANAGE_USERS');
+        $hasJoker = Context::hasJoker();
+        $userZoneCode = Context::zone();
         try {
             $decryptedId = $this->validator->decrypter($details);
             $userProfile = $this->model->getById($decryptedId);
@@ -491,7 +526,14 @@ class UserController extends BaseController
             $primaryRole = !empty($userRoles) ? $userRoles[0] : null;
             $roles = (new ModelRole())->getAll();
             $fonctions = (new ModelFonction())->getAll();
-            $zones = $this->model->getCon()->query("SELECT * FROM zones WHERE statut_zone = 'actif' ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
+            if ($hasJoker) {
+                $zones = $this->model->getCon()->query("SELECT * FROM zones WHERE statut_zone = 'actif' ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $etabCode = Context::etablissement();
+                $stmtZ = $this->model->getCon()->prepare("SELECT * FROM zones WHERE etablissement_code = ? AND statut_zone = 'actif' ORDER BY libelle_zone ASC");
+                $stmtZ->execute([$etabCode]);
+                $zones = $stmtZ->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'user/list');
             exit();
@@ -504,7 +546,9 @@ class UserController extends BaseController
             'userRoleCodes' => $userRoleCodes,
             'roles' => $roles,
             'fonctions' => $fonctions,
-            'zones' => $zones
+            'zones' => $zones,
+            'hasJoker' => $hasJoker,
+            'userZoneCode' => $userZoneCode
         ]);
     }
 

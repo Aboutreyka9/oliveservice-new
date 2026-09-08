@@ -4,6 +4,8 @@ $user = isset($user) ? $user : [];
 $role = isset($role) ? $role : [];
 $roles = isset($roles) ? $roles : (new ModelRole())->getAll();
 $fonctions = isset($fonctions) ? $fonctions : (new ModelFonction())->getAll();
+$hasJoker = isset($hasJoker) ? $hasJoker : Context::hasJoker();
+$userZoneCode = isset($userZoneCode) ? $userZoneCode : Context::zone();
 $isEdit = !empty($user['id_user']);
 $title = $isEdit ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur';
 ?>
@@ -82,15 +84,44 @@ $title = $isEdit ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur';
               </div>
 
               <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Zone d'Affectation <span style="color: #64748B; font-weight: 500; font-size: 12px;">(Optionnel)</span></label>
-                <select class="form-control select2" id="sel_zone_code" name="zone_code" style="width: 100%;">
-                  <option value="">-- Aucune zone (Global) --</option>
-                  <?php if (!empty($zones)): foreach($zones as $z): ?>
-                    <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ((($user['zone_code'] ?? $user['zone_user'] ?? '') == $z['code_zone']) ? 'selected' : '') ?>>
-                      <?= htmlspecialchars($z['libelle_zone']) ?>
+                <label style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                  <span>Zone d'Affectation <?= empty($hasJoker) ? '<span style="color: #EF4444;">*</span>' : '<span style="color: #64748B; font-weight: 500; font-size: 12px;">(Optionnel)</span>' ?></span>
+                  <?php if (empty($hasJoker)): ?>
+                    <span style="font-size: 11px; color: #B45309; background: #FEF3C7; border: 1px solid #FDE68A; padding: 2px 8px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                      <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Zone assignée (Lecture seule)
+                    </span>
+                  <?php endif; ?>
+                </label>
+
+                <?php if (empty($hasJoker)): ?>
+                  <?php 
+                    $lockedZoneCode = !empty($user['zone_code']) ? $user['zone_code'] : ($userZoneCode ?: Context::zone());
+                    $lockedZoneLibelle = 'Zone assignée';
+                    if (!empty($zones)) {
+                      foreach ($zones as $z) {
+                        if ($z['code_zone'] === $lockedZoneCode) {
+                          $lockedZoneLibelle = $z['libelle_zone'];
+                          break;
+                        }
+                      }
+                    }
+                  ?>
+                  <select class="form-control" id="sel_zone_code" disabled readonly aria-readonly="true" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #1E3A5F; background: #F8FAFC; border-radius: 10px; border: 1px solid #CBD5E1; cursor: not-allowed; pointer-events: none;">
+                    <option value="<?= htmlspecialchars($lockedZoneCode) ?>" selected>
+                      <?= htmlspecialchars($lockedZoneLibelle) ?>
                     </option>
-                  <?php endforeach; endif; ?>
-                </select>
+                  </select>
+                  <input type="hidden" name="zone_code" value="<?= htmlspecialchars($lockedZoneCode) ?>">
+                <?php else: ?>
+                  <select class="form-control select2" id="sel_zone_code" name="zone_code" style="width: 100%;">
+                    <option value="">-- Aucune zone (Global) --</option>
+                    <?php if (!empty($zones)): foreach($zones as $z): ?>
+                      <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ((($user['zone_code'] ?? $user['zone_user'] ?? '') == $z['code_zone']) ? 'selected' : '') ?>>
+                        <?= htmlspecialchars($z['libelle_zone']) ?>
+                      </option>
+                    <?php endforeach; endif; ?>
+                  </select>
+                <?php endif; ?>
               </div>
 
               <?php if (!$isEdit): ?>
@@ -294,7 +325,7 @@ $(document).ready(function() {
   if (window.lucide) lucide.createIcons();
   if ($.fn.select2) {
     $('#sel_fonction_user').select2({ placeholder: "-- Sélectionner un poste --", allowClear: true, width: '100%' });
-    $('#sel_zone_code, #sel_zone_user').select2({ placeholder: "-- Aucune zone (Global) --", allowClear: true, width: '100%' });
+    $('#sel_zone_code:not([disabled]), #sel_zone_user:not([disabled])').select2({ placeholder: "-- Aucune zone (Global) --", allowClear: true, width: '100%' });
     $('#sel_roles_user').select2({ placeholder: "Sélectionnez un ou plusieurs rôles", closeOnSelect: false, width: '100%' });
     $('#sel_roles_user').on('change', renderRolePermissions);
   }
