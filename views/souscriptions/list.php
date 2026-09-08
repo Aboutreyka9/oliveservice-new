@@ -15,6 +15,9 @@
           <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Contrats d'abonnement packs et suivi des cotisations terrain</p>
         </div>
         <div style="display: flex; gap: 10px;">
+          <a href="<?= RACINE ?>souscription/ressouscription" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #FFFFFF; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; text-decoration: none; box-shadow: 0 2px 6px rgba(5,150,105,0.25);">
+            <i data-lucide="refresh-cw" style="width: 18px; height: 18px;"></i> Ressouscription
+          </a>
           <a href="<?= RACINE ?>souscription/wizard" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; box-shadow: 0 2px 6px rgba(30,58,95,0.25);">
             <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Nouvelle Souscription
           </a>

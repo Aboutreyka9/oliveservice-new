@@ -107,6 +107,24 @@ class VersementController extends BaseController
         $filteredData = array_intersect_key($versementData, array_flip($cols));
 
         if ($this->model->create($filteredData)) {
+            // Notification pour le service Finance
+            try {
+                $userModel = new ModelUser();
+                $commercial = $userModel->getByCode($commercialCode);
+                $commNom = $commercial ? trim(($commercial['nom_user'] ?? '') . ' ' . ($commercial['prenom_user'] ?? '')) : 'Un agent commercial';
+
+                NotificationService::notifyVersementSoumis([
+                    'reference_code'     => $codeVersement,
+                    'montant'            => (float)$versementData['montant_versement'],
+                    'commercial_nom'     => $commNom,
+                    'etablissement_code' => $etabCode,
+                    'zone_code'          => $zoneCode,
+                    'annee_code'         => $anneeCode
+                ]);
+            } catch (\Throwable $ne) {
+                error_log('[VersementController] Notification error on submit: ' . $ne->getMessage());
+            }
+
             $this->success('Versement de caisse transmis avec succès (En attente de validation finance) !', ['code' => $codeVersement]);
         } else {
             $this->error('Erreur lors de l\'enregistrement du versement');
@@ -190,6 +208,22 @@ class VersementController extends BaseController
                     Context::annee()
                 ]);
             }
+
+            // Notification pour le commercial ayant émis le versement
+            try {
+                NotificationService::notifyVersementValide([
+                    'reference_code'     => $versement['code_versement'] ?? ('VER-' . $id),
+                    'commercial_code'    => $versement['commercial_code'],
+                    'montant'            => (float)($versement['montant_versement'] ?? 0),
+                    'statut'             => $statut,
+                    'etablissement_code' => Context::etablissement(),
+                    'zone_code'          => Context::zone(),
+                    'annee_code'         => Context::annee()
+                ]);
+            } catch (\Throwable $ne) {
+                error_log('[VersementController] Notification error on validate: ' . $ne->getMessage());
+            }
+
             $msg = ($statut === 'valide') 
                 ? 'Versement validé et cotisations du commercial actualisées avec succès !' 
                 : 'Versement rejeté / annulé avec succès !';

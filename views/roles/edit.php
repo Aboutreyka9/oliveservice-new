@@ -48,12 +48,12 @@ $title = $isEdit ? 'Configuration du Rôle : ' . htmlspecialchars($role['libelle
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; width: 100%;">
             <div class="form-group" style="width: 100%; box-sizing: border-box;">
               <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Libellé du Rôle <span style="color: #EF4444;">*</span></label>
-              <input type="text" class="form-control" name="libelle_role" value="<?= htmlspecialchars($role['libelle_role'] ?? '') ?>" placeholder="Ex: Responsable Scolarité" required style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;">
+              <input type="text" class="form-control" name="libelle_role" value="<?= htmlspecialchars($role['libelle_role'] ?? '') ?>" placeholder="Ex: Commercial Terrain" required style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;">
             </div>
 
             <div class="form-group" style="width: 100%; box-sizing: border-box;">
               <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Code Système</label>
-              <input type="text" class="form-control" name="code_role" value="<?= htmlspecialchars($role['code_role'] ?? '') ?>" placeholder="Ex: ROLE_SCOLARITE" <?= $isEdit ? 'readonly' : '' ?> style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 800; color: #1E3A5F; border-radius: 10px; border: 1px solid #CBD5E1; background: <?= $isEdit ? '#F1F5F9' : '#F8FAFC' ?>; outline: none; font-family: monospace;">
+              <input type="text" class="form-control" name="code_role" value="<?= htmlspecialchars($role['code_role'] ?? '') ?>" placeholder="Ex: ROLE_COMMERCIAL" <?= $isEdit ? 'readonly' : '' ?> style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 800; color: #1E3A5F; border-radius: 10px; border: 1px solid #CBD5E1; background: <?= $isEdit ? '#F1F5F9' : '#F8FAFC' ?>; outline: none; font-family: monospace;">
             </div>
 
             <div class="form-group" style="width: 100%; box-sizing: border-box;">

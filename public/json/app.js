@@ -785,4 +785,59 @@ if (modalSave) {
         e.preventDefault();
         $(this).blur();
     });
+
+    window.quickMarkNotifRead = function(e, notifId, url) {
+        const base = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
+        const card = document.querySelector(`.notification-card-item[data-notif-id="${notifId}"]`);
+        if (card) {
+            card.style.background = '#FFFFFF';
+            card.style.borderLeft = 'none';
+            const dot = card.querySelector('.unread-dot');
+            if (dot) dot.remove();
+        }
+        const badge = document.getElementById('navNotifBadge');
+        if (badge) {
+            let count = parseInt(badge.textContent) || 0;
+            if (count > 1) {
+                badge.textContent = count - 1;
+            } else {
+                badge.remove();
+                const tag = document.getElementById('navUnreadTag');
+                if (tag) tag.remove();
+                const markAllBtn = document.getElementById('navMarkAllBtn');
+                if (markAllBtn) markAllBtn.remove();
+            }
+        }
+        $.post(base + 'notification/marquerLu', { id: notifId }, function() {
+            if (url && url !== 'javascript:void(0)' && !url.startsWith('#')) {
+                window.location.href = url;
+            }
+        });
+    };
+
+    window.quickMarkAllNotifsRead = function(e) {
+        if (e) e.stopPropagation();
+        const base = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
+        $.post(base + 'notification/marquerToutLu', {}, function(rep) {
+            if (rep.status) {
+                const badge = document.getElementById('navNotifBadge');
+                if (badge) badge.remove();
+                const tag = document.getElementById('navUnreadTag');
+                if (tag) tag.remove();
+                const markAllBtn = document.getElementById('navMarkAllBtn');
+                if (markAllBtn) markAllBtn.remove();
+
+                document.querySelectorAll('.notification-card-item').forEach(function(el) {
+                    el.style.background = '#FFFFFF';
+                    el.style.borderLeft = 'none';
+                    const dot = el.querySelector('.unread-dot');
+                    if (dot) dot.remove();
+                });
+
+                if (typeof showToast === 'function') {
+                    showToast('Toutes les notifications sont lues', 'success');
+                }
+            }
+        }, 'json');
+    };
 });

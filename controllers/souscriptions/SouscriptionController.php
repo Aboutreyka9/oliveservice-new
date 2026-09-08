@@ -658,4 +658,205 @@ class SouscriptionController extends BaseController
             $this->error('Erreur lors de la validation de la souscription.');
         }
     }
+
+    /**
+     * Affiche l'interface de ressouscription pour un client existant
+     */
+    public function ressouscription()
+    {
+        $this->requirePermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_ADD_SOUSCRIPTION']);
+        $this->loadView('../views/souscriptions/ressouscription.php');
+    }
+
+    /**
+     * API: Recherche prédictive AJAX de clients existants pour Select2
+     */
+    public function apiClientsSearch()
+    {
+        $this->requirePermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_ADD_SOUSCRIPTION', 'COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
+        $q = trim($this->get('q') ?? ($this->post('q') ?? ''));
+
+        if (empty($q)) {
+            $this->json(['results' => []]);
+            return;
+        }
+
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $userCode = Context::user();
+
+        $sql = "
+            SELECT c.id_client, c.code_client, c.nom_client, c.telephone_client, c.sexe_client, 
+                   c.lieu_residence_client, c.email_client, c.profession_client, c.numero_cni, c.statut_client,
+                   (SELECT COUNT(*) FROM souscriptions sub WHERE sub.client_code = c.code_client) as total_souscriptions
+            FROM clients c
+            WHERE c.etablissement_code = ?
+              AND (
+                c.nom_client LIKE ? OR 
+                c.telephone_client LIKE ? OR 
+                c.code_client LIKE ? OR 
+                c.numero_cni LIKE ?
+              )
+        ";
+        $params = [$etabCode, "%$q%", "%$q%", "%$q%", "%$q%"];
+
+        if (Context::isCommercial()) {
+            $sql .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.user_code = ?))";
+            $params[] = $userCode;
+            $params[] = $userCode;
+        } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
+            $sql .= " AND (c.zone_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.zone_code = ?))";
+            $params[] = $zoneCode;
+            $params[] = $zoneCode;
+        }
+
+        $sql .= " ORDER BY c.created_at_client DESC LIMIT 25";
+
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $clients = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $results = [];
+        foreach ($clients as $c) {
+            $nom = htmlspecialchars($c['nom_client'] ?? 'Client');
+            $tel = htmlspecialchars($c['telephone_client'] ?? '');
+            $code = htmlspecialchars($c['code_client'] ?? '');
+            $cni = !empty($c['numero_cni']) ? " | CNI: " . htmlspecialchars($c['numero_cni']) : "";
+            $nbSous = (int)$c['total_souscriptions'];
+            $badgeSous = $nbSous > 0 ? " ($nbSous souscription" . ($nbSous > 1 ? "s" : "") . ")" : " (Nouveau)";
+
+            $results[] = [
+                'id' => $c['code_client'],
+                'text' => "{$nom} - {$tel} [{$code}]{$cni}{$badgeSous}",
+                'client' => $c
+            ];
+        }
+
+        $this->json(['results' => $results]);
+    }
+
+    /**
+     * Traite la soumission de ressouscription pour un client existant sans contrainte
+     */
+    public function processRessouscription()
+    {
+        $this->requirePost(false);
+        $this->requirePermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_ADD_SOUSCRIPTION']);
+
+        $data = $_POST;
+        unset($data['csrf_token']);
+
+        $clientCode = trim($data['client_code'] ?? '');
+        $sessionCode = trim($data['session_code'] ?? '');
+        $userCode = Context::user();
+        $etabCode = Context::etablissement();
+        $anneeCode = Context::annee();
+        $zoneCode = $data['zone_code'] ?? Context::zone();
+
+        if (empty($clientCode)) {
+            $this->error('Veuillez sélectionner un client existant.');
+            return;
+        }
+
+        if (empty($sessionCode)) {
+            $this->error('Veuillez sélectionner une session d\'activité.');
+            return;
+        }
+
+        $rawPacks = $data['packs'] ?? '[]';
+        $packCodes = is_array($rawPacks) ? $rawPacks : json_decode($rawPacks, true);
+
+        if (empty($packCodes) || !is_array($packCodes)) {
+            $this->error('Veuillez sélectionner au moins un pack.');
+            return;
+        }
+
+        $db = $this->model->getCon();
+
+        // 1. Vérifier l'existence du client
+        $stmtC = $db->prepare("SELECT * FROM clients WHERE code_client = ? AND etablissement_code = ? LIMIT 1");
+        $stmtC->execute([$clientCode, $etabCode]);
+        $clientExist = $stmtC->fetch(PDO::FETCH_ASSOC);
+
+        if (!$clientExist) {
+            $this->error('Client introuvable ou non autorisé.');
+            return;
+        }
+
+        // 2. Déterminer la zone de la session
+        if (!empty($sessionCode)) {
+            $stmtSessZ = $db->prepare("SELECT zone_code FROM sessions WHERE code_session = ? LIMIT 1");
+            $stmtSessZ->execute([$sessionCode]);
+            $sessZ = $stmtSessZ->fetchColumn();
+            if (!empty($sessZ)) {
+                $zoneCode = $sessZ;
+            }
+        }
+        if (empty($zoneCode)) {
+            $zoneCode = Context::zone();
+        }
+
+        if (empty($userCode) || empty($zoneCode) || empty($etabCode) || empty($anneeCode)) {
+            $this->error("Erreur d'enregistrement : La zone, l'année d'exercice, l'utilisateur connecté et l'établissement sont obligatoires.");
+            return;
+        }
+
+        // 3. Calculer le prix total par jour des packs sélectionnés
+        $inClause = implode(',', array_fill(0, count($packCodes), '?'));
+        $stmtP = $db->prepare("
+            SELECT SUM(prix_cotisation_pack) as total_prix 
+            FROM packs 
+            WHERE code_pack IN ($inClause) AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtP->execute(array_merge($packCodes, [$etabCode, $zoneCode, $anneeCode]));
+        $resP = $stmtP->fetch(PDO::FETCH_ASSOC);
+        $cotisJour = (float)($resP['total_prix'] ?? 0);
+
+        // 4. Obtenir la durée en jours de la session
+        $stmtS = $db->prepare("
+            SELECT nombre_jour_session 
+            FROM sessions 
+            WHERE code_session = ? AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+        ");
+        $stmtS->execute([$sessionCode, $etabCode, $zoneCode, $anneeCode]);
+        $resS = $stmtS->fetch(PDO::FETCH_ASSOC);
+        $nbJours = (int)($resS['nombre_jour_session'] ?? 0);
+
+        if ($nbJours <= 0) {
+            $this->error("La session sélectionnée est invalide ou son nombre de jours n'est pas configuré.");
+            return;
+        }
+
+        $montantTotalPrevu = $cotisJour * $nbJours;
+        $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
+
+        $souscriptionData = [
+            'code_souscription' => $codeSouscription,
+            'client_code' => $clientCode,
+            'session_code' => $sessionCode,
+            'zone_code' => $zoneCode,
+            'date_debut_souscription' => date('Y-m-d'),
+            'montant_total_prevu' => $montantTotalPrevu,
+            'montant_cotisation_journaliere' => $cotisJour,
+            'nombre_jour_total' => $nbJours,
+            'nombre_jour_cotise' => 0,
+            'montant_total_cotise' => 0,
+            'statut_distribution' => 'En attente',
+            'statut_souscription' => 'valide',
+            'user_code' => $userCode,
+            'etablissement_code' => $etabCode,
+            'annee_code' => $anneeCode,
+            'created_at_souscription' => date('Y-m-d H:i:s')
+        ];
+
+        if ($this->model->createSouscriptionWithMultiplePacks($souscriptionData, $packCodes)) {
+            $nomClient = htmlspecialchars($clientExist['nom_client'] ?? '');
+            $this->success("Ressouscription enregistrée avec succès pour {$nomClient} ($codeSouscription) !", [
+                'code_souscription' => $codeSouscription,
+                'redirect' => RACINE . 'cautisation-payment/situation/' . $codeSouscription
+            ]);
+        } else {
+            $this->error('Erreur lors de la création de la ressouscription.');
+        }
+    }
 }

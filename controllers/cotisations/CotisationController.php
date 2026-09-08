@@ -9,13 +9,13 @@ class CotisationController extends BaseController
 
     public function list()
     {
-        $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS']);
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         $this->loadView('../views/cotisations/list.php');
     }
 
     public function apiList()
     {
-        $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS']);
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         
         $sql = "
             SELECT c.*, 
@@ -144,6 +144,41 @@ class CotisationController extends BaseController
                 $modelSouscription = new ModelSouscription();
                 $modelSouscription->updateTotals($data['souscription_code'], $montant, $nbJours);
             }
+
+            // Notification In-App
+            try {
+                $stmtClient = $this->model->getCon()->prepare("SELECT nom_client FROM clients WHERE code_client = ?");
+                $stmtClient->execute([$sous['client_code']]);
+                $clientNom = $stmtClient->fetchColumn() ?: 'Client';
+
+                NotificationService::notifyCotisationClient([
+                    'reference_code'    => $codeCotisation,
+                    'souscription_code' => $data['souscription_code'],
+                    'montant'           => $montant,
+                    'client_nom'        => $clientNom,
+                    'client_code'       => $sous['client_code'] ?? '',
+                    'user_code'         => $userCode,
+                    'etablissement_code'=> $etabCode,
+                    'zone_code'         => $zoneCode,
+                    'annee_code'        => $anneeCode
+                ]);
+
+                // Vérifier si la souscription est 100% soldée
+                $nouveauSolde = max(0, (float)($sous['solde_restant'] ?? 0) - $montant);
+                if ($nouveauSolde <= 0) {
+                    NotificationService::notifySouscriptionSoldee([
+                        'reference_code'    => $data['souscription_code'],
+                        'client_nom'        => $clientNom,
+                        'montant_total'     => (float)($sous['montant_total'] ?? $montant),
+                        'etablissement_code'=> $etabCode,
+                        'zone_code'         => $zoneCode,
+                        'annee_code'        => $anneeCode
+                    ]);
+                }
+            } catch (\Throwable $ne) {
+                error_log('[CotisationController] Notification error: ' . $ne->getMessage());
+            }
+
             $msg = Context::isCommercial() 
                 ? 'Cotisation enregistrée avec succès (En attente de validation de la caisse/comptabilité).' 
                 : 'Cotisation enregistrée et validée avec succès !';

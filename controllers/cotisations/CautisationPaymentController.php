@@ -103,7 +103,7 @@ class CautisationPaymentController extends BaseController
      */
     public function situation($codesouscription = null)
     {
-        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
+        $this->requirePermission(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION']);
 
         $code = $codesouscription ?? ($_GET['code'] ?? null);
         if (!$code) {
@@ -121,7 +121,7 @@ class CautisationPaymentController extends BaseController
         $userCode     = $_SESSION[USERS_AUTH]['code_user'] ?? '';
         $modelCaisse  = new ModelCaisse();
         $caisseActive = $modelCaisse->getActiveOuvertureForToday($userCode);
-        $caisseOuverte = !empty($caisseActive);
+        $caisseOuverte = !empty($caisseActive) || !Context::isCommercial();
 
         $this->loadView('../views/cautisations_payment/situation.php', [
             'souscription'  => $souscription,
@@ -135,7 +135,7 @@ class CautisationPaymentController extends BaseController
      */
     public function situationDetails()
     {
-        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
+        $this->requirePermission(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION']);
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
@@ -162,7 +162,7 @@ class CautisationPaymentController extends BaseController
      */
     public function simulate()
     {
-        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
+        $this->requirePermission(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION']);
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
@@ -220,7 +220,7 @@ class CautisationPaymentController extends BaseController
 
     public function history()
     {
-        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
+        $this->requirePermission(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION']);
         $codeSouscription = $this->post('code_souscription') ?? '';
         if (empty($codeSouscription)) {
             $this->json(['status' => 0, 'data' => [], 'message' => 'Code souscription manquant']);
@@ -232,7 +232,7 @@ class CautisationPaymentController extends BaseController
 
     public function store()
     {
-        $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
+        $this->requirePermission(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION']);
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Méthode POST requise'], 405);
@@ -294,12 +294,7 @@ class CautisationPaymentController extends BaseController
             return;
         }
 
-        if (!$caisse || (empty($caisse['code_caisse']) && empty($caisse['code_ouverture']))) {
-            $this->error("Erreur d'insertion : Aucune caisse active ouverte n'a été trouvée pour enregistrer ce paiement.");
-            return;
-        }
-
-        $caisseCode = !empty($caisse['code_caisse']) ? $caisse['code_caisse'] : $caisse['code_ouverture'];
+        $caisseCode = !empty($caisse['code_caisse']) ? $caisse['code_caisse'] : (!empty($caisse['code_ouverture']) ? $caisse['code_ouverture'] : 'CAISSE-GEN');
 
         // RÈGLE RBAC : Statut initial = 'en_attente' pour les commerciaux, 'valide' pour finance/admin
         $statutInitial = Context::isCommercial() ? 'en_attente' : 'valide';
@@ -329,6 +324,38 @@ class CautisationPaymentController extends BaseController
                 $modelSouscription = new ModelSouscription();
                 $modelSouscription->updateTotals($codeSouscription, $montant, $nombreJours);
             }
+
+            // Notification In-App
+            try {
+                $clientNom = trim($souscription['nom_client'] ?? 'Client');
+                NotificationService::notifyCotisationClient([
+                    'reference_code'    => $codeCautisation,
+                    'souscription_code' => $codeSouscription,
+                    'montant'           => $montant,
+                    'client_nom'        => $clientNom,
+                    'client_code'       => $souscription['client_code'] ?? '',
+                    'user_code'         => $userCode,
+                    'etablissement_code'=> $etabCode,
+                    'zone_code'         => $zoneCode,
+                    'annee_code'        => $anneeCode
+                ]);
+
+                // Vérifier si la souscription est 100% soldée
+                $nouveauSolde = max(0, (float)($souscription['solde_restant'] ?? 0) - $montant);
+                if ($nouveauSolde <= 0) {
+                    NotificationService::notifySouscriptionSoldee([
+                        'reference_code'    => $codeSouscription,
+                        'client_nom'        => $clientNom,
+                        'montant_total'     => (float)($souscription['montant_total'] ?? $montant),
+                        'etablissement_code'=> $etabCode,
+                        'zone_code'         => $zoneCode,
+                        'annee_code'        => $anneeCode
+                    ]);
+                }
+            } catch (\Throwable $ne) {
+                error_log('[CautisationPaymentController] Notification error: ' . $ne->getMessage());
+            }
+
             $dateProchainRdv = CautisationValidator::calculateNextDate($nombreJours);
             $msg = Context::isCommercial()
                 ? 'Cotisation enregistrée avec succès (En attente de validation par la caisse/finance).'
@@ -459,6 +486,13 @@ class CautisationPaymentController extends BaseController
         $totalCotise = (float) ($totaux['total_cotise'] ?? 0);
         $nombreJoursPayes = (int) ($totaux['nombre_jours_payes'] ?? 0);
 
+        if ($totalCotise <= 0 && !empty($souscription['montant_total_cotise'])) {
+            $totalCotise = (float) $souscription['montant_total_cotise'];
+        }
+        if ($nombreJoursPayes <= 0 && !empty($souscription['nombre_jour_cotise'])) {
+            $nombreJoursPayes = (int) $souscription['nombre_jour_cotise'];
+        }
+
         $soldeRestant = max(0, $montantTotalPrevu - $totalCotise);
         $joursRestants = max(0, $nombreJourSession - $nombreJoursPayes);
         $progression = CautisationValidator::calculateProgressPercentage($totalCotise, $montantTotalPrevu);
@@ -510,13 +544,14 @@ class CautisationPaymentController extends BaseController
         $con = $this->model->getCon();
         $stmt = $con->prepare("
             SELECT 
-                COALESCE(SUM(montant_cautisation_client), 0) as total_cotise,
-                COALESCE(SUM(nombre_jour), 0) as nombre_jours_payes
+                COALESCE(SUM(CASE WHEN (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL) THEN montant_cautisation_client ELSE 0 END), 0) as total_cotise,
+                COALESCE(SUM(CASE WHEN (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL) THEN nombre_jour ELSE 0 END), 0) as nombre_jours_payes,
+                COALESCE(SUM(CASE WHEN statut_cautisation_client = 'valide' THEN montant_cautisation_client ELSE 0 END), 0) as total_valide,
+                COALESCE(SUM(CASE WHEN statut_cautisation_client = 'valide' THEN nombre_jour ELSE 0 END), 0) as nombre_jours_valides
             FROM cautisation_clients
-            WHERE souscription_code = ? AND statut_cautisation_client = 'valide'
-              AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+            WHERE souscription_code = ? AND (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL)
         ");
-        $stmt->execute([$codeSouscription, Context::etablissement(), Context::zone(), Context::annee()]);
+        $stmt->execute([$codeSouscription]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['total_cotise' => 0, 'nombre_jours_payes' => 0];
     }
 
