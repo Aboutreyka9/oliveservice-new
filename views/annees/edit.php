@@ -64,6 +64,13 @@ $title = $isEdit ? 'Éditer l\'Année Académique' : 'Nouvelle Année Académiqu
                 </label>
                 <input type="date" name="date_fin_annee" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" value="<?= htmlspecialchars($item['date_fin_annee'] ?? '') ?>" required>
               </div>
+
+              <div class="form-group" style="width: 100%; box-sizing: border-box;">
+                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                  Pénalité de reconduction (%)
+                </label>
+                <input type="number" step="0.01" min="0" max="100" name="penalite_annee" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" value="<?= htmlspecialchars($item['penalite_annee'] ?? '0') ?>" placeholder="Ex: 10">
+              </div>
             </div>
           </div>
 
@@ -100,8 +107,24 @@ $(document).ready(function() {
     });
   });
 
+  function notifyToast(msg, type) {
+    if (typeof showToast === 'function') {
+      showToast(msg, type);
+    } else if (window.toastr && typeof window.toastr[type] === 'function') {
+      window.toastr[type](msg);
+    } else {
+      alert(msg);
+    }
+  }
+
   $('#form-annee').on('submit', function(e) {
     e.preventDefault();
+    var $btn = $(this).find('button[type="submit"]');
+    var originalText = $btn.html();
+
+    $btn.prop('disabled', true).html('<i data-lucide="loader-2" class="spin" style="width: 18px; height: 18px;"></i> Traitement...');
+    if (window.lucide) lucide.createIcons();
+
     $.ajax({
       url: $(this).attr('action'),
       type: 'POST',
@@ -109,14 +132,22 @@ $(document).ready(function() {
       dataType: 'json',
       success: function(res) {
         if (res.status === 1 || res.success) {
-          if (window.toastr) toastr.success(res.message || 'Opération réussie');
+          notifyToast(res.message || 'Année académique enregistrée avec succès !', 'success');
           setTimeout(function() { window.location.href = '<?= RACINE ?>annee/list'; }, 1000);
         } else {
-          if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
+          $btn.prop('disabled', false).html(originalText);
+          if (window.lucide) lucide.createIcons();
+          notifyToast(res.message || 'Erreur lors de l\'enregistrement', 'error');
         }
       },
-      error: function() {
-        if (window.toastr) toastr.error('Erreur réseau lors de l\'enregistrement');
+      error: function(xhr) {
+        $btn.prop('disabled', false).html(originalText);
+        if (window.lucide) lucide.createIcons();
+        var errMsg = 'Erreur réseau lors de l\'enregistrement';
+        if (xhr.responseJSON && xhr.responseJSON.message) {
+          errMsg = xhr.responseJSON.message;
+        }
+        notifyToast(errMsg, 'error');
       }
     });
   });

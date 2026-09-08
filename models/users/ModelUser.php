@@ -59,11 +59,15 @@ class ModelUser extends BaseModel
      * @param array $rolesData [ 'ROLE_CODE' => ['create' => 1, 'edit' => 1, ...], ... ] ou ['ROLE_1', 'ROLE_2']
      * @param array $defaultCrud Permissions par défaut si non fournies
      */
-    public function syncUserRoles(string $userCode, array $rolesData, array $defaultCrud = []): bool
+    public function syncUserRoles(string $userCode, array $rolesData, array $defaultCrud = [], ?string $zoneCode = null): bool
     {
         try {
             $pdo = $this->getCon();
-            $pdo->beginTransaction();
+            $shouldCommit = false;
+            if (!$pdo->inTransaction()) {
+                $pdo->beginTransaction();
+                $shouldCommit = true;
+            }
 
             $stmtDel = $pdo->prepare("DELETE FROM user_roles WHERE user_code = ?");
             $stmtDel->execute([$userCode]);
@@ -72,12 +76,18 @@ class ModelUser extends BaseModel
                 $rolesData = ['ROLE_COMMERCIAL' => ['create' => 1, 'edit' => 1, 'show' => 1, 'delete' => 0]];
             }
 
+            if (empty($zoneCode)) {
+                $stmtZ = $pdo->prepare("SELECT zone_code FROM users WHERE code_user = ? LIMIT 1");
+                $stmtZ->execute([$userCode]);
+                $zoneCode = $stmtZ->fetchColumn() ?: Context::zone();
+            }
+
             $maxId = (int)($pdo->query("SELECT MAX(id) FROM user_roles")->fetchColumn() ?: 0);
             $nextId = $maxId + 1;
 
             $stmtIns = $pdo->prepare("
-                INSERT INTO user_roles (id, user_code, role_code, create_permission, edit_permission, show_permission, delete_permission) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO user_roles (id, user_code, role_code, create_permission, edit_permission, show_permission, delete_permission, zone_code) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             foreach ($rolesData as $key => $val) {
@@ -96,14 +106,16 @@ class ModelUser extends BaseModel
                 }
 
                 if (!empty($roleCode)) {
-                    $stmtIns->execute([$nextId++, $userCode, $roleCode, $createP, $editP, $showP, $deleteP]);
+                    $stmtIns->execute([$nextId++, $userCode, $roleCode, $createP, $editP, $showP, $deleteP, $zoneCode]);
                 }
             }
 
-            $pdo->commit();
+            if ($shouldCommit) {
+                $pdo->commit();
+            }
             return true;
         } catch (Exception $e) {
-            if ($this->getCon()->inTransaction()) {
+            if ($shouldCommit && $this->getCon()->inTransaction()) {
                 $this->getCon()->rollBack();
             }
             error_log("ModelUser::syncUserRoles error: " . $e->getMessage());

@@ -39,12 +39,26 @@ class AnneeController extends BaseController
             if (!$this->checkUnique('annees', 'libelle_annee', $data['libelle_annee'], 'Annee academique')) return;
         }
 
-        $userCode = Context::user();
+        $userCode = Context::user() ?: ($_SESSION[USERS_AUTH]['code_user'] ?? null);
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
 
+        if (empty($etabCode)) {
+            try {
+                $stmtE = $this->model->getCon()->query("SELECT code_etablissement FROM etablissements LIMIT 1");
+                $etabCode = $stmtE ? $stmtE->fetchColumn() : '';
+            } catch (\Throwable $e) {}
+        }
+
+        if (empty($zoneCode)) {
+            try {
+                $stmtZ = $this->model->getCon()->query("SELECT code_zone FROM zones LIMIT 1");
+                $zoneCode = $stmtZ ? $stmtZ->fetchColumn() : '';
+            } catch (\Throwable $e) {}
+        }
+
         if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires.");
             return;
         }
 
@@ -59,9 +73,12 @@ class AnneeController extends BaseController
         if (in_array('zone_code', $cols)) $data['zone_code'] = $zoneCode;
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->create($filteredData)) {
-            $this->success('Item créé avec succès!');
+            if (($filteredData['statut_annee'] ?? '') === 'actif') {
+                NotificationService::resolveAnneeNonActive($etabCode);
+            }
+            $this->success('Année académique créée avec succès !');
         } else {
-            $this->error('Erreur lors de la création');
+            $this->error('Erreur lors de la création de l\'année académique');
         }
     }
 
@@ -80,9 +97,12 @@ class AnneeController extends BaseController
         $cols = $this->model->getCon()->query("DESCRIBE annees")->fetchAll(PDO::FETCH_COLUMN);
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->update($filteredData, $id)) {
-            $this->success('Item modifié avec succès!');
+            if (($filteredData['statut_annee'] ?? '') === 'actif') {
+                NotificationService::resolveAnneeNonActive(Context::etablissement());
+            }
+            $this->success('Année académique modifiée avec succès !');
         } else {
-            $this->error('Erreur lors de la modification');
+            $this->error('Erreur lors de la modification de l\'année académique');
         }
     }
 
@@ -93,6 +113,10 @@ class AnneeController extends BaseController
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
+                $updated = $this->model->getById($id);
+                if ($updated && ($updated['statut_annee'] ?? '') === 'actif') {
+                    NotificationService::resolveAnneeNonActive(Context::etablissement());
+                }
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
                 $this->error('Erreur lors de la mise à jour du statut');

@@ -10,12 +10,107 @@ class UserController extends BaseController
     public function list()
     {
         $this->requirePermission('ADMIN_MANAGE_USERS');
-        $this->loadView('../views/users/list.php');
+        $hasJoker = Context::hasJoker();
+        $userZoneCode = Context::zone();
+
+        // Récupérer les zones actives (toutes les zones si Joker, ou celles de l'établissement actif)
+        $etabCode = Context::etablissement();
+        if ($hasJoker) {
+            $stmtZones = $this->model->getCon()->query("
+                SELECT code_zone, libelle_zone 
+                FROM zones 
+                WHERE statut_zone = 'actif' 
+                ORDER BY libelle_zone ASC
+            ");
+            $zones = $stmtZones ? $stmtZones->fetchAll(PDO::FETCH_ASSOC) : [];
+        } else {
+            $stmtZones = $this->model->getCon()->prepare("
+                SELECT code_zone, libelle_zone 
+                FROM zones 
+                WHERE etablissement_code = ? AND statut_zone = 'actif' 
+                ORDER BY libelle_zone ASC
+            ");
+            $stmtZones->execute([$etabCode]);
+            $zones = $stmtZones->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+
+        $userZoneLibelle = 'Zone non définie';
+        if (!empty($userZoneCode)) {
+            foreach ($zones as $z) {
+                if ($z['code_zone'] === $userZoneCode) {
+                    $userZoneLibelle = $z['libelle_zone'];
+                    break;
+                }
+            }
+            if ($userZoneLibelle === 'Zone non définie') {
+                $stmtUserZone = $this->model->getCon()->prepare("SELECT libelle_zone FROM zones WHERE code_zone = ? LIMIT 1");
+                $stmtUserZone->execute([$userZoneCode]);
+                $lbl = $stmtUserZone->fetchColumn();
+                if ($lbl) {
+                    $userZoneLibelle = $lbl;
+                }
+            }
+        }
+
+        $this->loadView('../views/users/list.php', [
+            'zones'           => $zones,
+            'hasJoker'        => $hasJoker,
+            'userZoneCode'    => $userZoneCode,
+            'userZoneLibelle' => $userZoneLibelle
+        ]);
     }
 
     public function apiList()
     {
         $this->requirePermission('ADMIN_MANAGE_USERS');
+
+        $currentUserId = Context::userId() ?? ($_SESSION[USERS_AUTH]['id_user'] ?? null);
+        $currentUserCode = Context::user() ?? ($_SESSION[USERS_AUTH]['code_user'] ?? null);
+        $hasJoker = Context::hasJoker();
+        $userZone = Context::zone();
+
+        $conds = [];
+        $params = [];
+
+        // 1. Exclure l'utilisateur actuellement connecté
+        if (!empty($currentUserId)) {
+            $conds[] = "u.id_user != :curr_user_id";
+            $params[':curr_user_id'] = $currentUserId;
+        }
+        if (!empty($currentUserCode)) {
+            $conds[] = "u.code_user != :curr_user_code";
+            $params[':curr_user_code'] = $currentUserCode;
+        }
+
+        // 2. Exclure tout utilisateur qui possède le Joker (ROLE_SUPERADMIN, ROLE_DIR_GENERAL ou permission MAIN_ACCESS)
+        $conds[] = "u.code_user NOT IN (
+            SELECT DISTINCT ur.user_code 
+            FROM user_roles ur 
+            WHERE ur.role_code IN ('ROLE_SUPERADMIN', 'ROLE_DIR_GENERAL') 
+               OR ur.role_code IN (SELECT role_code FROM role_permissions WHERE permission_code = 'MAIN_ACCESS')
+            UNION
+            SELECT DISTINCT up.user_code
+            FROM user_permissions up
+            WHERE up.permission_code = 'MAIN_ACCESS' AND up.accorded = 1
+        )";
+
+        // 3. Filtrage selon la zone sélectionnée / assignée
+        $requestedZone = trim($_POST['zone_code'] ?? ($_GET['zone_code'] ?? ''));
+
+        if (!$hasJoker) {
+            // Utilisateur sans Joker : strictement verrouillé sur sa zone
+            $conds[] = "u.zone_code = :forced_zone";
+            $params[':forced_zone'] = $userZone;
+        } else {
+            // Utilisateur avec Joker : peut filtrer par zone ou voir tout
+            if (!empty($requestedZone) && $requestedZone !== 'ALL') {
+                $conds[] = "u.zone_code = :selected_zone";
+                $params[':selected_zone'] = $requestedZone;
+            }
+        }
+
+        $whereClause = !empty($conds) ? ("WHERE " . implode(" AND ", $conds)) : "";
+
         $sql = "SELECT u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code,
                        z.libelle_zone,
                        GROUP_CONCAT(DISTINCT r.libelle_role ORDER BY r.id SEPARATOR '||') as roles_libelles,
@@ -26,9 +121,12 @@ class UserController extends BaseController
                 LEFT JOIN roles r ON r.code_role = ur.role_code
                 LEFT JOIN fonctions f ON f.code_fonction = u.fonction_code
                 LEFT JOIN zones z ON z.code_zone = u.zone_code
+                {$whereClause}
                 GROUP BY u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code, z.libelle_zone, f.libelle_fonction
                 ORDER BY u.id_user DESC";
-        $users = $this->model->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $data = [];
         foreach ($users as $u) {
@@ -120,6 +218,19 @@ class UserController extends BaseController
         }
         $activationToken = bin2hex(random_bytes(32));
 
+        $hasJoker = Context::hasJoker();
+        $userZone = Context::zone();
+
+        if (!$hasJoker) {
+            $zoneCodeTarget = $userZone;
+            if (empty($zoneCodeTarget)) {
+                $this->error("Erreur d'insertion : La zone active est obligatoire et ne peut pas être nulle.");
+                return;
+            }
+        } else {
+            $zoneCodeTarget = !empty($_POST['zone_code']) ? trim($_POST['zone_code']) : (!empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null);
+        }
+
         $data = [
             'id_user' => $id_user,
             'code_user' => $code_user,
@@ -131,7 +242,7 @@ class UserController extends BaseController
             'password_user' => $password,
             'token_user' => $activationToken,
             'fonction_code' => $fonctionCode,
-            'zone_code' => !empty($_POST['zone_code']) ? trim($_POST['zone_code']) : (!empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null),
+            'zone_code' => $zoneCodeTarget,
             'etablissement_code' => $etabCode,
             'statut_user' => 'inactif',
             'created_at_user' => date('Y-m-d H:i:s')
@@ -151,7 +262,7 @@ class UserController extends BaseController
                 }
             }
 
-            $this->model->syncUserRoles($code_user, $rolesData);
+            $this->model->syncUserRoles($code_user, $rolesData, [], $zoneCodeTarget);
 
             // Construction de l'URL d'activation unique
             $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
@@ -255,6 +366,15 @@ class UserController extends BaseController
             }
         }
 
+        $hasJoker = Context::hasJoker();
+        $userZone = Context::zone();
+
+        if (!$hasJoker) {
+            $zoneCodeTarget = !empty($user['zone_code']) ? $user['zone_code'] : $userZone;
+        } else {
+            $zoneCodeTarget = !empty($_POST['zone_code']) ? trim($_POST['zone_code']) : (!empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null);
+        }
+
         $data = [
             'id_user' => $id,
             'nom_user' => $nom,
@@ -263,7 +383,7 @@ class UserController extends BaseController
             'email_user' => $email ?: null,
             'sexe_user' => $_POST['sexe_user'] ?? 'M',
             'fonction_code' => $fonctionCode,
-            'zone_code' => !empty($_POST['zone_code']) ? trim($_POST['zone_code']) : (!empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null),
+            'zone_code' => $zoneCodeTarget,
             'statut_user' => $statut,
             'updated_at_user' => date('Y-m-d H:i:s')
         ];
@@ -287,7 +407,7 @@ class UserController extends BaseController
                     }
                 }
 
-                $this->model->syncUserRoles($user['code_user'], $rolesData);
+                $this->model->syncUserRoles($user['code_user'], $rolesData, [], $zoneCodeTarget);
             }
             $this->success('Utilisateur et permissions par rôle mis à jour avec succès !');
         } else {
@@ -363,9 +483,18 @@ class UserController extends BaseController
     public function formulaire()
     {
         $this->requirePermission('ADMIN_MANAGE_USERS');
+        $hasJoker = Context::hasJoker();
+        $userZoneCode = Context::zone();
         $roles = (new ModelRole())->getAll();
         $fonctions = (new ModelFonction())->getAll();
-        $zones = $this->model->getCon()->query("SELECT * FROM zones WHERE statut_zone = 'actif' ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
+        if ($hasJoker) {
+            $zones = $this->model->getCon()->query("SELECT * FROM zones WHERE statut_zone = 'actif' ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $etabCode = Context::etablissement();
+            $stmtZ = $this->model->getCon()->prepare("SELECT * FROM zones WHERE etablissement_code = ? AND statut_zone = 'actif' ORDER BY libelle_zone ASC");
+            $stmtZ->execute([$etabCode]);
+            $zones = $stmtZ->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
         $this->loadView('../views/users/edit.php', [
             'user' => [],
             'role' => [],
@@ -373,13 +502,17 @@ class UserController extends BaseController
             'userRoleCodes' => [],
             'roles' => $roles,
             'fonctions' => $fonctions,
-            'zones' => $zones
+            'zones' => $zones,
+            'hasJoker' => $hasJoker,
+            'userZoneCode' => $userZoneCode
         ]);
     }
 
     public function edition($details)
     {
         $this->requirePermission('ADMIN_MANAGE_USERS');
+        $hasJoker = Context::hasJoker();
+        $userZoneCode = Context::zone();
         try {
             $decryptedId = $this->validator->decrypter($details);
             $userProfile = $this->model->getById($decryptedId);
@@ -393,7 +526,14 @@ class UserController extends BaseController
             $primaryRole = !empty($userRoles) ? $userRoles[0] : null;
             $roles = (new ModelRole())->getAll();
             $fonctions = (new ModelFonction())->getAll();
-            $zones = $this->model->getCon()->query("SELECT * FROM zones WHERE statut_zone = 'actif' ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
+            if ($hasJoker) {
+                $zones = $this->model->getCon()->query("SELECT * FROM zones WHERE statut_zone = 'actif' ORDER BY libelle_zone ASC")->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $etabCode = Context::etablissement();
+                $stmtZ = $this->model->getCon()->prepare("SELECT * FROM zones WHERE etablissement_code = ? AND statut_zone = 'actif' ORDER BY libelle_zone ASC");
+                $stmtZ->execute([$etabCode]);
+                $zones = $stmtZ->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'user/list');
             exit();
@@ -406,7 +546,9 @@ class UserController extends BaseController
             'userRoleCodes' => $userRoleCodes,
             'roles' => $roles,
             'fonctions' => $fonctions,
-            'zones' => $zones
+            'zones' => $zones,
+            'hasJoker' => $hasJoker,
+            'userZoneCode' => $userZoneCode
         ]);
     }
 
@@ -707,9 +849,35 @@ class UserController extends BaseController
                     // 3. Année active : doit exister dans la table annees avec statut = actif (ou contourné par Joker)
                     $stmtAnnee = $this->model->getCon()->query("SELECT code_annee, libelle_annee FROM annees WHERE statut_annee = 'actif' ORDER BY id_annee DESC LIMIT 1");
                     $activeAnnee = $stmtAnnee ? $stmtAnnee->fetch(PDO::FETCH_ASSOC) : null;
-                    if (empty($activeAnnee) && !$hasMainAccessJoker) {
-                        $this->error("Aucune année d'activité n'est configurée. Veuillez contacter l'administrateur.");
-                        return;
+                    if (empty($activeAnnee)) {
+                        // Créer une notification d'alerte système pour les administrateurs si aucune notification non lue n'existe
+                        try {
+                            $checkEtab = $etabCode ?: 'DEFAULT_ETAB';
+                            $stmtCheckNotif = $this->model->getCon()->prepare("
+                                SELECT id_notification 
+                                FROM notifications 
+                                WHERE reference_code = 'ANNEE_INACTIVE' 
+                                  AND lu_notification = 0 
+                                  AND etablissement_code = ? 
+                                LIMIT 1
+                            ");
+                            $stmtCheckNotif->execute([$checkEtab]);
+                            if (!$stmtCheckNotif->fetch()) {
+                                NotificationService::notifyAnneeNonActive([
+                                    'etablissement_code' => $checkEtab,
+                                    'zone_code'          => $zoneCode,
+                                    'user_code'          => null,
+                                    'blocked_user_nom'   => !$hasMainAccessJoker ? ($user['nom_user'] . ' ' . ($user['prenom_user'] ?? '')) : null
+                                ]);
+                            }
+                        } catch (\Throwable $e) {
+                            error_log("Erreur lors de la notification pour année non active: " . $e->getMessage());
+                        }
+
+                        if (!$hasMainAccessJoker) {
+                            $this->error("Aucune année d'activité n'est configurée. Veuillez contacter l'administrateur.");
+                            return;
+                        }
                     }
 
                     // ─── PEUPLEMENT DE LA SESSION UTILISATEUR ───────────────────────────
@@ -741,12 +909,13 @@ class UserController extends BaseController
                     if (!empty($activeAnnee)) {
                         $_SESSION['annee_active_code']    = $activeAnnee['code_annee'];
                         $_SESSION['annee_active_libelle'] = $activeAnnee['libelle_annee'];
+                        $this->success('Connexion réussie ! Bienvenue sur Olive Service.');
                     } else {
                         $_SESSION['annee_active_code']    = date('Y');
                         $_SESSION['annee_active_libelle'] = 'Année Non Configurée (' . date('Y') . ')';
+                        $_SESSION['flash_warning']        = "Attention : Aucune année d'activité n'est actuellement active. Le système fonctionne en mode dégradé (Joker). Veuillez configurer ou activer une année dans les paramètres.";
+                        $this->success("Connexion réussie (Attention : Aucune année d'activité n'est active !)");
                     }
-
-                    $this->success('Connexion réussie ! Bienvenue sur Olive Service.');
                     return;
                 } else {
                     $this->error('Ce compte utilisateur est inactif ou suspendu. Veuillez contacter l\'administrateur.');

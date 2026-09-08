@@ -36,6 +36,50 @@
         <?php endif; ?>
       </div>
 
+      <!-- BARRE DE FILTRAGE PAR ZONE -->
+      <div style="background: #FFFFFF; border-radius: 14px; padding: 16px 20px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.03); margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1E293B; font-size: 13px;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(5, 150, 105, 0.1); color: #059669; display: flex; align-items: center; justify-content: center;">
+              <i data-lucide="map-pin" style="width: 17px; height: 17px;"></i>
+            </div>
+            <span>Zone Commerciale :</span>
+          </div>
+
+          <div style="min-width: 260px;">
+            <?php if (!empty($hasJoker)): ?>
+              <select id="filter-zone" class="form-control" style="border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 600; color: #1E293B; background: #FFF; width: 100%; cursor: pointer;">
+                <option value="">Toutes les zones (Affichage Global)</option>
+                <?php if (!empty($zones)): ?>
+                  <?php foreach ($zones as $z): ?>
+                    <option value="<?= htmlspecialchars($z['code_zone']) ?>">
+                      <?= htmlspecialchars($z['libelle_zone']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </select>
+            <?php else: ?>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <select id="filter-zone" class="form-control" disabled readonly aria-readonly="true" style="border: 1.5px solid #E2E8F0; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; color: #1E3A5F; background: #F8FAFC; cursor: not-allowed; min-width: 220px; pointer-events: none;">
+                  <option value="<?= htmlspecialchars($userZoneCode ?? '') ?>" selected>
+                    <?= htmlspecialchars($userZoneLibelle ?? 'Zone assignée') ?>
+                  </option>
+                </select>
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #B45309; background: #FEF3C7; border: 1px solid #FDE68A; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">
+                  <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Zone assignée (Lecture seule)
+                </span>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+
+        <?php if (!empty($hasJoker)): ?>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #059669; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 5px 12px; border-radius: 20px;">
+            <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i> Accès Joker SuperAdmin (Toutes zones autorisées)
+          </span>
+        <?php endif; ?>
+      </div>
+
       <!-- CARTE TABLEAU PRINCIPALE (NAVY PREMIUM) -->
       <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 28px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; box-sizing: border-box; overflow: hidden;">
         <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
@@ -63,11 +107,17 @@
 </div>
 
 <script>
-var IS_SUPER_ADMIN_USER = <?= $isSuperAdminUser ? 'true' : 'false' ?>;
+var IS_SUPER_ADMIN_USER = <?= !empty($isSuperAdminUser) ? 'true' : 'false' ?>;
 
 $(document).ready(function() {
   var table = $('#table-users').DataTable({
-    ajax: '<?= RACINE ?>user/apiList',
+    ajax: {
+      url: '<?= RACINE ?>user/apiList',
+      type: 'POST',
+      data: function(d) {
+        d.zone_code = $('#filter-zone').val() || '';
+      }
+    },
     processing: true,
     autoWidth: false,
     columns: [
@@ -153,6 +203,11 @@ $(document).ready(function() {
     ],
     language: { url: '<?= RACINE ?>json/datatables-i18n-fr-FR.json' },
     drawCallback: function() { if (window.lucide) lucide.createIcons(); }
+  });
+
+  // Rechargement automatique de la liste lors du changement de filtre de zone
+  $('#filter-zone').on('change', function() {
+    table.ajax.reload();
   });
 
   // Bascule de statut instantanée via Ajax
