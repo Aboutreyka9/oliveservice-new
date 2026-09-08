@@ -183,6 +183,7 @@ $route->addRoute('/distribution/changer', ['DistributionController', 'changer'])
 $route->addRoute('/distribution/details/{param}', ['DistributionController', 'details']);
 $route->addRoute('/distribution/edition/{param}', ['DistributionController', 'edition']);
 $route->addRoute('/distribution/formulaire', ['DistributionController', 'formulaire']);
+$route->addRoute('/distribution/getPacksInfo', ['DistributionController', 'getPacksInfo']);
 
 // -------------------------------------------------------------
 // Module: Caisse & Finances (Ouverture, Clôture, Dépenses, Versements)

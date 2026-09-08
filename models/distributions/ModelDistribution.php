@@ -12,17 +12,17 @@ class ModelDistribution extends BaseModel
         try {
             $sql = "
                 SELECT d.*, 
-                       c.nom_client, c.telephone_client,
-                       s.code_souscription, s.statut_souscription,
-                       p.libelle_pack,
+                       c.nom_client, c.telephone_client, c.code_client,
+                       s.code_souscription, s.statut_souscription, s.montant_total_prevu,
                        u.nom_user as nom_livreur, u.prenom_user as prenom_livreur,
-                       z.libelle_zone
+                       z.libelle_zone,
+                       GROUP_CONCAT(DISTINCT p.libelle_pack SEPARATOR ', ') as libelle_pack
                 FROM distributions d
-                LEFT JOIN clients c ON c.code_client = d.client_code
+                LEFT JOIN clients c ON c.code_client = d.client_code OR c.code_client = (SELECT client_code FROM souscriptions WHERE code_souscription = d.souscription_code LIMIT 1)
                 LEFT JOIN souscriptions s ON s.code_souscription = d.souscription_code
                 LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code
-                LEFT JOIN users u ON u.code_user = d.agent_livreur_code
+                LEFT JOIN users u ON u.code_user = d.user_code
                 LEFT JOIN zones z ON z.code_zone = d.zone_code
                 WHERE 1=1
             ";
@@ -30,7 +30,7 @@ class ModelDistribution extends BaseModel
             $conds = [];
             Context::applyTripleFilter('d', $conds, $params, false);
             if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
-            $sql .= " ORDER BY d.created_at_distribution DESC";
+            $sql .= " GROUP BY d.id_distribution ORDER BY d.created_at_distribution DESC";
 
             $stmt = $this->getCon()->prepare($sql);
             $stmt->execute($params);
@@ -41,17 +41,46 @@ class ModelDistribution extends BaseModel
         }
     }
 
-    public function createDistribution(array $data): bool
+    /**
+     * Récupère la liste des packs et le cumul d'articles attendus pour une souscription donnée
+     */
+    public function getPacksDetailsForSouscription(string $souscriptionCode): array
+    {
+        try {
+            $sql = "
+                SELECT ps.pack_code, p.libelle_pack, p.categorie_pack_code, cp.libelle_categorie_pack,
+                       COALESCE(SUM(pa.quantite_article), 0) as quantite_article_attendue
+                FROM pack_souscriptions ps
+                JOIN packs p ON p.code_pack = ps.pack_code
+                LEFT JOIN categorie_packs cp ON cp.code_categorie_pack = p.categorie_pack_code
+                LEFT JOIN pack_articles pa ON pa.pack_code = p.code_pack
+                WHERE ps.souscription_code = ?
+                GROUP BY ps.pack_code, p.libelle_pack, p.categorie_pack_code, cp.libelle_categorie_pack
+            ";
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute([$souscriptionCode]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            error_log("ModelDistribution::getPacksDetailsForSouscription error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Crée une distribution ainsi que les détails dans distribution_packs et met à jour la souscription
+     */
+    public function createDistributionWithPacks(array $distributionData, array $packsItems): bool
     {
         try {
             $this->getCon()->beginTransaction();
 
-            $data['etablissement_code'] = $data['etablissement_code'] ?? Context::etablissement();
-            $data['zone_code'] = $data['zone_code'] ?? Context::zone();
-            $data['annee_code'] = $data['annee_code'] ?? Context::annee();
+            $distributionData['etablissement_code'] = $distributionData['etablissement_code'] ?? Context::etablissement();
+            $distributionData['zone_code'] = $distributionData['zone_code'] ?? Context::zone();
+            $distributionData['annee_code'] = $distributionData['annee_code'] ?? Context::annee();
+            $distributionData['user_code'] = $distributionData['user_code'] ?? Context::user();
 
             $cols = $this->getCon()->query("DESCRIBE distributions")->fetchAll(PDO::FETCH_COLUMN);
-            $filteredData = array_intersect_key($data, array_flip($cols));
+            $filteredData = array_intersect_key($distributionData, array_flip($cols));
 
             $colsStr = implode(',', array_keys($filteredData));
             $paramsStr = implode(',', array_fill(0, count($filteredData), '?'));
@@ -59,9 +88,38 @@ class ModelDistribution extends BaseModel
             $stmt = $this->getCon()->prepare("INSERT INTO distributions ({$colsStr}) VALUES ({$paramsStr})");
             $stmt->execute(array_values($filteredData));
 
-            $souscriptionCode = $data['souscription_code'] ?? null;
+            $distCode = $distributionData['code_distribution'];
+            $etabCode = $distributionData['etablissement_code'];
+            $zoneCode = $distributionData['zone_code'];
+            $anneeCode = $distributionData['annee_code'];
+            $userCode = $distributionData['user_code'];
+
+            // Insertion dans distribution_packs
+            $stmtPack = $this->getCon()->prepare("
+                INSERT INTO distribution_packs (
+                    distribution_code, pack_code, quantite_article_attendue, quantite_article_livree,
+                    etablissement_code, zone_code, annee_code, user_code, created_at_distribution_pack
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            foreach ($packsItems as $item) {
+                $stmtPack->execute([
+                    $distCode,
+                    $item['pack_code'],
+                    (int)($item['quantite_article_attendue'] ?? 0),
+                    (int)($item['quantite_article_livree'] ?? 0),
+                    $etabCode,
+                    $zoneCode,
+                    $anneeCode,
+                    $userCode,
+                    date('Y-m-d H:i:s')
+                ]);
+            }
+
+            // Mise à jour de la souscription : statut_distribution = 'valide'
+            $souscriptionCode = $distributionData['souscription_code'] ?? null;
             if ($souscriptionCode) {
-                $statut = $data['statut_distribution'] ?? 'valide';
+                $statut = $distributionData['statut_distribution'] ?? 'valide';
                 $stmtUpd = $this->getCon()->prepare("
                     UPDATE souscriptions 
                     SET statut_distribution = ?,
@@ -77,8 +135,30 @@ class ModelDistribution extends BaseModel
             if ($this->getCon()->inTransaction()) {
                 $this->getCon()->rollBack();
             }
-            error_log("ModelDistribution::createDistribution error: " . $e->getMessage());
+            error_log("ModelDistribution::createDistributionWithPacks error: " . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Récupère les packs enregistrés pour une distribution
+     */
+    public function getDistributionPacks(string $distributionCode): array
+    {
+        try {
+            $sql = "
+                SELECT dp.*, p.libelle_pack, cp.libelle_categorie_pack
+                FROM distribution_packs dp
+                JOIN packs p ON p.code_pack = dp.pack_code
+                LEFT JOIN categorie_packs cp ON cp.code_categorie_pack = p.categorie_pack_code
+                WHERE dp.distribution_code = ?
+            ";
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute([$distributionCode]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            error_log("ModelDistribution::getDistributionPacks error: " . $e->getMessage());
+            return [];
         }
     }
 
