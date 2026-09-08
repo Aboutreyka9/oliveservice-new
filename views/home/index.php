@@ -174,6 +174,8 @@ $isAdmin = Context::isSuperAdmin();
 .kpi-card:nth-child(6) { animation: fadeInUp 0.3s ease-out 0.30s backwards; }
 .kpi-card:nth-child(7) { animation: fadeInUp 0.3s ease-out 0.35s backwards; }
 .kpi-card:nth-child(8) { animation: fadeInUp 0.3s ease-out 0.40s backwards; }
+.kpi-card:nth-child(9) { animation: fadeInUp 0.3s ease-out 0.45s backwards; }
+.kpi-card:nth-child(10) { animation: fadeInUp 0.3s ease-out 0.50s backwards; }
 
 .kpi-card::before {
   content: '';
@@ -770,6 +772,32 @@ $isAdmin = Context::isSuperAdmin();
             <div class="kpi-footer">
               <span>Recettes &minus; Décaissements</span>
               <span class="kpi-tag" style="background: #EEF2FF; color: #4F46E5;">Bilan</span>
+            </div>
+          </div>
+
+          <!-- KPI 9 : Utilisateurs & Commerciaux -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #0284C7, #0369A1); --kpi-bg-icon: #E0F2FE; --kpi-color-icon: #0284C7;">
+            <div class="kpi-header">
+              <span class="kpi-title">Utilisateurs & Agents</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="user-check" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #0284C7;"><?= number_format($stats['total_users'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 14px; font-weight: 600;">Utilisateurs</span></div>
+            <div class="kpi-footer">
+              <span>Commerciaux actifs</span>
+              <span class="kpi-tag" style="background: #E0F2FE; color: #0284C7;"><?= (int)($stats['total_commerciaux'] ?? 0) ?> agents</span>
+            </div>
+          </div>
+
+          <!-- KPI 10 : Catégories & Sessions -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #84CC16, #4D7C0F); --kpi-bg-icon: #F7FEE7; --kpi-color-icon: #65A30D;">
+            <div class="kpi-header">
+              <span class="kpi-title">Catégories & Sessions</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="layers" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #4D7C0F;"><?= number_format($stats['total_categories'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 14px; font-weight: 600;">Catégories</span></div>
+            <div class="kpi-footer">
+              <span>Sessions configurées</span>
+              <span class="kpi-tag" style="background: #F7FEE7; color: #4D7C0F;"><?= (int)($stats['total_sessions'] ?? 0) ?> sessions</span>
             </div>
           </div>
 

@@ -324,6 +324,38 @@ class CautisationPaymentController extends BaseController
                 $modelSouscription = new ModelSouscription();
                 $modelSouscription->updateTotals($codeSouscription, $montant, $nombreJours);
             }
+
+            // Notification In-App
+            try {
+                $clientNom = trim($souscription['nom_client'] ?? 'Client');
+                NotificationService::notifyCotisationClient([
+                    'reference_code'    => $codeCautisation,
+                    'souscription_code' => $codeSouscription,
+                    'montant'           => $montant,
+                    'client_nom'        => $clientNom,
+                    'client_code'       => $souscription['client_code'] ?? '',
+                    'user_code'         => $userCode,
+                    'etablissement_code'=> $etabCode,
+                    'zone_code'         => $zoneCode,
+                    'annee_code'        => $anneeCode
+                ]);
+
+                // Vérifier si la souscription est 100% soldée
+                $nouveauSolde = max(0, (float)($souscription['solde_restant'] ?? 0) - $montant);
+                if ($nouveauSolde <= 0) {
+                    NotificationService::notifySouscriptionSoldee([
+                        'reference_code'    => $codeSouscription,
+                        'client_nom'        => $clientNom,
+                        'montant_total'     => (float)($souscription['montant_total'] ?? $montant),
+                        'etablissement_code'=> $etabCode,
+                        'zone_code'         => $zoneCode,
+                        'annee_code'        => $anneeCode
+                    ]);
+                }
+            } catch (\Throwable $ne) {
+                error_log('[CautisationPaymentController] Notification error: ' . $ne->getMessage());
+            }
+
             $dateProchainRdv = CautisationValidator::calculateNextDate($nombreJours);
             $msg = Context::isCommercial()
                 ? 'Cotisation enregistrée avec succès (En attente de validation par la caisse/finance).'

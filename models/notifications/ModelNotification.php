@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../BaseModel.php';
+require_once __DIR__ . '/../../core/BaseModel.php';
 
 class ModelNotification extends BaseModel
 {
@@ -79,13 +79,14 @@ class ModelNotification extends BaseModel
     /**
      * Construit les clauses WHERE et les paramètres pour le ciblage selon l'utilisateur et ses rôles
      */
-    private function buildTargetScope(?string $userCode, array $roles, ?string $etabCode, ?string $zoneCode = null): array
+    private function buildTargetScope(?string $userCode, array $roles, ?string $etabCode, ?string $zoneCode = null, string $alias = ''): array
     {
+        $prefix = !empty($alias) ? "{$alias}." : "";
         $conds = [];
         $params = [];
 
         if (!empty($etabCode)) {
-            $conds[] = "etablissement_code = :etab";
+            $conds[] = "{$prefix}etablissement_code = :etab";
             $params[':etab'] = $etabCode;
         }
 
@@ -101,7 +102,7 @@ class ModelNotification extends BaseModel
         if (!$isAdmin) {
             $targetConds = [];
             if (!empty($userCode)) {
-                $targetConds[] = "user_code = :user_code";
+                $targetConds[] = "{$prefix}user_code = :user_code";
                 $params[':user_code'] = $userCode;
             }
 
@@ -112,18 +113,18 @@ class ModelNotification extends BaseModel
                     $rolePlaceholders[] = $ph;
                     $params[$ph] = $role;
                 }
-                $targetConds[] = "role_target IN (" . implode(',', $rolePlaceholders) . ")";
+                $targetConds[] = "{$prefix}role_target IN (" . implode(',', $rolePlaceholders) . ")";
             }
 
             // Notifications globales (sans user_code ni role_target)
-            $targetConds[] = "(user_code IS NULL AND role_target IS NULL)";
+            $targetConds[] = "({$prefix}user_code IS NULL AND {$prefix}role_target IS NULL)";
 
             $conds[] = "(" . implode(' OR ', $targetConds) . ")";
 
             // Si commercial, filtrer sur sa zone si la notification précise une zone
             $isCommercial = in_array('ROLE_COMMERCIAL', $roles, true);
             if ($isCommercial && !empty($zoneCode)) {
-                $conds[] = "(zone_code IS NULL OR zone_code = '' OR zone_code = :zone_code)";
+                $conds[] = "({$prefix}zone_code IS NULL OR {$prefix}zone_code = '' OR {$prefix}zone_code = :zone_code)";
                 $params[':zone_code'] = $zoneCode;
             }
         }
@@ -138,7 +139,7 @@ class ModelNotification extends BaseModel
     public function getUnreadCountForUser(?string $userCode, array $roles, ?string $etabCode, ?string $zoneCode = null): int
     {
         try {
-            [$whereClause, $params] = $this->buildTargetScope($userCode, $roles, $etabCode, $zoneCode);
+            [$whereClause, $params] = $this->buildTargetScope($userCode, $roles, $etabCode, $zoneCode, '');
             $whereClause .= ($whereClause ? " AND " : "WHERE ") . "lu_notification = 0 AND statut_notification = 'actif'";
 
             $sql = "SELECT COUNT(*) FROM `{$this->table}` {$whereClause}";
@@ -157,7 +158,7 @@ class ModelNotification extends BaseModel
     public function getRecentForUser(?string $userCode, array $roles, ?string $etabCode, ?string $zoneCode = null, int $limit = 8): array
     {
         try {
-            [$whereClause, $params] = $this->buildTargetScope($userCode, $roles, $etabCode, $zoneCode);
+            [$whereClause, $params] = $this->buildTargetScope($userCode, $roles, $etabCode, $zoneCode, '');
             $whereClause .= ($whereClause ? " AND " : "WHERE ") . "statut_notification = 'actif'";
 
             $sql = "SELECT * FROM `{$this->table}` {$whereClause} ORDER BY created_at_notification DESC, id_notification DESC LIMIT :lim";
@@ -180,8 +181,8 @@ class ModelNotification extends BaseModel
     public function getAllForUser(?string $userCode, array $roles, ?string $etabCode, ?string $zoneCode = null, int $limit = 200): array
     {
         try {
-            [$whereClause, $params] = $this->buildTargetScope($userCode, $roles, $etabCode, $zoneCode);
-            $whereClause .= ($whereClause ? " AND " : "WHERE ") . "statut_notification = 'actif'";
+            [$whereClause, $params] = $this->buildTargetScope($userCode, $roles, $etabCode, $zoneCode, 'n');
+            $whereClause .= ($whereClause ? " AND " : "WHERE ") . "n.statut_notification = 'actif'";
 
             $sql = "SELECT n.*, 
                            u.nom_user, u.prenom_user
@@ -209,7 +210,7 @@ class ModelNotification extends BaseModel
     public function getStats(?string $userCode, array $roles, ?string $etabCode, ?string $zoneCode = null): array
     {
         try {
-            [$whereClause, $params] = $this->buildTargetScope($userCode, $roles, $etabCode, $zoneCode);
+            [$whereClause, $params] = $this->buildTargetScope($userCode, $roles, $etabCode, $zoneCode, '');
             $whereClause .= ($whereClause ? " AND " : "WHERE ") . "statut_notification = 'actif'";
 
             $sql = "
@@ -286,7 +287,7 @@ class ModelNotification extends BaseModel
     public function markAllAsRead(?string $userCode, array $roles, ?string $etabCode, ?string $zoneCode = null): bool
     {
         try {
-            [$whereClause, $params] = $this->buildTargetScope($userCode, $roles, $etabCode, $zoneCode);
+            [$whereClause, $params] = $this->buildTargetScope($userCode, $roles, $etabCode, $zoneCode, '');
             $whereClause .= ($whereClause ? " AND " : "WHERE ") . "lu_notification = 0";
 
             $sql = "UPDATE `{$this->table}` SET `lu_notification` = 1 {$whereClause}";

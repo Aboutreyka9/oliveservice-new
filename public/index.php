@@ -254,6 +254,10 @@ $route->addRoute('/notification/apiList', ['NotificationController', 'apiList'])
 $route->addRoute('/notification/add', ['NotificationController', 'add']);
 $route->addRoute('/notification/edit', ['NotificationController', 'edit']);
 $route->addRoute('/notification/changer', ['NotificationController', 'changer']);
+$route->addRoute('/notification/marquerLu', ['NotificationController', 'marquerLu']);
+$route->addRoute('/notification/marquerToutLu', ['NotificationController', 'marquerToutLu']);
+$route->addRoute('/notification/delete', ['NotificationController', 'delete']);
+$route->addRoute('/notification/stats', ['NotificationController', 'stats']);
 $route->addRoute('/notification/details/{param}', ['NotificationController', 'details']);
 $route->addRoute('/notification/edition/{param}', ['NotificationController', 'edition']);
 $route->addRoute('/notification/formulaire', ['NotificationController', 'formulaire']);

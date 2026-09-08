@@ -279,34 +279,90 @@
             </div>
         </div>
         <div class="notification-wrapper">
-            <button class="btn-icon" id="notificationBtn" title="Notifications">
+            <button class="btn-icon" id="notificationBtn" title="Notifications" style="position: relative;">
                 <i data-lucide="bell"></i>
                 <?php if (isset($unreadNotifsCount) && $unreadNotifsCount > 0): ?>
-                    <span class="badge"><?= $unreadNotifsCount ?></span>
+                    <span class="badge" id="navNotifBadge"><?= $unreadNotifsCount > 99 ? '99+' : $unreadNotifsCount ?></span>
                 <?php endif; ?>
             </button>
-            <div class="dropdown-panel" id="notificationPanel" style="width: 320px;">
-                <div class="dropdown-header" style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3>Notifications</h3>
-                    <span style="font-size: 11px; color: #64748B;"><?= isset($recentAdminNotifs) ? count($recentAdminNotifs) : 0 ?> récente(s)</span>
+            <div class="dropdown-panel" id="notificationPanel" style="width: 360px; padding: 0; overflow: hidden; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0;">
+                <div class="dropdown-header" style="padding: 14px 16px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #1E293B;">Notifications</h3>
+                        <?php if (isset($unreadNotifsCount) && $unreadNotifsCount > 0): ?>
+                            <span id="navUnreadTag" style="background: #ECFDF5; color: #059669; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; border: 1px solid #A7F3D0;">
+                                <?= $unreadNotifsCount ?> non lue<?= $unreadNotifsCount > 1 ? 's' : '' ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                    <?php if (isset($unreadNotifsCount) && $unreadNotifsCount > 0): ?>
+                        <button type="button" id="navMarkAllBtn" onclick="quickMarkAllNotifsRead(event)" style="background: none; border: none; font-size: 11px; font-weight: 600; color: #059669; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 0;">
+                            <i data-lucide="check-check" style="width: 14px; height: 14px;"></i> Tout marquer lu
+                        </button>
+                    <?php endif; ?>
                 </div>
-                <div class="notification-list">
+                <div class="notification-list" style="max-height: 380px; overflow-y: auto;">
                     <?php if (empty($recentAdminNotifs)): ?>
-                        <div style="padding: 16px; text-align: center; color: #94A3B8; font-size: 13px;">
-                            Aucune notification récente
+                        <div style="padding: 32px 16px; text-align: center; color: #94A3B8; font-size: 13px;">
+                            <i data-lucide="bell-off" style="width: 32px; height: 32px; margin: 0 auto 8px; stroke-width: 1.5; opacity: 0.5;"></i>
+                            <p style="margin: 0; font-weight: 500;">Aucune notification pour le moment</p>
                         </div>
                     <?php else: ?>
-                        <?php foreach ($recentAdminNotifs as $notif): ?>
-                            <div class="notification-card" style="<?= empty($notif['lu_notification']) ? 'background: #F8FAFC;' : '' ?>">
-                                <i data-lucide="bell" class="icon-primary" style="width: 18px; height: 18px;"></i>
-                                <div class="notification-content">
-                                    <strong><?= htmlspecialchars($notif['titre_notification'] ?? 'Notification') ?></strong>
-                                    <p style="margin: 2px 0 0; font-size: 12px; color: #475569;"><?= htmlspecialchars($notif['message_notification'] ?? '') ?></p>
-                                    <small style="color: #94A3B8; font-size: 10px;"><?= !empty($notif['created_at_notification']) ? date('d/m H:i', strtotime($notif['created_at_notification'])) : '' ?></small>
+                        <?php foreach ($recentAdminNotifs as $notif): 
+                            $isUnread = empty($notif['lu_notification']);
+                            $type = $notif['type_notification'] ?? 'cotisation';
+                            $icon = 'bell';
+                            $iconColor = '#64748B';
+                            $iconBg = '#F1F5F9';
+
+                            if ($type === 'cotisation') {
+                                $icon = 'coins';
+                                $iconColor = '#059669';
+                                $iconBg = '#ECFDF5';
+                            } elseif ($type === 'versement') {
+                                $icon = 'arrow-up-right';
+                                $iconColor = '#2563EB';
+                                $iconBg = '#EFF6FF';
+                            } elseif ($type === 'souscription') {
+                                $icon = 'sparkles';
+                                $iconColor = '#D97706';
+                                $iconBg = '#FEF3C7';
+                            }
+                            $destUrl = !empty($notif['url_notification']) ? $notif['url_notification'] : 'javascript:void(0)';
+                        ?>
+                            <a href="<?= htmlspecialchars($destUrl) ?>" 
+                               class="notification-card-item"
+                               data-notif-id="<?= (int)$notif['id_notification'] ?>"
+                               onclick="quickMarkNotifRead(event, <?= (int)$notif['id_notification'] ?>, '<?= htmlspecialchars($destUrl) ?>')"
+                               style="display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #F1F5F9; text-decoration: none; color: inherit; transition: background 0.15s ease; <?= $isUnread ? 'background: #F0FDF4; border-left: 3px solid #059669;' : 'background: #FFFFFF;' ?>">
+                                <div style="width: 34px; height: 34px; border-radius: 8px; background: <?= $iconBg ?>; color: <?= $iconColor ?>; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+                                    <i data-lucide="<?= $icon ?>" style="width: 17px; height: 17px;"></i>
                                 </div>
-                            </div>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 6px;">
+                                        <strong style="font-size: 12px; color: #1E293B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: <?= $isUnread ? '700' : '600' ?>;">
+                                            <?= htmlspecialchars($notif['titre_notification'] ?? 'Notification') ?>
+                                        </strong>
+                                        <?php if ($isUnread): ?>
+                                            <span class="unread-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #059669; flex-shrink: 0;"></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <p style="margin: 3px 0 0; font-size: 11px; color: #475569; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                        <?= htmlspecialchars($notif['message_notification'] ?? '') ?>
+                                    </p>
+                                    <span style="color: #94A3B8; font-size: 10px; display: block; margin-top: 4px;">
+                                        <?= !empty($notif['created_at_notification']) ? date('d/m à H:i', strtotime($notif['created_at_notification'])) : '' ?>
+                                    </span>
+                                </div>
+                            </a>
                         <?php endforeach; ?>
                     <?php endif; ?>
+                </div>
+                <div style="padding: 10px 16px; background: #F8FAFC; border-top: 1px solid #E2E8F0; text-align: center;">
+                    <a href="<?= RACINE ?>notification/list" style="font-size: 12px; font-weight: 700; color: #1E3A5F; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                        <span>Voir tout l'historique</span>
+                        <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                    </a>
                 </div>
             </div>
         </div>

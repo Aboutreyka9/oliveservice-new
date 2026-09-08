@@ -2,344 +2,154 @@
 
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../config/const.php';
+require_once __DIR__ . '/../models/notifications/ModelNotification.php';
 
 class NotificationService
 {
-    private static ?PDO $db = null;
+    private static ?ModelNotification $model = null;
 
-    private static function getDb(): PDO
+    private static function getModel(): ModelNotification
     {
-        if (self::$db === null) {
-            self::$db = (new Database())->getCon();
+        if (self::$model === null) {
+            self::$model = new ModelNotification();
         }
-        return self::$db;
-    }
-
-    public function send(
-        string $title,
-        string $message,
-        string $clientCode,
-        string $target = 'client',
-        string $type = 'commande',
-        ?string $referenceCode = null,
-        array $extraData = []
-    ): ?string {
-        return self::notifyClient($clientCode, $type, $title, $message, $referenceCode, $extraData);
+        return self::$model;
     }
 
     /**
-     * Envoie une notification au client (In-App en BDD + Push OneSignal)
+     * Envoie / Enregistre une notification en base
      */
-    public static function notifyClient(
-        string $clientCode,
-        string $type,
-        string $title,
-        string $message,
-        ?string $referenceCode = null,
-        array $extraData = []
-    ): ?string {
-        if (empty($clientCode)) {
-            return null;
-        }
-
-        $codeNotification = 'NOT-' . strtoupper(bin2hex(random_bytes(4))) . '-' . substr(time(), -4);
-        $dataJsonStr = !empty($extraData) ? json_encode($extraData, JSON_UNESCAPED_UNICODE) : null;
-
-        // 1. Sauvegarde en Base de Données (In-App)
-        try {
-            $pdo = self::getDb();
-            $stmt = $pdo->prepare("
-                INSERT INTO `notifications` 
-                (`code_notification`, `client_code`, `type_notification`, `titre_notification`, `message_notification`, `reference_code`, `data_json`, `lu_notification`, `statut_notification`) 
-                VALUES 
-                (:code, :client_code, :type, :title, :message, :reference_code, :data_json, 0, 'envoyee')
-            ");
-            $stmt->execute([
-                ':code' => $codeNotification,
-                ':client_code' => $clientCode,
-                ':type' => $type,
-                ':title' => $title,
-                ':message' => $message,
-                ':reference_code' => $referenceCode,
-                ':data_json' => $dataJsonStr
-            ]);
-        } catch (Exception $e) {
-            error_log("Erreur BDD NotificationService (Admin): " . $e->getMessage());
-            return null;
-        }
-
-        // 2. Envoi Push OneSignal en arrière-plan
-        self::sendOneSignalPush($clientCode, $title, $message, $codeNotification, $referenceCode, $extraData);
-
-        return $codeNotification;
+    public static function send(array $data): ?string
+    {
+        return self::getModel()->createNotification($data);
     }
 
     /**
-     * Envoie une notification dédiée au livreur (In-App)
+     * Notification lors de l'enregistrement d'une cotisation client
      */
-    public static function notifyLivreur(
-        string $livreurCode,
-        string $type,
-        string $title,
-        string $message,
-        ?string $referenceCode = null,
-        array $extraData = []
-    ): ?string {
-        if (empty($livreurCode)) {
-            return null;
-        }
+    public static function notifyCotisationClient(array $params): ?string
+    {
+        $montant = (float)($params['montant'] ?? 0);
+        $montantFmt = number_format($montant, 0, ',', ' ');
+        $clientNom = !empty($params['client_nom']) ? $params['client_nom'] : 'Client';
+        $sousCode = $params['souscription_code'] ?? '';
+        $refCode = $params['reference_code'] ?? '';
+        $etabCode = $params['etablissement_code'] ?? '';
+        $zoneCode = $params['zone_code'] ?? null;
+        $anneeCode = $params['annee_code'] ?? null;
+        $userCode = $params['user_code'] ?? null;
 
-        $codeNotification = 'NOT-' . strtoupper(bin2hex(random_bytes(4))) . '-' . substr(time(), -4);
-        $dataJsonStr = !empty($extraData) ? json_encode($extraData, JSON_UNESCAPED_UNICODE) : null;
+        $url = !empty($sousCode) 
+            ? RACINE . 'cautisation-payment/situation/' . urlencode($sousCode)
+            : RACINE . 'cautisation/list';
 
-        try {
-            $pdo = self::getDb();
-            $stmt = $pdo->prepare("
-                INSERT INTO `notifications` 
-                (`code_notification`, `livreur_code`, `type_notification`, `titre_notification`, `message_notification`, `reference_code`, `data_json`, `lu_notification`, `statut_notification`) 
-                VALUES 
-                (:code, :livreur_code, :type, :title, :message, :reference_code, :data_json, 0, 'envoyee')
-            ");
-            $stmt->execute([
-                ':code' => $codeNotification,
-                ':livreur_code' => $livreurCode,
-                ':type' => $type,
-                ':title' => $title,
-                ':message' => $message,
-                ':reference_code' => $referenceCode,
-                ':data_json' => $dataJsonStr
-            ]);
-        } catch (Exception $e) {
-            error_log("Erreur BDD NotificationService (Livreur): " . $e->getMessage());
-            return null;
-        }
-
-        self::sendOneSignalPush($livreurCode, $title, $message, $codeNotification, $referenceCode, $extraData);
-
-        return $codeNotification;
+        return self::send([
+            'user_code'            => null, // Visible par les profils concernés
+            'role_target'          => 'ROLE_FINANCE', // Notifie en priorité la finance et les admins
+            'type_notification'    => 'cotisation',
+            'titre_notification'   => 'Nouvelle cotisation collectée',
+            'message_notification' => "Cotisation de {$montantFmt} FCFA collectée pour {$clientNom} (Réf : {$refCode}).",
+            'reference_code'       => $refCode ?: $sousCode,
+            'url_notification'     => $url,
+            'lu_notification'      => 0,
+            'statut_notification'  => 'actif',
+            'etablissement_code'   => $etabCode,
+            'zone_code'            => $zoneCode,
+            'annee_code'           => $anneeCode
+        ]);
     }
 
     /**
-     * Envoie une notification dédiée au pressing (In-App + Push OneSignal)
+     * Notification lorsqu'une souscription est 100% soldée (éligible au pack / livraison)
      */
-    public static function notifyPressing(
-        string $pressingCode,
-        string $type,
-        string $title,
-        string $message,
-        ?string $referenceCode = null,
-        array $extraData = []
-    ): ?string {
-        if (empty($pressingCode)) {
-            return null;
-        }
+    public static function notifySouscriptionSoldee(array $params): ?string
+    {
+        $clientNom = !empty($params['client_nom']) ? $params['client_nom'] : 'Client';
+        $refCode = $params['reference_code'] ?? '';
+        $montantTotal = (float)($params['montant_total'] ?? 0);
+        $montantFmt = number_format($montantTotal, 0, ',', ' ');
+        $etabCode = $params['etablissement_code'] ?? '';
+        $zoneCode = $params['zone_code'] ?? null;
+        $anneeCode = $params['annee_code'] ?? null;
 
-        $codeNotification = 'NOT-' . strtoupper(bin2hex(random_bytes(4))) . '-' . substr(time(), -4);
-        $dataJsonStr = !empty($extraData) ? json_encode($extraData, JSON_UNESCAPED_UNICODE) : null;
+        $url = RACINE . 'distribution/list';
 
-        try {
-            $pdo = self::getDb();
-            $stmt = $pdo->prepare("
-                INSERT INTO `notifications` 
-                (`code_notification`, `pressing_code`, `type_notification`, `titre_notification`, `message_notification`, `reference_code`, `data_json`, `lu_notification`, `statut_notification`) 
-                VALUES 
-                (:code, :pressing_code, :type, :title, :message, :reference_code, :data_json, 0, 'envoyee')
-            ");
-            $stmt->execute([
-                ':code' => $codeNotification,
-                ':pressing_code' => $pressingCode,
-                ':type' => $type,
-                ':title' => $title,
-                ':message' => $message,
-                ':reference_code' => $referenceCode,
-                ':data_json' => $dataJsonStr
-            ]);
-        } catch (Exception $e) {
-            error_log("Erreur BDD NotificationService (Pressing): " . $e->getMessage());
-            return null;
-        }
-
-        self::sendOneSignalPush($pressingCode, $title, $message, $codeNotification, $referenceCode, $extraData);
-
-        return $codeNotification;
+        return self::send([
+            'user_code'            => null,
+            'role_target'          => 'ROLE_GESTIONNAIRE', // Gestionnaire de stock / distribution & Admin
+            'type_notification'    => 'souscription',
+            'titre_notification'   => 'Souscription 100% Soldée 🎉',
+            'message_notification' => "La souscription {$refCode} de {$clientNom} ({$montantFmt} FCFA) est entièrement soldée. Le pack peut être distribué.",
+            'reference_code'       => $refCode,
+            'url_notification'     => $url,
+            'lu_notification'      => 0,
+            'statut_notification'  => 'actif',
+            'etablissement_code'   => $etabCode,
+            'zone_code'            => $zoneCode,
+            'annee_code'           => $anneeCode
+        ]);
     }
 
     /**
-     * Envoi Push OneSignal REST API
+     * Notification lors de la soumission d'un versement commercial
      */
-    private static function sendOneSignalPush(
-        string $clientCode,
-        string $title,
-        string $message,
-        string $codeNotification,
-        ?string $referenceCode = null,
-        array $extraData = []
-    ): void {
-        // Push désactivé pour le projet GEICG (notifications BDD uniquement)
-        return;
+    public static function notifyVersementSoumis(array $params): ?string
+    {
+        $montant = (float)($params['montant'] ?? 0);
+        $montantFmt = number_format($montant, 0, ',', ' ');
+        $commercialNom = !empty($params['commercial_nom']) ? $params['commercial_nom'] : 'Un agent commercial';
+        $refCode = $params['reference_code'] ?? '';
+        $etabCode = $params['etablissement_code'] ?? '';
+        $zoneCode = $params['zone_code'] ?? null;
+        $anneeCode = $params['annee_code'] ?? null;
+
+        return self::send([
+            'user_code'            => null,
+            'role_target'          => 'ROLE_FINANCE',
+            'type_notification'    => 'versement',
+            'titre_notification'   => 'Nouveau versement de caisse',
+            'message_notification' => "{$commercialNom} a transmis un versement de {$montantFmt} FCFA ({$refCode}) en attente de validation.",
+            'reference_code'       => $refCode,
+            'url_notification'     => RACINE . 'versement/list',
+            'lu_notification'      => 0,
+            'statut_notification'  => 'actif',
+            'etablissement_code'   => $etabCode,
+            'zone_code'            => $zoneCode,
+            'annee_code'           => $anneeCode
+        ]);
     }
 
-    // --- Helpers Événements Métier Client ---
-
-    public static function notifyOrderCreated(string $clientCode, string $orderCode, string $pressingName): ?string
+    /**
+     * Notification au commercial après validation ou rejet de son versement
+     */
+    public static function notifyVersementValide(array $params): ?string
     {
-        return self::notifyClient(
-            $clientCode,
-            'commande.creee',
-            'Commande envoyée',
-            "Votre commande #{$orderCode} a été transmise à {$pressingName}.",
-            $orderCode,
-            ['pressing' => $pressingName, 'step' => 'creee']
-        );
-    }
+        $montant = (float)($params['montant'] ?? 0);
+        $montantFmt = number_format($montant, 0, ',', ' ');
+        $commercialCode = $params['commercial_code'] ?? null;
+        $statut = $params['statut'] ?? 'valide';
+        $refCode = $params['reference_code'] ?? '';
+        $etabCode = $params['etablissement_code'] ?? '';
+        $zoneCode = $params['zone_code'] ?? null;
+        $anneeCode = $params['annee_code'] ?? null;
 
-    public static function notifyOrderAccepted(string $clientCode, string $orderCode, string $pressingName): ?string
-    {
-        return self::notifyClient(
-            $clientCode,
-            'commande.acceptee',
-            'Commande acceptée',
-            "{$pressingName} a accepté votre commande #{$orderCode}.",
-            $orderCode,
-            ['pressing' => $pressingName, 'step' => 'acceptee']
-        );
-    }
+        $isValide = in_array(strtolower($statut), ['valide', 'validé'], true);
+        $titre = $isValide ? 'Versement validé ✅' : 'Versement rejeté ⚠️';
+        $actionText = $isValide ? 'validé' : 'rejeté';
 
-    public static function notifyOrderRejected(string $clientCode, string $orderCode, string $pressingName, ?string $motif = null): ?string
-    {
-        $msg = "{$pressingName} ne peut pas traiter votre commande #{$orderCode}.";
-        if (!empty($motif)) {
-            $msg .= " (Motif : {$motif})";
-        }
-        return self::notifyClient(
-            $clientCode,
-            'commande.refusee',
-            'Commande refusée',
-            $msg,
-            $orderCode,
-            ['pressing' => $pressingName, 'motif' => $motif, 'step' => 'refusee']
-        );
-    }
-
-    public static function notifyCollectionScheduled(string $clientCode, string $orderCode): ?string
-    {
-        return self::notifyClient(
-            $clientCode,
-            'collecte.programmee',
-            'Collecte programmée',
-            "Un livreur va récupérer votre commande #{$orderCode}.",
-            $orderCode,
-            ['step' => 'collecte_programmee']
-        );
-    }
-
-    public static function notifyDriverAssigned(string $clientCode, string $orderCode, string $driverName): ?string
-    {
-        return self::notifyClient(
-            $clientCode,
-            'collecte.livreur_assigne',
-            'Livreur assigné',
-            "Votre collecte #{$orderCode} sera effectuée par {$driverName}.",
-            $orderCode,
-            ['driver_name' => $driverName, 'step' => 'livreur_assigne']
-        );
-    }
-
-    public static function notifyDriverEnRoute(string $clientCode, string $orderCode, string $driverName): ?string
-    {
-        return self::notifyClient(
-            $clientCode,
-            'collecte.livreur_en_route',
-            'Votre livreur est en route',
-            "{$driverName} arrive pour récupérer votre linge (#{$orderCode}).",
-            $orderCode,
-            ['driver_name' => $driverName, 'step' => 'livreur_en_route']
-        );
-    }
-
-    public static function notifyCollectionCompleted(string $clientCode, string $orderCode): ?string
-    {
-        return self::notifyClient(
-            $clientCode,
-            'collecte.effectuee',
-            'Linge collecté',
-            "Votre commande #{$orderCode} a été récupérée avec succès.",
-            $orderCode,
-            ['step' => 'collectee']
-        );
-    }
-
-    public static function notifyReceivedAtPressing(string $clientCode, string $orderCode, string $pressingName): ?string
-    {
-        return self::notifyClient(
-            $clientCode,
-            'pressing.receptionnee',
-            'Linge arrivé au pressing',
-            "Vos vêtements sont arrivés chez {$pressingName} (#{$orderCode}).",
-            $orderCode,
-            ['pressing' => $pressingName, 'step' => 'recue_pressing']
-        );
-    }
-
-    public static function notifyColisPriceToConfirm(string $clientCode, string $orderCode, float $amount, string $pressingName): ?string
-    {
-        $formattedAmount = number_format($amount, 0, ',', ' ');
-        return self::notifyClient(
-            $clientCode,
-            'colis.prix_a_valider',
-            'Devis après inventaire',
-            "Votre linge a été inventorié chez {$pressingName}. Montant : {$formattedAmount} FCFA. Cliquez pour confirmer.",
-            $orderCode,
-            ['amount' => $amount, 'requires_confirmation' => true, 'step' => 'prix_a_valider']
-        );
-    }
-
-    public static function notifyProcessingStarted(string $clientCode, string $orderCode): ?string
-    {
-        return self::notifyClient(
-            $clientCode,
-            'traitement.en_cours',
-            'Commande en traitement',
-            "Votre linge (#{$orderCode}) est actuellement en cours de nettoyage.",
-            $orderCode,
-            ['step' => 'en_traitement']
-        );
-    }
-
-    public static function notifyOrderReady(string $clientCode, string $orderCode): ?string
-    {
-        return self::notifyClient(
-            $clientCode,
-            'commande.prete',
-            'Votre commande est prête',
-            "Votre linge (#{$orderCode}) est propre et prêt à être livré.",
-            $orderCode,
-            ['step' => 'prete']
-        );
-    }
-
-    public static function notifyDeliveryEnRoute(string $clientCode, string $orderCode, ?string $driverName = null): ?string
-    {
-        $driverMsg = !empty($driverName) ? " par {$driverName}" : "";
-        return self::notifyClient(
-            $clientCode,
-            'livraison.en_cours',
-            'Livraison en cours',
-            "Votre commande #{$orderCode} est en route vers votre adresse{$driverMsg}.",
-            $orderCode,
-            ['driver_name' => $driverName, 'step' => 'en_livraison']
-        );
-    }
-
-    public static function notifyOrderDelivered(string $clientCode, string $orderCode): ?string
-    {
-        return self::notifyClient(
-            $clientCode,
-            'commande.livree',
-            'Commande livrée',
-            "Votre linge propre (#{$orderCode}) vous a été remis. Merci d'avoir utilisé Lavex !",
-            $orderCode,
-            ['step' => 'livree']
-        );
+        return self::send([
+            'user_code'            => $commercialCode, // Directement adressé au commercial
+            'role_target'          => null,
+            'type_notification'    => 'versement',
+            'titre_notification'   => $titre,
+            'message_notification' => "Votre versement de {$montantFmt} FCFA ({$refCode}) a été {$actionText} par la comptabilité.",
+            'reference_code'       => $refCode,
+            'url_notification'     => RACINE . 'versement/list',
+            'lu_notification'      => 0,
+            'statut_notification'  => 'actif',
+            'etablissement_code'   => $etabCode,
+            'zone_code'            => $zoneCode,
+            'annee_code'           => $anneeCode
+        ]);
     }
 }

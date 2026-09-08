@@ -151,6 +151,28 @@ class ModelHome extends BaseModel
             if (!empty($condsDistVal)) $sqlDistVal .= " AND " . implode(' AND ', $condsDistVal);
             $totalDistributionsValidees = $this->safeCount($db, $sqlDistVal, $pDistVal);
 
+            // ── 8. Utilisateurs & Commerciaux ─────────────────────────────────────
+            $totalUsers = $this->safeCount($db, "SELECT COUNT(*) FROM users WHERE statut_user = 'actif'");
+            $totalCommerciaux = $this->safeCount($db, "
+                SELECT COUNT(DISTINCT u.code_user) 
+                FROM users u 
+                INNER JOIN user_roles ur ON ur.user_code = u.code_user 
+                WHERE ur.role_code = 'ROLE_COMMERCIAL' AND u.statut_user = 'actif'
+            ");
+
+            // ── 9. Catégories Packs & Sessions ───────────────────────────────────
+            $sqlCat = "SELECT COUNT(*) FROM categorie_packs WHERE statut_categorie_pack = 'actif'";
+            $pCat = []; $condsCat = [];
+            Context::applyTripleFilter('', $condsCat, $pCat, false);
+            if (!empty($condsCat)) $sqlCat .= " AND " . implode(' AND ', $condsCat);
+            $totalCategories = $this->safeCount($db, $sqlCat, $pCat);
+
+            $sqlSess = "SELECT COUNT(*) FROM sessions WHERE statut_session = 'actif'";
+            $pSess = []; $condsSess = [];
+            Context::applyTripleFilter('', $condsSess, $pSess, false);
+            if (!empty($condsSess)) $sqlSess .= " AND " . implode(' AND ', $condsSess);
+            $totalSessions = $this->safeCount($db, $sqlSess, $pSess);
+
             return [
                 'annee_code'                  => $anneeCode,
                 'total_clients'               => $totalClients,
@@ -167,6 +189,10 @@ class ModelHome extends BaseModel
                 'total_distributions'         => $totalDistributions,
                 'total_distributions_validees'=> $totalDistributionsValidees,
                 'solde_net'                   => $soldeNet,
+                'total_users'                 => $totalUsers,
+                'total_commerciaux'           => $totalCommerciaux,
+                'total_categories'            => $totalCategories,
+                'total_sessions'              => $totalSessions,
             ];
 
         } catch (\Exception $e) {
@@ -178,6 +204,8 @@ class ModelHome extends BaseModel
                 'ca_encaisse' => 0, 'total_versements' => 0, 'total_versements_en_attente' => 0,
                 'total_depenses' => 0, 'total_distributions' => 0,
                 'total_distributions_validees' => 0, 'solde_net' => 0,
+                'total_users' => 0, 'total_commerciaux' => 0,
+                'total_categories' => 0, 'total_sessions' => 0,
             ];
         }
     }

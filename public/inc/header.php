@@ -152,10 +152,14 @@
     $unreadNotifsCount = 0;
     try {
         $notifModel = new ModelNotification();
-        $notifStats = $notifModel->getStats($currentPressingCode, $currentLivreurCode);
-        $unreadNotifsCount = $notifStats['non_lues'] ?? 0;
-        $recentAdminNotifs = $notifModel->getAllWithClient($currentPressingCode, $currentLivreurCode, 5);
-    } catch (Exception $e) {
+        $notifUserCode = Context::user();
+        $notifRoles    = Context::roles();
+        $notifEtab     = Context::etablissement();
+        $notifZone     = Context::zone();
+
+        $unreadNotifsCount = $notifModel->getUnreadCountForUser($notifUserCode, $notifRoles, $notifEtab, $notifZone);
+        $recentAdminNotifs = $notifModel->getRecentForUser($notifUserCode, $notifRoles, $notifEtab, $notifZone, 6);
+    } catch (\Throwable $e) {
         $recentAdminNotifs = [];
         $unreadNotifsCount = 0;
     }
