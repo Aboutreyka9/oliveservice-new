@@ -107,8 +107,24 @@ $(document).ready(function() {
     });
   });
 
+  function notifyToast(msg, type) {
+    if (typeof showToast === 'function') {
+      showToast(msg, type);
+    } else if (window.toastr && typeof window.toastr[type] === 'function') {
+      window.toastr[type](msg);
+    } else {
+      alert(msg);
+    }
+  }
+
   $('#form-annee').on('submit', function(e) {
     e.preventDefault();
+    var $btn = $(this).find('button[type="submit"]');
+    var originalText = $btn.html();
+
+    $btn.prop('disabled', true).html('<i data-lucide="loader-2" class="spin" style="width: 18px; height: 18px;"></i> Traitement...');
+    if (window.lucide) lucide.createIcons();
+
     $.ajax({
       url: $(this).attr('action'),
       type: 'POST',
@@ -116,14 +132,22 @@ $(document).ready(function() {
       dataType: 'json',
       success: function(res) {
         if (res.status === 1 || res.success) {
-          if (window.toastr) toastr.success(res.message || 'Opération réussie');
+          notifyToast(res.message || 'Année académique enregistrée avec succès !', 'success');
           setTimeout(function() { window.location.href = '<?= RACINE ?>annee/list'; }, 1000);
         } else {
-          if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
+          $btn.prop('disabled', false).html(originalText);
+          if (window.lucide) lucide.createIcons();
+          notifyToast(res.message || 'Erreur lors de l\'enregistrement', 'error');
         }
       },
-      error: function() {
-        if (window.toastr) toastr.error('Erreur réseau lors de l\'enregistrement');
+      error: function(xhr) {
+        $btn.prop('disabled', false).html(originalText);
+        if (window.lucide) lucide.createIcons();
+        var errMsg = 'Erreur réseau lors de l\'enregistrement';
+        if (xhr.responseJSON && xhr.responseJSON.message) {
+          errMsg = xhr.responseJSON.message;
+        }
+        notifyToast(errMsg, 'error');
       }
     });
   });

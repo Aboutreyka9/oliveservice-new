@@ -39,12 +39,26 @@ class AnneeController extends BaseController
             if (!$this->checkUnique('annees', 'libelle_annee', $data['libelle_annee'], 'Annee academique')) return;
         }
 
-        $userCode = Context::user();
+        $userCode = Context::user() ?: ($_SESSION[USERS_AUTH]['code_user'] ?? null);
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
 
+        if (empty($etabCode)) {
+            try {
+                $stmtE = $this->model->getCon()->query("SELECT code_etablissement FROM etablissements LIMIT 1");
+                $etabCode = $stmtE ? $stmtE->fetchColumn() : '';
+            } catch (\Throwable $e) {}
+        }
+
+        if (empty($zoneCode)) {
+            try {
+                $stmtZ = $this->model->getCon()->query("SELECT code_zone FROM zones LIMIT 1");
+                $zoneCode = $stmtZ ? $stmtZ->fetchColumn() : '';
+            } catch (\Throwable $e) {}
+        }
+
         if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires.");
             return;
         }
 
@@ -62,9 +76,9 @@ class AnneeController extends BaseController
             if (($filteredData['statut_annee'] ?? '') === 'actif') {
                 NotificationService::resolveAnneeNonActive($etabCode);
             }
-            $this->success('Item créé avec succès!');
+            $this->success('Année académique créée avec succès !');
         } else {
-            $this->error('Erreur lors de la création');
+            $this->error('Erreur lors de la création de l\'année académique');
         }
     }
 
@@ -86,9 +100,9 @@ class AnneeController extends BaseController
             if (($filteredData['statut_annee'] ?? '') === 'actif') {
                 NotificationService::resolveAnneeNonActive(Context::etablissement());
             }
-            $this->success('Item modifié avec succès!');
+            $this->success('Année académique modifiée avec succès !');
         } else {
-            $this->error('Erreur lors de la modification');
+            $this->error('Erreur lors de la modification de l\'année académique');
         }
     }
 

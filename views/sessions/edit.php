@@ -33,8 +33,9 @@ $zones = $zones ?? [];
       </div>
 
       <!-- CARTE FORMULAIRE PRINCIPALE -->
-      <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 32px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; max-width: 760px; box-sizing: border-box;">
-        <form id="form-session" action="<?= RACINE ?>session/<?= $isEdit ? 'edit' : 'add' ?>" method="POST" style="width: 100%;">
+      <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 32px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; box-sizing: border-box;">
+        
+      <form id="form-session" action="<?= RACINE ?>session/<?= $isEdit ? 'edit' : 'add' ?>" method="POST" style="width: 100%;">
           <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
           <?php if ($isEdit): ?>
             <input type="hidden" name="id_session" value="<?= $item['id_session'] ?>">
@@ -46,15 +47,15 @@ $zones = $zones ?? [];
               <i data-lucide="info" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Identification de la Session
             </h3>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-              <div class="form-group" style="grid-column: 1 / -1;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+              <div class="form-group" style="width: 100%; box-sizing: border-box;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Libellé de la Session <span style="color: #EF4444;">*</span>
                 </label>
                 <input type="text" name="libelle_session" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" value="<?= htmlspecialchars($item['libelle_session'] ?? '') ?>" required placeholder="Ex: Session Noël 2026">
               </div>
 
-              <div class="form-group">
+              <div class="form-group" style="width: 100%; box-sizing: border-box;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Année d'activité <span style="color: #EF4444;">*</span>
                 </label>
@@ -68,7 +69,7 @@ $zones = $zones ?? [];
                 </select>
               </div>
 
-              <div class="form-group">
+              <div class="form-group" style="width: 100%; box-sizing: border-box;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Zone Commerciale <span style="color: #64748B; font-weight: 500; font-size: 12px;">(Optionnel)</span>
                 </label>
@@ -172,8 +173,23 @@ $(document).ready(function() {
 
   $('#date-debut-session, #date-fin-session').on('change', calculerNombreJours);
 
+  function notifyToast(msg, type) {
+    if (typeof showToast === 'function') {
+      showToast(msg, type);
+    } else if (window.toastr && typeof window.toastr[type] === 'function') {
+      window.toastr[type](msg);
+    } else {
+      alert(msg);
+    }
+  }
+
   $('#form-session').on('submit', function(e) {
     e.preventDefault();
+    var $btn = $(this).find('button[type="submit"]');
+    var originalText = $btn.html();
+    $btn.prop('disabled', true).html('<i data-lucide="loader-2" class="spin" style="width: 18px; height: 18px;"></i> Traitement...');
+    if (window.lucide) lucide.createIcons();
+
     $.ajax({
       url: $(this).attr('action'),
       type: 'POST',
@@ -181,14 +197,22 @@ $(document).ready(function() {
       dataType: 'json',
       success: function(res) {
         if (res.status === 1 || res.success) {
-          if (window.toastr) toastr.success(res.message || 'Opération réussie');
+          notifyToast(res.message || 'Session enregistrée avec succès !', 'success');
           setTimeout(function() { window.location.href = '<?= RACINE ?>session/list'; }, 1000);
         } else {
-          if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
+          $btn.prop('disabled', false).html(originalText);
+          if (window.lucide) lucide.createIcons();
+          notifyToast(res.message || 'Erreur lors de l\'enregistrement', 'error');
         }
       },
-      error: function() {
-        if (window.toastr) toastr.error('Erreur réseau');
+      error: function(xhr) {
+        $btn.prop('disabled', false).html(originalText);
+        if (window.lucide) lucide.createIcons();
+        var errMsg = 'Erreur réseau lors de l\'enregistrement';
+        if (xhr.responseJSON && xhr.responseJSON.message) {
+          errMsg = xhr.responseJSON.message;
+        }
+        notifyToast(errMsg, 'error');
       }
     });
   });
