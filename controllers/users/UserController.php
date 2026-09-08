@@ -661,13 +661,14 @@ class UserController extends BaseController
                     $stmtPerms->execute($roleCodes);
                     $allPermissions = $stmtPerms->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
-                    // ─── VÉRIFICATION D'ACCÈS PRINCIPAL (MAIN_ACCESS) ────────────────────
-                    // L'utilisateur doit avoir cette permission pour accéder à l'application.
-                    // Si elle est absente ou inactive sur son rôle, connexion refusée.
-                    if (!in_array('MAIN_ACCESS', $allPermissions, true)) {
-                        $this->error("Votre compte ne dispose pas des droits d'accès à l'application. Veuillez contacter l'administrateur.");
-                        return;
-                    }
+                    // ─── PERMISSION JOKER (MAIN_ACCESS / BYPASS ACCÈS) ─────────────────
+                    // La permission MAIN_ACCESS (ou rôle admin) sert de Joker / Pass-Partout :
+                    // Elle permet de contourner les blocages de contexte (zone manquante, année non configurée, etc.)
+                    // afin de permettre à l'administrateur de se connecter pour effectuer les réglages système.
+                    $hasMainAccessJoker = in_array('MAIN_ACCESS', $allPermissions, true) || 
+                                          in_array('*', $allPermissions, true) || 
+                                          in_array('ROLE_ADMIN', $roleCodes, true) || 
+                                          in_array('ROLE_SUPERADMIN', $roleCodes, true);
 
                     $sessionData = [
                         'id_user'       => $user['id_user'],
@@ -688,49 +689,62 @@ class UserController extends BaseController
                         ]
                     ];
 
-                    // ─── VALIDATION STRICTE DU CONTEXTE AVANT OUVERTURE DE SESSION ───────
-                    // 1. Établissement : doit être renseigné dans le profil utilisateur
+                    // ─── VALIDATION DU CONTEXTE DE TRAVAIL (EXIGÉ SAUF POUR LE JOKER MAIN_ACCESS) ─
+                    // 1. Établissement : doit être renseigné dans le profil (ou contourné par Joker)
                     $etabCode = $user['etablissement_code'] ?? null;
-                    if (empty($etabCode)) {
+                    if (empty($etabCode) && !$hasMainAccessJoker) {
                         $this->error("Votre compte n'est associé à aucun établissement. Veuillez contacter l'administrateur.");
                         return;
                     }
 
-                    // 2. Zone : doit être renseignée dans le profil utilisateur
+                    // 2. Zone : doit être renseignée dans le profil (ou contourné par Joker)
                     $zoneCode = $user['zone_code'] ?? null;
-                    if (empty($zoneCode)) {
+                    if (empty($zoneCode) && !$hasMainAccessJoker) {
                         $this->error("Votre compte n'est associé à aucune zone. Veuillez contacter l'administrateur.");
                         return;
                     }
 
-                    // 3. Année active : doit exister dans la table annees (statut = actif)
+                    // 3. Année active : doit exister dans la table annees avec statut = actif (ou contourné par Joker)
                     $stmtAnnee = $this->model->getCon()->query("SELECT code_annee, libelle_annee FROM annees WHERE statut_annee = 'actif' ORDER BY id_annee DESC LIMIT 1");
                     $activeAnnee = $stmtAnnee ? $stmtAnnee->fetch(PDO::FETCH_ASSOC) : null;
-                    if (empty($activeAnnee)) {
+                    if (empty($activeAnnee) && !$hasMainAccessJoker) {
                         $this->error("Aucune année d'activité n'est configurée. Veuillez contacter l'administrateur.");
                         return;
                     }
 
-                    // ─── PEUPLEMENT DE SESSION ────────────────────────────────────────────
+                    // ─── PEUPLEMENT DE LA SESSION UTILISATEUR ───────────────────────────
                     Validator::saveSesion(USERS_AUTH, $sessionData);
                     $_SESSION['permissions'] = $allPermissions;
                     $_SESSION['roles']       = $roleCodes;
 
                     // Établissement
-                    $_SESSION['etablissement_active_code'] = $etabCode;
-                    $stmtEtab = $this->model->getCon()->prepare("SELECT libelle_etablissement FROM etablissements WHERE code_etablissement = ? LIMIT 1");
-                    $stmtEtab->execute([$etabCode]);
-                    $_SESSION['etablissement_active_libelle'] = $stmtEtab->fetchColumn() ?: $etabCode;
+                    $_SESSION['etablissement_active_code'] = $etabCode ?: 'DEFAULT_ETAB';
+                    if (!empty($etabCode)) {
+                        $stmtEtab = $this->model->getCon()->prepare("SELECT libelle_etablissement FROM etablissements WHERE code_etablissement = ? LIMIT 1");
+                        $stmtEtab->execute([$etabCode]);
+                        $_SESSION['etablissement_active_libelle'] = $stmtEtab->fetchColumn() ?: $etabCode;
+                    } else {
+                        $_SESSION['etablissement_active_libelle'] = 'Établissement Principal';
+                    }
 
                     // Zone
-                    $_SESSION['zone_active_code'] = $zoneCode;
-                    $stmtZone = $this->model->getCon()->prepare("SELECT libelle_zone FROM zones WHERE code_zone = ? LIMIT 1");
-                    $stmtZone->execute([$zoneCode]);
-                    $_SESSION['zone_active_libelle'] = $stmtZone->fetchColumn() ?: $zoneCode;
+                    $_SESSION['zone_active_code'] = $zoneCode ?: 'DEFAULT_ZONE';
+                    if (!empty($zoneCode)) {
+                        $stmtZone = $this->model->getCon()->prepare("SELECT libelle_zone FROM zones WHERE code_zone = ? LIMIT 1");
+                        $stmtZone->execute([$zoneCode]);
+                        $_SESSION['zone_active_libelle'] = $stmtZone->fetchColumn() ?: $zoneCode;
+                    } else {
+                        $_SESSION['zone_active_libelle'] = 'Zone Générale';
+                    }
 
                     // Année active
-                    $_SESSION['annee_active_code']    = $activeAnnee['code_annee'];
-                    $_SESSION['annee_active_libelle'] = $activeAnnee['libelle_annee'];
+                    if (!empty($activeAnnee)) {
+                        $_SESSION['annee_active_code']    = $activeAnnee['code_annee'];
+                        $_SESSION['annee_active_libelle'] = $activeAnnee['libelle_annee'];
+                    } else {
+                        $_SESSION['annee_active_code']    = date('Y');
+                        $_SESSION['annee_active_libelle'] = 'Année Non Configurée (' . date('Y') . ')';
+                    }
 
                     $this->success('Connexion réussie ! Bienvenue sur Olive Service.');
                     return;
