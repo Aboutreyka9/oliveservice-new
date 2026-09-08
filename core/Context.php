@@ -95,6 +95,16 @@ class Context
         return self::isSuperAdmin();
     }
 
+    public static function hasJoker(): bool
+    {
+        $roles = self::roles();
+        if (in_array('ROLE_SUPERADMIN', $roles, true) || in_array('ROLE_DIR_GENERAL', $roles, true)) {
+            return true;
+        }
+        $perms = $_SESSION['permissions'] ?? self::permissions();
+        return in_array('MAIN_ACCESS', $perms, true);
+    }
+
     public static function permissions(): array
     {
         if (self::isSuperAdmin()) {

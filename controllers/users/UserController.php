@@ -10,12 +10,107 @@ class UserController extends BaseController
     public function list()
     {
         $this->requirePermission('ADMIN_MANAGE_USERS');
-        $this->loadView('../views/users/list.php');
+        $hasJoker = Context::hasJoker();
+        $userZoneCode = Context::zone();
+
+        // Récupérer les zones actives (toutes les zones si Joker, ou celles de l'établissement actif)
+        $etabCode = Context::etablissement();
+        if ($hasJoker) {
+            $stmtZones = $this->model->getCon()->query("
+                SELECT code_zone, libelle_zone 
+                FROM zones 
+                WHERE statut_zone = 'actif' 
+                ORDER BY libelle_zone ASC
+            ");
+            $zones = $stmtZones ? $stmtZones->fetchAll(PDO::FETCH_ASSOC) : [];
+        } else {
+            $stmtZones = $this->model->getCon()->prepare("
+                SELECT code_zone, libelle_zone 
+                FROM zones 
+                WHERE etablissement_code = ? AND statut_zone = 'actif' 
+                ORDER BY libelle_zone ASC
+            ");
+            $stmtZones->execute([$etabCode]);
+            $zones = $stmtZones->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+
+        $userZoneLibelle = 'Zone non définie';
+        if (!empty($userZoneCode)) {
+            foreach ($zones as $z) {
+                if ($z['code_zone'] === $userZoneCode) {
+                    $userZoneLibelle = $z['libelle_zone'];
+                    break;
+                }
+            }
+            if ($userZoneLibelle === 'Zone non définie') {
+                $stmtUserZone = $this->model->getCon()->prepare("SELECT libelle_zone FROM zones WHERE code_zone = ? LIMIT 1");
+                $stmtUserZone->execute([$userZoneCode]);
+                $lbl = $stmtUserZone->fetchColumn();
+                if ($lbl) {
+                    $userZoneLibelle = $lbl;
+                }
+            }
+        }
+
+        $this->loadView('../views/users/list.php', [
+            'zones'           => $zones,
+            'hasJoker'        => $hasJoker,
+            'userZoneCode'    => $userZoneCode,
+            'userZoneLibelle' => $userZoneLibelle
+        ]);
     }
 
     public function apiList()
     {
         $this->requirePermission('ADMIN_MANAGE_USERS');
+
+        $currentUserId = Context::userId() ?? ($_SESSION[USERS_AUTH]['id_user'] ?? null);
+        $currentUserCode = Context::user() ?? ($_SESSION[USERS_AUTH]['code_user'] ?? null);
+        $hasJoker = Context::hasJoker();
+        $userZone = Context::zone();
+
+        $conds = [];
+        $params = [];
+
+        // 1. Exclure l'utilisateur actuellement connecté
+        if (!empty($currentUserId)) {
+            $conds[] = "u.id_user != :curr_user_id";
+            $params[':curr_user_id'] = $currentUserId;
+        }
+        if (!empty($currentUserCode)) {
+            $conds[] = "u.code_user != :curr_user_code";
+            $params[':curr_user_code'] = $currentUserCode;
+        }
+
+        // 2. Exclure tout utilisateur qui possède le Joker (ROLE_SUPERADMIN, ROLE_DIR_GENERAL ou permission MAIN_ACCESS)
+        $conds[] = "u.code_user NOT IN (
+            SELECT DISTINCT ur.user_code 
+            FROM user_roles ur 
+            WHERE ur.role_code IN ('ROLE_SUPERADMIN', 'ROLE_DIR_GENERAL') 
+               OR ur.role_code IN (SELECT role_code FROM role_permissions WHERE permission_code = 'MAIN_ACCESS')
+            UNION
+            SELECT DISTINCT up.user_code
+            FROM user_permissions up
+            WHERE up.permission_code = 'MAIN_ACCESS' AND up.accorded = 1
+        )";
+
+        // 3. Filtrage selon la zone sélectionnée / assignée
+        $requestedZone = trim($_POST['zone_code'] ?? ($_GET['zone_code'] ?? ''));
+
+        if (!$hasJoker) {
+            // Utilisateur sans Joker : strictement verrouillé sur sa zone
+            $conds[] = "u.zone_code = :forced_zone";
+            $params[':forced_zone'] = $userZone;
+        } else {
+            // Utilisateur avec Joker : peut filtrer par zone ou voir tout
+            if (!empty($requestedZone) && $requestedZone !== 'ALL') {
+                $conds[] = "u.zone_code = :selected_zone";
+                $params[':selected_zone'] = $requestedZone;
+            }
+        }
+
+        $whereClause = !empty($conds) ? ("WHERE " . implode(" AND ", $conds)) : "";
+
         $sql = "SELECT u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code,
                        z.libelle_zone,
                        GROUP_CONCAT(DISTINCT r.libelle_role ORDER BY r.id SEPARATOR '||') as roles_libelles,
@@ -26,9 +121,12 @@ class UserController extends BaseController
                 LEFT JOIN roles r ON r.code_role = ur.role_code
                 LEFT JOIN fonctions f ON f.code_fonction = u.fonction_code
                 LEFT JOIN zones z ON z.code_zone = u.zone_code
+                {$whereClause}
                 GROUP BY u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code, z.libelle_zone, f.libelle_fonction
                 ORDER BY u.id_user DESC";
-        $users = $this->model->getCon()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $data = [];
         foreach ($users as $u) {
