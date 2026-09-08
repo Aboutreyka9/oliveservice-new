@@ -7,6 +7,43 @@ $(function() {
   const racine = window.AppConfig ? window.AppConfig.racine : (window.RACINE || '/');
   const csrfToken = $('#csrf_token').val() || '';
 
+  function updateKpiCards(stats) {
+    if (!stats) return;
+    
+    if ($('#kpi-total-packs').length) {
+      const totalPacks = Number(stats.total_packs || 0).toLocaleString('fr-FR');
+      $('#kpi-total-packs').html(`${totalPacks} <small style="font-size: 13px; font-weight: 600; color: #64748B;">Packs</small>`);
+    }
+    
+    if ($('#kpi-nb-actif').length) {
+      $('#kpi-nb-actif').text(stats.nb_actif || 0);
+    }
+    
+    if ($('#kpi-nb-actif-val').length) {
+      $('#kpi-nb-actif-val').text(Number(stats.nb_actif || 0).toLocaleString('fr-FR'));
+    }
+    
+    if ($('#kpi-avg-prix-jour').length) {
+      const avgPrix = Number(stats.avg_prix_jour || 0).toLocaleString('fr-FR');
+      $('#kpi-avg-prix-jour').html(`${avgPrix} <small style="font-size: 13px; font-weight: 700;">FCFA</small>`);
+    }
+    
+    if ($('#kpi-total-articles').length) {
+      const totalArticles = Number(stats.total_articles || 0).toLocaleString('fr-FR');
+      $('#kpi-total-articles').html(`${totalArticles} <small style="font-size: 13px; font-weight: 600; color: #64748B;">réfs</small>`);
+    }
+  }
+
+  function notifyToast(message, type) {
+    if (typeof showToast === 'function') {
+      showToast(message, type);
+    } else if (window.toastr && typeof window.toastr[type || 'info'] === 'function') {
+      window.toastr[type || 'info'](message);
+    } else {
+      alert(message);
+    }
+  }
+
   const $tablePacks = $('#table-packs');
   if ($tablePacks.length) {
     const table = $tablePacks.DataTable({
@@ -119,6 +156,25 @@ $(function() {
       }
     });
 
+    // Update KPI cards on DataTables XHR response
+    table.on('xhr', function(e, settings, json, xhr) {
+      if (json && json.stats) {
+        updateKpiCards(json.stats);
+      }
+    });
+
+    // Handle reload button
+    $('#btn-reload-packs').on('click', function() {
+      const $btn = $(this);
+      const $icon = $btn.find('i[data-lucide="rotate-cw"]');
+      $icon.css('transition', 'transform 0.5s ease').css('transform', 'rotate(360deg)');
+      setTimeout(() => $icon.css('transform', 'none'), 500);
+
+      table.ajax.reload(function() {
+        notifyToast('Liste des packs actualisée', 'success');
+      }, false);
+    });
+
     // Toggle statut pack via Ajax
     $(document).on('change', '.toggle-statut-pack', function() {
       const id = $(this).data('id');
@@ -133,15 +189,15 @@ $(function() {
         dataType: 'json',
         success: function(res) {
           if (res.status === 1 || res.success) {
-            if (window.toastr) toastr.success(res.message || 'Statut mis à jour avec succès');
+            notifyToast(res.message || 'Statut mis à jour avec succès', 'success');
             table.ajax.reload(null, false);
           } else {
-            if (window.toastr) toastr.error(res.message || 'Erreur lors du changement de statut');
+            notifyToast(res.message || 'Erreur lors du changement de statut', 'error');
             $input.prop('checked', !isChecked);
           }
         },
         error: function() {
-          if (window.toastr) toastr.error('Erreur réseau');
+          notifyToast('Erreur réseau lors de la mise à jour du statut', 'error');
           $input.prop('checked', !isChecked);
         }
       });

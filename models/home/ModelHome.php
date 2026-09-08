@@ -162,9 +162,17 @@ class ModelHome extends BaseModel
 
             // ── 9. Catégories Packs & Sessions ───────────────────────────────────
             $sqlCat = "SELECT COUNT(*) FROM categorie_packs WHERE statut_categorie_pack = 'actif'";
-            $pCat = []; $condsCat = [];
-            Context::applyTripleFilter('', $condsCat, $pCat, false);
-            if (!empty($condsCat)) $sqlCat .= " AND " . implode(' AND ', $condsCat);
+            $pCat = [];
+            $etabCode = Context::etablissement();
+            if (!empty($etabCode)) {
+                $sqlCat .= " AND etablissement_code = ?";
+                $pCat[] = $etabCode;
+            }
+            $zoneCode = Context::zone();
+            if (!empty($zoneCode)) {
+                $sqlCat .= " AND (zone_code = ? OR zone_code = '' OR zone_code IS NULL)";
+                $pCat[] = $zoneCode;
+            }
             $totalCategories = $this->safeCount($db, $sqlCat, $pCat);
 
             $sqlSess = "SELECT COUNT(*) FROM sessions WHERE statut_session = 'actif'";

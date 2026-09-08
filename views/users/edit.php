@@ -440,6 +440,134 @@ $(document).ready(function() {
   }
 
   renderRolePermissions();
+
+  function notifyToast(msg, type) {
+    if (typeof showToast === 'function') {
+      showToast(msg, type);
+    } else if (window.toastr && typeof window.toastr[type] === 'function') {
+      window.toastr[type](msg);
+    } else {
+      alert(msg);
+    }
+  }
+
+  window.copyTextToClipboard = function(text, btnEl) {
+    if (!text) return;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(function() {
+        showCopyFeedback(btnEl);
+      }).catch(function() {
+        fallbackCopy(text, btnEl);
+      });
+    } else {
+      fallbackCopy(text, btnEl);
+    }
+  };
+
+  function fallbackCopy(text, btnEl) {
+    var temp = $('<input>');
+    $('body').append(temp);
+    temp.val(text).select();
+    try {
+      document.execCommand('copy');
+      showCopyFeedback(btnEl);
+    } catch (err) {
+      notifyToast('Impossible de copier automatiquement. Veuillez copier manuellement le lien.', 'warning');
+    }
+    temp.remove();
+  }
+
+  function showCopyFeedback(btnEl) {
+    if (!btnEl) return;
+    var $btn = $(btnEl);
+    var $span = $btn.find('span');
+    var oldText = $span.length ? $span.text() : $btn.text();
+    if ($span.length) {
+      $span.text('Copié !');
+    } else {
+      $btn.text('Copié !');
+    }
+    $btn.css('background', '#059669');
+    setTimeout(function() {
+      if ($span.length) {
+        $span.text(oldText);
+      } else {
+        $btn.text(oldText);
+      }
+      $btn.css('background', '');
+    }, 2000);
+  }
+
+  window.copyModalLink = function() {
+    var linkVal = $('#modalActivationLinkInput').val();
+    copyTextToClipboard(linkVal, document.getElementById('btnCopyActivationLink'));
+  };
+
+  function showActivationModal(data) {
+    $('#modalUserNom').text(data.nom || '-');
+    $('#modalUserEmail').text(data.email || '-');
+    $('#modalUserPassword').text(data.password || '-');
+    $('#modalActivationLinkInput').val(data.activation_url || '');
+    $('#modalDirectActivateBtn').attr('href', data.activation_url || '#');
+
+    if (data.email_sent) {
+      $('#modalActivationAlert').css({ 'background': '#ECFDF5', 'border-color': '#A7F3D0' });
+      $('#modalActivationMessage').html("Un e-mail d'activation avec les identifiants a été expédié avec succès à <strong>" + (data.email || 'l\'utilisateur') + "</strong>.");
+    } else {
+      $('#modalActivationAlert').css({ 'background': '#FFFBEB', 'border-color': '#FCD34D' });
+      $('#modalActivationMessage').html("Compte initialisé ! Vous pouvez copier ou utiliser directement le lien d'activation sécurisé ci-dessous.");
+    }
+
+    $('#modalActivationSuccess').css('display', 'flex');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // Traitement Ajax de la soumission du formulaire utilisateur
+  $('#form-user').on('submit', function(e) {
+    e.preventDefault();
+    var $form = $(this);
+    var $btn = $form.find('button[type="submit"]');
+    var originalText = $btn.html();
+
+    $btn.prop('disabled', true).html('<i data-lucide="loader-2" class="spin" style="width: 18px; height: 18px;"></i> Traitement...');
+    if (window.lucide) lucide.createIcons();
+
+    $.ajax({
+      url: $form.attr('action'),
+      type: 'POST',
+      data: $form.serialize(),
+      dataType: 'json',
+      success: function(res) {
+        if (res.status === 1 || res.success) {
+          notifyToast(res.message || 'Utilisateur enregistré avec succès !', 'success');
+
+          // En création, afficher la modale avec le lien d'activation direct
+          if (res.data && res.data.activation_url) {
+            $btn.prop('disabled', false).html(originalText);
+            if (window.lucide) lucide.createIcons();
+            showActivationModal(res.data);
+          } else {
+            setTimeout(function() {
+              window.location.href = '<?= RACINE ?>user/list';
+            }, 1000);
+          }
+        } else {
+          $btn.prop('disabled', false).html(originalText);
+          if (window.lucide) lucide.createIcons();
+          notifyToast(res.message || 'Erreur lors de l\'enregistrement', 'error');
+        }
+      },
+      error: function(xhr) {
+        $btn.prop('disabled', false).html(originalText);
+        if (window.lucide) lucide.createIcons();
+        var errMsg = 'Erreur réseau lors de l\'enregistrement';
+        if (xhr.responseJSON && xhr.responseJSON.message) {
+          errMsg = xhr.responseJSON.message;
+        }
+        notifyToast(errMsg, 'error');
+      }
+    });
+  });
 });
 </script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>
