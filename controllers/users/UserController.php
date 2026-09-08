@@ -133,6 +133,12 @@ class UserController extends BaseController
             $idCrypte = $this->validator->crypter($u['id_user']);
             $roleNames = !empty($u['roles_libelles']) ? explode('||', $u['roles_libelles']) : [];
             $roleCodes = !empty($u['roles_codes']) ? explode(',', $u['roles_codes']) : [];
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $baseUrl = (strpos(RACINE, 'http://') === 0 || strpos(RACINE, 'https://') === 0) 
+                ? rtrim(RACINE, '/') . '/' 
+                : ($protocol . '://' . $host . '/' . ltrim(RACINE, '/'));
+
             $data[] = [
                 'code' => $u['code_user'],
                 'nom' => $u['nom_user'],
@@ -148,6 +154,7 @@ class UserController extends BaseController
                 'roles_codes' => $roleCodes,
                 'statut' => $u['statut_user'],
                 'token_pending' => !empty($u['token_user']),
+                'activation_url' => !empty($u['token_user']) ? ($baseUrl . 'user/activer?token=' . $u['token_user']) : null,
                 'id' => $u['id_user'],
                 'editId' => $idCrypte
             ];
@@ -267,7 +274,10 @@ class UserController extends BaseController
             // Construction de l'URL d'activation unique
             $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
             $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            $activationUrl = $protocol . '://' . $host . RACINE . 'user/activer?token=' . $activationToken;
+            $baseUrl = (strpos(RACINE, 'http://') === 0 || strpos(RACINE, 'https://') === 0) 
+                ? rtrim(RACINE, '/') . '/' 
+                : ($protocol . '://' . $host . '/' . ltrim(RACINE, '/'));
+            $activationUrl = $baseUrl . 'user/activer?token=' . $activationToken;
 
             // Récupération du libellé de fonction
             $libelleFonction = 'Collaborateur';
@@ -290,8 +300,10 @@ class UserController extends BaseController
             }
 
             // Envoi de l'email d'activation avec coordonnées
+            $emailSent = false;
+            $emailError = null;
             if (!empty($email)) {
-                MailerService::sendTemplate(
+                $mailRes = MailerService::sendTemplate(
                     $email,
                     "Olive Service - Activation de votre compte & Coordonnées d'accès",
                     "welcome_credentials",
@@ -304,10 +316,28 @@ class UserController extends BaseController
                         'loginUrl' => $activationUrl
                     ]
                 );
+                $emailSent = !empty($mailRes['status']);
+                if (!$emailSent) {
+                    $emailError = $mailRes['message'] ?? "Erreur d'envoi du courriel";
+                }
             }
 
             $idDisplay = $email ?: ($telephone ?: $nom);
-            $this->success("Utilisateur créé avec succès en statut inactif ! Un e-mail d'activation avec ses accès et son mot de passe temporaire a été envoyé à <strong>{$idDisplay}</strong>.", ['password' => $rawPassword]);
+            $msg = "Utilisateur créé avec succès en statut inactif !";
+            if ($emailSent) {
+                $msg .= " Un e-mail d'activation avec ses accès et son mot de passe temporaire a été envoyé à <strong>{$idDisplay}</strong>.";
+            } else {
+                $msg .= " Le lien d'activation a été généré avec succès.";
+            }
+
+            $this->success($msg, [
+                'password'       => $rawPassword,
+                'activation_url' => $activationUrl,
+                'email'          => $email,
+                'email_sent'     => $emailSent,
+                'email_error'    => $emailError,
+                'nom'            => trim($nom . ' ' . $prenom)
+            ]);
         } else {
             $this->error('Erreur lors de la création de l\'utilisateur.');
         }

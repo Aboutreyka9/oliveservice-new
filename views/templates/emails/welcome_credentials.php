@@ -85,10 +85,19 @@
           </table>
         </div>
 
-        <!-- Bouton d'Action CTA -->
-        <div style="text-align: center; margin: 32px 0 24px 0;">
-          <a href="<?= htmlspecialchars($loginUrl ?? '#') ?>" target="_blank" style="background: linear-gradient(135deg, #1E3A5F 0%, #2563EB 100%); color: #FFFFFF; font-weight: 700; padding: 15px 32px; text-decoration: none; border-radius: 10px; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
-            Accéder à l'Espace de Connexion &rarr;
+        <!-- Bouton d'Action CTA d'Activation -->
+        <div style="text-align: center; margin: 32px 0 20px 0;">
+          <a href="<?= htmlspecialchars($loginUrl ?? '#') ?>" target="_blank" style="background: linear-gradient(135deg, #059669 0%, #1E3A5F 100%); color: #FFFFFF; font-weight: 800; padding: 16px 36px; text-decoration: none; border-radius: 12px; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35); letter-spacing: 0.3px;">
+            Activer mon Compte &amp; Se Connecter &rarr;
+          </a>
+        </div>
+
+        <div style="background: #F1F5F9; border-radius: 8px; padding: 12px 16px; margin: 16px 0 24px 0; text-align: center;">
+          <p style="font-size: 11px; color: #64748B; margin: 0 0 4px 0; font-weight: 600;">
+            Si le bouton ne fonctionne pas, copiez-collez ce lien d'activation sécurisé dans votre navigateur :
+          </p>
+          <a href="<?= htmlspecialchars($loginUrl ?? '#') ?>" style="color: #2563EB; font-size: 12px; font-weight: 600; word-break: break-all; text-decoration: underline;">
+            <?= htmlspecialchars($loginUrl ?? '') ?>
           </a>
         </div>
 

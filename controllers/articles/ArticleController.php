@@ -42,8 +42,15 @@ class ArticleController extends BaseController
             if (!$this->checkUnique('articles', 'libelle_article', $data['libelle_article'], 'Article')) return;
         }
 
-        $userCode = Context::user() ?? '';
+        $userCode = Context::user() ?: ($_SESSION[USERS_AUTH]['code_user'] ?? '');
         $etabCode = Context::etablissement();
+
+        if (empty($etabCode)) {
+            try {
+                $stmtE = $this->model->getCon()->query("SELECT code_etablissement FROM etablissements LIMIT 1");
+                $etabCode = $stmtE ? $stmtE->fetchColumn() : '';
+            } catch (\Throwable $e) {}
+        }
 
         if (empty($data['code_article'])) {
             $data['code_article'] = $this->validator->generateCode('articles', 'code_article', 'ART-', 8);

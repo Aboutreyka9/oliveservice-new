@@ -38,10 +38,38 @@ $title = $isEdit ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur';
 
       <!-- CARTE FORMULAIRE PRINCIPALE -->
       <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 32px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; box-sizing: border-box;">
-        <form action="<?= RACINE ?>user/<?= $isEdit ? 'edit' : 'add' ?>" method="POST" style="width: 100%;">
+        <form id="form-user" action="<?= RACINE ?>user/<?= $isEdit ? 'edit' : 'add' ?>" method="POST" style="width: 100%;">
           <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
           <?php if ($isEdit): ?>
             <input type="hidden" name="id_user" value="<?= $user['id_user'] ?>">
+          <?php endif; ?>
+
+          <?php if ($isEdit && !empty($user['token_user'])): 
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $baseUrl = (strpos(RACINE, 'http://') === 0 || strpos(RACINE, 'https://') === 0) 
+                ? rtrim(RACINE, '/') . '/' 
+                : ($protocol . '://' . $host . '/' . ltrim(RACINE, '/'));
+            $pendingActivationUrl = $baseUrl . 'user/activer?token=' . $user['token_user'];
+          ?>
+            <div style="background: #FFFBEB; border: 1px solid #FCD34D; border-left: 4px solid #D97706; border-radius: 12px; padding: 18px 20px; margin-bottom: 24px;">
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; color: #92400E;">
+                <i data-lucide="alert-triangle" style="width: 18px; height: 18px; color: #D97706;"></i>
+                Compte en attente d'activation par jeton
+              </div>
+              <p style="font-size: 12.5px; color: #78350F; margin: 4px 0 10px 0; line-height: 1.4;">
+                Ce collaborateur n'a pas encore validé son compte via le lien d'activation sécurisé. Vous pouvez copier ce lien pour lui transmettre ou activer directement son compte.
+              </p>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <input type="text" class="form-control" readonly value="<?= htmlspecialchars($pendingActivationUrl) ?>" style="flex: 1; min-width: 240px; font-size: 12px; background: #FFFFFF; font-family: monospace; color: #1E293B;" onclick="this.select();">
+                <button type="button" class="btn btn-copy-inline" onclick="copyTextToClipboard('<?= htmlspecialchars($pendingActivationUrl) ?>', this)" style="background: #D97706; color: #FFFFFF; font-weight: 700; border-radius: 8px; font-size: 12px; padding: 9px 14px; white-space: nowrap; border: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <i data-lucide="copy" style="width: 14px; height: 14px;"></i> <span>Copier le lien</span>
+                </button>
+                <a href="<?= htmlspecialchars($pendingActivationUrl) ?>" target="_blank" class="btn" style="background: #059669; color: #FFFFFF; font-weight: 700; border-radius: 8px; font-size: 12px; padding: 9px 14px; white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                  <i data-lucide="external-link" style="width: 14px; height: 14px;"></i> Activer
+                </a>
+              </div>
+            </div>
           <?php endif; ?>
 
           <!-- BLOC 1 : IDENTITÉ -->
@@ -196,6 +224,87 @@ $title = $isEdit ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur';
             </a>
           </div>
         </form>
+      </div>
+
+      <!-- MODAL SUCCÈS CRÉATION & LIEN D'ACTIVATION -->
+      <div id="modalActivationSuccess" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(5px); padding: 20px;">
+        <div style="background: #FFFFFF; border-radius: 20px; width: 100%; max-width: 580px; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35); overflow: hidden; border: 1px solid #E2E8F0; animation: modalSlideDown 0.25s ease-out;">
+          
+          <div style="padding: 24px 28px; background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(5, 150, 105, 0.25); border: 1px solid #059669; color: #34D399; display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="check-circle" style="width: 24px; height: 24px;"></i>
+              </div>
+              <div>
+                <h3 style="margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.3px;">Compte Utilisateur Initialisé !</h3>
+                <p style="margin: 2px 0 0 0; font-size: 12px; color: #94A3B8;">Lien d'activation &amp; coordonnées d'accès</p>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding: 28px;">
+            <div id="modalActivationAlert" style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+              <i data-lucide="mail-check" style="width: 20px; height: 20px; color: #059669; flex-shrink: 0;"></i>
+              <span id="modalActivationMessage" style="font-size: 13px; color: #065F46; font-weight: 600;">
+                L'utilisateur a été créé avec succès en statut inactif.
+              </span>
+            </div>
+
+            <!-- Coordonnées sommaires -->
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr>
+                  <td style="color: #64748B; font-weight: 600; padding: 4px 0; width: 140px;">Collaborateur :</td>
+                  <td id="modalUserNom" style="color: #0F172A; font-weight: 800;">-</td>
+                </tr>
+                <tr>
+                  <td style="color: #64748B; font-weight: 600; padding: 4px 0;">Identifiant / Email :</td>
+                  <td id="modalUserEmail" style="color: #0F172A; font-weight: 700;">-</td>
+                </tr>
+                <tr>
+                  <td style="color: #64748B; font-weight: 600; padding: 4px 0;">Mot de passe tempo :</td>
+                  <td>
+                    <code id="modalUserPassword" style="font-family: monospace; font-size: 14px; font-weight: 800; color: #059669; background: #DCFCE7; border: 1px dashed #86EFAC; padding: 2px 8px; border-radius: 6px; display: inline-block;">-</code>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Bloc Lien d'activation -->
+            <div style="margin-bottom: 24px;">
+              <label style="display: block; font-size: 12.5px; font-weight: 800; color: #1E3A5F; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                <i data-lucide="link" style="width: 14px; height: 14px; color: #059669; vertical-align: middle;"></i> Lien d'activation du compte
+              </label>
+              
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="modalActivationLinkInput" class="form-control" readonly style="width: 100%; font-size: 12.5px; font-family: monospace; font-weight: 600; background: #F8FAFC; color: #1E3A5F; padding: 10px 14px; border: 1px solid #CBD5E1; border-radius: 8px;" onclick="this.select();">
+                <button type="button" id="btnCopyActivationLink" class="btn" onclick="copyModalLink()" style="background: #1E3A5F; color: #FFFFFF; font-weight: 700; border-radius: 8px; padding: 10px 18px; white-space: nowrap; border: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                  <i data-lucide="copy" style="width: 15px; height: 15px;"></i> <span id="copyBtnText">Copier</span>
+                </button>
+              </div>
+              <small style="color: #64748B; font-size: 11.5px; margin-top: 6px; display: block;">
+                Ce lien sécurisé permet d'activer le compte et de débloquer l'accès pour ce collaborateur.
+              </small>
+            </div>
+
+            <!-- Boutons d'action finaux -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-top: 1px solid #E2E8F0; padding-top: 20px;">
+              <a id="modalDirectActivateBtn" href="#" target="_blank" class="btn" style="background: #059669; color: #FFFFFF; font-weight: 800; border-radius: 10px; padding: 11px 22px; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);">
+                <i data-lucide="check" style="width: 16px; height: 16px;"></i> Activer le compte maintenant
+              </a>
+
+              <div style="display: flex; gap: 8px;">
+                <a href="<?= RACINE ?>user/formulaire" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 10px; padding: 11px 16px; text-decoration: none; border: 1px solid #CBD5E1; font-size: 13px;">
+                  Nouveau
+                </a>
+                <a href="<?= RACINE ?>user/list" class="btn" style="background: #1E3A5F; color: #FFFFFF; font-weight: 700; border-radius: 10px; padding: 11px 18px; text-decoration: none; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+                  <i data-lucide="users" style="width: 15px; height: 15px;"></i> Liste des utilisateurs
+                </a>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
 
     </div>
