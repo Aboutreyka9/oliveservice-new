@@ -192,7 +192,7 @@ class NotificationService
     public static function resolveAnneeNonActive(?string $etabCode = null): bool
     {
         try {
-            $pdo = Database::getInstance()->getCon();
+            $pdo = self::getModel()->getCon();
             $sql = "UPDATE notifications SET lu_notification = 1 WHERE reference_code = 'ANNEE_INACTIVE' AND lu_notification = 0";
             $params = [];
             if (!empty($etabCode)) {

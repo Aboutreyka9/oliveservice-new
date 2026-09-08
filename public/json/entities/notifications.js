@@ -33,9 +33,9 @@ $(document).ready(function() {
                         color = '#D97706';
                         label = 'Souscription';
                     } else if (data === 'systeme') {
-                        icon = 'info';
-                        bg = '#F1F5F9';
-                        color = '#475569';
+                        icon = 'alert-triangle';
+                        bg = '#FEF2F2';
+                        color = '#DC2626';
                         label = 'Système';
                     }
 
