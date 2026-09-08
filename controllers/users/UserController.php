@@ -849,9 +849,35 @@ class UserController extends BaseController
                     // 3. Année active : doit exister dans la table annees avec statut = actif (ou contourné par Joker)
                     $stmtAnnee = $this->model->getCon()->query("SELECT code_annee, libelle_annee FROM annees WHERE statut_annee = 'actif' ORDER BY id_annee DESC LIMIT 1");
                     $activeAnnee = $stmtAnnee ? $stmtAnnee->fetch(PDO::FETCH_ASSOC) : null;
-                    if (empty($activeAnnee) && !$hasMainAccessJoker) {
-                        $this->error("Aucune année d'activité n'est configurée. Veuillez contacter l'administrateur.");
-                        return;
+                    if (empty($activeAnnee)) {
+                        // Créer une notification d'alerte système pour les administrateurs si aucune notification non lue n'existe
+                        try {
+                            $checkEtab = $etabCode ?: 'DEFAULT_ETAB';
+                            $stmtCheckNotif = $this->model->getCon()->prepare("
+                                SELECT id_notification 
+                                FROM notifications 
+                                WHERE reference_code = 'ANNEE_INACTIVE' 
+                                  AND lu_notification = 0 
+                                  AND etablissement_code = ? 
+                                LIMIT 1
+                            ");
+                            $stmtCheckNotif->execute([$checkEtab]);
+                            if (!$stmtCheckNotif->fetch()) {
+                                NotificationService::notifyAnneeNonActive([
+                                    'etablissement_code' => $checkEtab,
+                                    'zone_code'          => $zoneCode,
+                                    'user_code'          => null,
+                                    'blocked_user_nom'   => !$hasMainAccessJoker ? ($user['nom_user'] . ' ' . ($user['prenom_user'] ?? '')) : null
+                                ]);
+                            }
+                        } catch (\Throwable $e) {
+                            error_log("Erreur lors de la notification pour année non active: " . $e->getMessage());
+                        }
+
+                        if (!$hasMainAccessJoker) {
+                            $this->error("Aucune année d'activité n'est configurée. Veuillez contacter l'administrateur.");
+                            return;
+                        }
                     }
 
                     // ─── PEUPLEMENT DE LA SESSION UTILISATEUR ───────────────────────────
@@ -883,12 +909,13 @@ class UserController extends BaseController
                     if (!empty($activeAnnee)) {
                         $_SESSION['annee_active_code']    = $activeAnnee['code_annee'];
                         $_SESSION['annee_active_libelle'] = $activeAnnee['libelle_annee'];
+                        $this->success('Connexion réussie ! Bienvenue sur Olive Service.');
                     } else {
                         $_SESSION['annee_active_code']    = date('Y');
                         $_SESSION['annee_active_libelle'] = 'Année Non Configurée (' . date('Y') . ')';
+                        $_SESSION['flash_warning']        = "Attention : Aucune année d'activité n'est actuellement active. Le système fonctionne en mode dégradé (Joker). Veuillez configurer ou activer une année dans les paramètres.";
+                        $this->success("Connexion réussie (Attention : Aucune année d'activité n'est active !)");
                     }
-
-                    $this->success('Connexion réussie ! Bienvenue sur Olive Service.');
                     return;
                 } else {
                     $this->error('Ce compte utilisateur est inactif ou suspendu. Veuillez contacter l\'administrateur.');

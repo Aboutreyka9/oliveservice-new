@@ -152,4 +152,58 @@ class NotificationService
             'annee_code'           => $anneeCode
         ]);
     }
+
+    /**
+     * Notification d'alerte système lorsqu'aucune année d'activité n'est configurée ou active
+     */
+    public static function notifyAnneeNonActive(array $params = []): ?string
+    {
+        $etabCode = $params['etablissement_code'] ?? 'DEFAULT_ETAB';
+        $zoneCode = $params['zone_code'] ?? null;
+        $userCode = $params['user_code'] ?? null;
+        $blockedUserNom = !empty($params['blocked_user_nom']) ? $params['blocked_user_nom'] : null;
+
+        $titre = "Configuration requise : Aucune année active ⚠️";
+        if (!empty($blockedUserNom)) {
+            $message = "Attention : Une tentative de connexion de {$blockedUserNom} a été bloquée car aucune année académique / d'activité n'est active. Veuillez activer ou créer une année.";
+        } else {
+            $message = "Attention : Aucune année académique / d'activité n'est actuellement activée dans le système. Veuillez vous rendre dans le module Années pour activer ou créer une année afin de débloquer l'accès pour l'ensemble des utilisateurs.";
+        }
+
+        return self::send([
+            'user_code'            => $userCode,
+            'role_target'          => 'ROLE_ADMIN',
+            'type_notification'    => 'systeme',
+            'titre_notification'   => $titre,
+            'message_notification' => $message,
+            'reference_code'       => 'ANNEE_INACTIVE',
+            'url_notification'     => RACINE . 'annee/list',
+            'lu_notification'      => 0,
+            'statut_notification'  => 'actif',
+            'etablissement_code'   => $etabCode,
+            'zone_code'            => $zoneCode,
+            'annee_code'           => null
+        ]);
+    }
+
+    /**
+     * Marquer comme lues et résolues les alertes d'année inactive lorsqu'une année est activée
+     */
+    public static function resolveAnneeNonActive(?string $etabCode = null): bool
+    {
+        try {
+            $pdo = Database::getInstance()->getCon();
+            $sql = "UPDATE notifications SET lu_notification = 1 WHERE reference_code = 'ANNEE_INACTIVE' AND lu_notification = 0";
+            $params = [];
+            if (!empty($etabCode)) {
+                $sql .= " AND (etablissement_code = ? OR etablissement_code IS NULL OR etablissement_code = 'DEFAULT_ETAB')";
+                $params[] = $etabCode;
+            }
+            $stmt = $pdo->prepare($sql);
+            return $stmt->execute($params);
+        } catch (Exception $e) {
+            error_log("resolveAnneeNonActive error: " . $e->getMessage());
+            return false;
+        }
+    }
 }

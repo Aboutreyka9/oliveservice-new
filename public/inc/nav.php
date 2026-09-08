@@ -24,6 +24,17 @@
   <?php unset($_SESSION['flash_error']); ?>
 <?php endif; ?>
 
+<?php if (!empty($_SESSION['flash_warning'])): ?>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof showToast === 'function') {
+        showToast(<?= json_encode($_SESSION['flash_warning']) ?>, 'warning');
+      }
+    });
+  </script>
+  <?php unset($_SESSION['flash_warning']); ?>
+<?php endif; ?>
+
 <header class="topbar">
     <div class="topbar-left">
         <button class="btn-icon mobile-menu-btn" id="mobileMenuBtn" title="Menu mobile">
@@ -327,6 +338,10 @@
                                 $icon = 'sparkles';
                                 $iconColor = '#D97706';
                                 $iconBg = '#FEF3C7';
+                            } elseif ($type === 'systeme' || $type === 'annee') {
+                                $icon = 'alert-triangle';
+                                $iconColor = '#DC2626';
+                                $iconBg = '#FEF2F2';
                             }
                             $destUrl = !empty($notif['url_notification']) ? $notif['url_notification'] : 'javascript:void(0)';
                         ?>
@@ -334,7 +349,7 @@
                                class="notification-card-item"
                                data-notif-id="<?= (int)$notif['id_notification'] ?>"
                                onclick="quickMarkNotifRead(event, <?= (int)$notif['id_notification'] ?>, '<?= htmlspecialchars($destUrl) ?>')"
-                               style="display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #F1F5F9; text-decoration: none; color: inherit; transition: background 0.15s ease; <?= $isUnread ? 'background: #F0FDF4; border-left: 3px solid #059669;' : 'background: #FFFFFF;' ?>">
+                               style="display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #F1F5F9; text-decoration: none; color: inherit; transition: background 0.15s ease; <?= $isUnread ? (($type === 'systeme' || $type === 'annee') ? 'background: #FEF2F2; border-left: 3px solid #DC2626;' : 'background: #F0FDF4; border-left: 3px solid #059669;') : 'background: #FFFFFF;' ?>">
                                 <div style="width: 34px; height: 34px; border-radius: 8px; background: <?= $iconBg ?>; color: <?= $iconColor ?>; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
                                     <i data-lucide="<?= $icon ?>" style="width: 17px; height: 17px;"></i>
                                 </div>

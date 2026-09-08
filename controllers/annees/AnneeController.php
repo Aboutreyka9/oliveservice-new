@@ -59,6 +59,9 @@ class AnneeController extends BaseController
         if (in_array('zone_code', $cols)) $data['zone_code'] = $zoneCode;
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->create($filteredData)) {
+            if (($filteredData['statut_annee'] ?? '') === 'actif') {
+                NotificationService::resolveAnneeNonActive($etabCode);
+            }
             $this->success('Item créé avec succès!');
         } else {
             $this->error('Erreur lors de la création');
@@ -80,6 +83,9 @@ class AnneeController extends BaseController
         $cols = $this->model->getCon()->query("DESCRIBE annees")->fetchAll(PDO::FETCH_COLUMN);
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->update($filteredData, $id)) {
+            if (($filteredData['statut_annee'] ?? '') === 'actif') {
+                NotificationService::resolveAnneeNonActive(Context::etablissement());
+            }
             $this->success('Item modifié avec succès!');
         } else {
             $this->error('Erreur lors de la modification');
@@ -93,6 +99,10 @@ class AnneeController extends BaseController
         $id = $this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
+                $updated = $this->model->getById($id);
+                if ($updated && ($updated['statut_annee'] ?? '') === 'actif') {
+                    NotificationService::resolveAnneeNonActive(Context::etablissement());
+                }
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
                 $this->error('Erreur lors de la mise à jour du statut');
