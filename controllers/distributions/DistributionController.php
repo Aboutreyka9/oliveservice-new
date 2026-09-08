@@ -333,7 +333,13 @@ class DistributionController extends BaseController
         $stmtSous->execute([$etabCode, $zoneCode, $anneeCode]);
         $souscriptions = $stmtSous->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-        $agents = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user, role_user FROM users WHERE statut_user='actif'")->fetchAll(PDO::FETCH_ASSOC);
+        $agents = $this->model->getCon()->query("
+            SELECT u.code_user, u.nom_user, u.prenom_user, r.libelle_role as role_user 
+            FROM users u
+            LEFT JOIN user_roles ur ON ur.user_code = u.code_user
+            LEFT JOIN roles r ON r.code_role = ur.role_code
+            WHERE u.statut_user='actif'
+        ")->fetchAll(PDO::FETCH_ASSOC);
 
         $this->loadView('../views/distributions/edit.php', [
             'item' => [],

@@ -48,14 +48,14 @@ class ModelDistribution extends BaseModel
     {
         try {
             $sql = "
-                SELECT ps.pack_code, p.libelle_pack, p.categorie_pack_code, cp.libelle_categorie_pack,
+                SELECT ps.pack_code, p.libelle_pack, p.prix_cotisation_pack, p.categorie_pack_code, cp.libelle_categorie_pack,
                        COALESCE(SUM(pa.quantite_article), 0) as quantite_article_attendue
                 FROM pack_souscriptions ps
                 JOIN packs p ON p.code_pack = ps.pack_code
                 LEFT JOIN categorie_packs cp ON cp.code_categorie_pack = p.categorie_pack_code
                 LEFT JOIN pack_articles pa ON pa.pack_code = p.code_pack
                 WHERE ps.souscription_code = ?
-                GROUP BY ps.pack_code, p.libelle_pack, p.categorie_pack_code, cp.libelle_categorie_pack
+                GROUP BY ps.pack_code, p.libelle_pack, p.prix_cotisation_pack, p.categorie_pack_code, cp.libelle_categorie_pack
             ";
             $stmt = $this->getCon()->prepare($sql);
             $stmt->execute([$souscriptionCode]);

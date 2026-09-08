@@ -108,16 +108,17 @@ $agents = $agents ?? [];
               <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                 <thead>
                   <tr style="border-bottom: 2px solid #CBD5E1; text-align: left; color: #475569; font-weight: 700;">
-                    <th style="padding: 10px;">Pack Souscrit</th>
+                    <th style="padding: 10px;">Libellé Pack</th>
                     <th style="padding: 10px;">Catégorie</th>
-                    <th style="padding: 10px;">Articles Inclus dans le Pack</th>
-                    <th style="padding: 10px; text-align: center;">Qté Attendue</th>
-                    <th style="padding: 10px; text-align: center; width: 140px;">Qté Livrée</th>
+                    <th style="padding: 10px; text-align: right;">Prix Cotisation</th>
+                    <th style="padding: 10px; text-align: center;">Quantité Attendue</th>
+                    <th style="padding: 10px; text-align: center; width: 130px;">Quantité Livrée</th>
+                    <th style="padding: 10px; text-align: center; width: 90px;">Action</th>
                   </tr>
                 </thead>
                 <tbody id="table-distribution-packs-body">
                   <tr>
-                    <td colspan="5" style="padding: 20px; text-align: center; color: #94A3B8;">
+                    <td colspan="6" style="padding: 20px; text-align: center; color: #94A3B8;">
                       Veuillez sélectionner une souscription pour afficher ses packs.
                     </td>
                   </tr>
@@ -206,23 +207,28 @@ function loadSouscriptionPacksInfo(souscriptionCode) {
           res.packs.forEach(function(pack, idx) {
             var articlesHtml = '';
             if (pack.articles && pack.articles.length > 0) {
-              articlesHtml = pack.articles.map(function(art) {
+              articlesHtml = '<div style="margin-top: 4px;">' + pack.articles.map(function(art) {
                 return '<span style="display:inline-block; background:#E2E8F0; color:#334155; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; margin:2px;">' +
                        art.libelle_article + ' (x' + art.quantite_article + ')</span>';
-              }).join(' ');
-            } else {
-              articlesHtml = '<em style="color:#94A3B8;">Aucun article configuré</em>';
+              }).join(' ') + '</div>';
             }
 
             var qteAttendue = parseInt(pack.quantite_article_attendue || 0);
+            var prixCotis = parseFloat(pack.prix_cotisation_pack || 0);
 
             var row = '<tr style="border-bottom: 1px solid #E2E8F0;">' +
-              '<td style="padding: 12px; font-weight: 800; color: #0F172A;">' + (pack.libelle_pack || 'Pack') + '</td>' +
+              '<td style="padding: 12px; font-weight: 800; color: #0F172A;">' +
+                '<div>' + (pack.libelle_pack || 'Pack') + '</div>' +
+                articlesHtml +
+              '</td>' +
               '<td style="padding: 12px;"><span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 12px; background: #ECFDF5; color: #059669;">' + (pack.libelle_categorie_pack || 'Général') + '</span></td>' +
-              '<td style="padding: 12px;">' + articlesHtml + '</td>' +
-              '<td style="padding: 12px; text-align: center; font-weight: 800; color: #2563EB; font-size: 15px;">' + qteAttendue + '</td>' +
+              '<td style="padding: 12px; text-align: right; font-weight: 800; color: #2563EB;">' + prixCotis.toLocaleString('fr-FR') + ' FCFA</td>' +
+              '<td style="padding: 12px; text-align: center; font-weight: 800; color: #0F172A; font-size: 15px;">' + qteAttendue + '</td>' +
               '<td style="padding: 12px; text-align: center;">' +
-                '<input type="number" class="form-control input-qte-livree" data-pack="' + pack.pack_code + '" data-attendue="' + qteAttendue + '" value="' + qteAttendue + '" min="0" max="' + qteAttendue + '" style="width: 90px; text-align: center; font-weight: 800; color: #059669; padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1;">' +
+                '<input type="number" class="form-control input-qte-livree" data-pack="' + pack.pack_code + '" data-attendue="' + qteAttendue + '" value="' + qteAttendue + '" min="0" max="' + qteAttendue + '" style="width: 85px; text-align: center; font-weight: 800; color: #059669; padding: 6px 8px; border-radius: 8px; border: 1px solid #CBD5E1;">' +
+              '</td>' +
+              '<td style="padding: 12px; text-align: center;">' +
+                '<input type="checkbox" class="chk-pack-deliver" data-pack="' + pack.pack_code + '" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: #059669;">' +
               '</td>' +
             '</tr>';
             tbody.append(row);
@@ -230,7 +236,7 @@ function loadSouscriptionPacksInfo(souscriptionCode) {
 
           $('#packs-section').slideDown(200);
         } else {
-          $('#table-distribution-packs-body').html('<tr><td colspan="5" style="padding: 20px; text-align: center; color: #94A3B8;">Aucun pack associé à cette souscription.</td></tr>');
+          $('#table-distribution-packs-body').html('<tr><td colspan="6" style="padding: 20px; text-align: center; color: #94A3B8;">Aucun pack associé à cette souscription.</td></tr>');
           $('#packs-section').slideDown(200);
         }
         if (window.lucide) lucide.createIcons();
@@ -254,6 +260,16 @@ $(document).ready(function() {
     loadSouscriptionPacksInfo($(this).val());
   });
 
+  $(document).on('change', '.chk-pack-deliver', function() {
+    var isChecked = $(this).is(':checked');
+    var $inputQte = $(this).closest('tr').find('.input-qte-livree');
+    if (isChecked) {
+      $inputQte.prop('disabled', false).val($inputQte.data('attendue'));
+    } else {
+      $inputQte.prop('disabled', true).val(0);
+    }
+  });
+
   // Si pré-sélectionné
   var initialCode = $('#select-souscription').val();
   if (initialCode) {
@@ -270,16 +286,25 @@ $(document).ready(function() {
     }
 
     var packsData = [];
-    $('.input-qte-livree').each(function() {
-      var packCode = $(this).data('pack');
-      var qteAttendue = parseInt($(this).data('attendue') || 0);
-      var qteLivree = parseInt($(this).val() || 0);
-      packsData.push({
-        pack_code: packCode,
-        quantite_article_attendue: qteAttendue,
-        quantite_article_livree: qteLivree
-      });
+    $('.chk-pack-deliver').each(function() {
+      if ($(this).is(':checked')) {
+        var packCode = $(this).data('pack');
+        var $row = $(this).closest('tr');
+        var $inputQte = $row.find('.input-qte-livree');
+        var qteAttendue = parseInt($inputQte.data('attendue') || 0);
+        var qteLivree = parseInt($inputQte.val() || 0);
+        packsData.push({
+          pack_code: packCode,
+          quantite_article_attendue: qteAttendue,
+          quantite_article_livree: qteLivree
+        });
+      }
     });
+
+    if (packsData.length === 0) {
+      if (window.toastr) toastr.error('Veuillez cocher au moins un pack à livrer.');
+      return;
+    }
 
     $('#packs_data_json').val(JSON.stringify(packsData));
 
