@@ -415,19 +415,22 @@ class ClientController extends BaseController
 
             // Récupérer les souscriptions de ce client avec filtrage par rôle
             $sql = "
-                SELECT s.*, p.libelle_pack, z.libelle_zone
+                SELECT s.*, 
+                       z.libelle_zone,
+                       sess.libelle_session,
+                       sess.nombre_jour_session,
+                       (SELECT GROUP_CONCAT(DISTINCT p2.libelle_pack SEPARATOR ', ') FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as libelle_pack,
+                       (SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as sum_prix_cotisation_pack,
+                       ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) * COALESCE(sess.nombre_jour_session, 0)) as totale_souscription,
+                       (SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)) as montant_total_cotise,
+                       (SELECT COALESCE(SUM(mc.nombre_jour), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)) as nombre_jour_cotise,
+                       sess.nombre_jour_session as nombre_jour_total
                 FROM souscriptions s
-                LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription AND ps.etablissement_code = ? AND ps.zone_code = ? AND ps.annee_code = ?
-                LEFT JOIN packs p ON p.code_pack = ps.pack_code AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
                 LEFT JOIN zones z ON z.code_zone = s.zone_code
-                WHERE s.client_code = ? AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
+                LEFT JOIN sessions sess ON sess.code_session = s.session_code
+                WHERE s.client_code = ? AND s.etablissement_code = ?
             ";
-            $params = [
-                $etabCode, $zoneCode, $anneeCode,
-                $etabCode, $zoneCode, $anneeCode,
-                $item['code_client'],
-                $etabCode, $zoneCode, $anneeCode
-            ];
+            $params = [$item['code_client'], $etabCode];
 
             if (Context::isCommercial()) {
                 $sql .= " AND s.user_code = ?";
@@ -440,18 +443,51 @@ class ClientController extends BaseController
             $stmtSous->execute($params);
             $souscriptions = $stmtSous->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+            foreach ($souscriptions as &$s) {
+                $sId = $s['id_souscription'];
+                $s['encrypted_id'] = $this->validator->crypter($sId);
+
+                $sumPrixCotisation = (float)($s['sum_prix_cotisation_pack'] ?? 0);
+                if ($sumPrixCotisation <= 0 && !empty($s['montant_cotisation_journaliere'])) {
+                    $sumPrixCotisation = (float)$s['montant_cotisation_journaliere'];
+                }
+                $s['calculated_prix_cotisation'] = $sumPrixCotisation;
+
+                $nombreJourSession = (int)($s['nombre_jour_session'] ?? ($s['nombre_jour_total'] ?? 0));
+                $s['calculated_nb_jours'] = $nombreJourSession;
+
+                $totaleSouscription = (float)($s['totale_souscription'] ?? 0);
+                if ($totaleSouscription <= 0) {
+                    $totaleSouscription = !empty($s['montant_total_prevu']) ? (float)$s['montant_total_prevu'] : ($sumPrixCotisation * $nombreJourSession);
+                }
+                $s['calculated_total_souscription'] = $totaleSouscription;
+
+                $montantCotise = (float)($s['montant_total_cotise'] ?? 0);
+                $s['calculated_total_cotise'] = $montantCotise;
+
+                $soldeRestant = max(0, $totaleSouscription - $montantCotise);
+                $s['calculated_solde_restant'] = $soldeRestant;
+
+                $joursCotises = (int)($s['nombre_jour_cotise'] ?? 0);
+                $s['calculated_jours_cotises'] = $joursCotises;
+
+                $progression = $nombreJourSession > 0 ? min(100, round(($joursCotises / $nombreJourSession) * 100)) : 0;
+                $s['calculated_progression'] = $progression;
+            }
+            unset($s);
+
             // Récupérer la liste des cotisations (versements) effectuées par ce client
             $sqlCot = "
                 SELECT cc.*, s.code_souscription
                 FROM cautisation_clients cc
-                LEFT JOIN souscriptions s ON s.code_souscription = cc.souscription_code AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
+                LEFT JOIN souscriptions s ON s.code_souscription = cc.souscription_code AND s.etablissement_code = ?
                 WHERE (cc.client_code = ? OR s.client_code = ?)
-                  AND cc.etablissement_code = ? AND cc.zone_code = ? AND cc.annee_code = ?
+                  AND cc.etablissement_code = ?
             ";
             $paramsCot = [
-                $etabCode, $zoneCode, $anneeCode,
+                $etabCode,
                 $item['code_client'], $item['code_client'],
-                $etabCode, $zoneCode, $anneeCode
+                $etabCode
             ];
 
             if (Context::isCommercial()) {
