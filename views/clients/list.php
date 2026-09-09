@@ -625,5 +625,5 @@ $stats = $stats ?? [
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/clients.js?v=2.0"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/clients.js?v=2.1"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

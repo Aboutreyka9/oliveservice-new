@@ -193,8 +193,8 @@ $(function () {
             const canSous = window.AppConfig && window.AppConfig.can ? window.AppConfig.can('COMMERCIAL_ADD_SOUSCRIPTION') : false;
 
             const sousBtn = canSous ? `
-              <a href="${racine}souscription/wizard" class="btn-action-icon success" title="Nouvelle Souscription">
-                <i data-lucide="plus-circle" style="width: 15px; height: 15px;"></i>
+              <a href="${racine}souscription/ressouscription?client_code=${encodeURIComponent(d.code_client || '')}" class="btn-action-icon success" title="Ressouscription">
+                <i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i>
               </a>` : '';
 
             const editBtn = canEdit ? `

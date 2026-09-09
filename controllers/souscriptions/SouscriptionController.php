@@ -665,7 +665,28 @@ class SouscriptionController extends BaseController
     public function ressouscription()
     {
         $this->requirePermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_ADD_SOUSCRIPTION']);
-        $this->loadView('../views/souscriptions/ressouscription.php');
+
+        $clientCode = trim($_GET['client_code'] ?? ($_GET['client'] ?? ''));
+        $preselectedClient = null;
+
+        if (!empty($clientCode)) {
+            $etabCode = Context::etablissement();
+            $stmt = $this->model->getCon()->prepare("
+                SELECT c.id_client, c.code_client, c.nom_client, c.telephone_client, c.sexe_client, 
+                       c.lieu_residence_client, c.email_client, c.profession_client, c.numero_cni, c.statut_client,
+                       (SELECT COUNT(*) FROM souscriptions sub WHERE sub.client_code = c.code_client) as total_souscriptions
+                FROM clients c
+                WHERE (c.code_client = ? OR c.id_client = ?)
+                  AND c.etablissement_code = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$clientCode, $clientCode, $etabCode]);
+            $preselectedClient = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+
+        $this->loadView('../views/souscriptions/ressouscription.php', [
+            'preselectedClient' => $preselectedClient
+        ]);
     }
 
     /**
