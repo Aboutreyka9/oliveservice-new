@@ -22,11 +22,7 @@ $(function() {
     if ($('#kpi-nb-actif-val').length) {
       $('#kpi-nb-actif-val').text(Number(stats.nb_actif || 0).toLocaleString('fr-FR'));
     }
-    
-    if ($('#kpi-avg-prix-jour').length) {
-      const avgPrix = Number(stats.avg_prix_jour || 0).toLocaleString('fr-FR');
-      $('#kpi-avg-prix-jour').html(`${avgPrix} <small style="font-size: 13px; font-weight: 700;">FCFA</small>`);
-    }
+
     
     if ($('#kpi-total-articles').length) {
       const totalArticles = Number(stats.total_articles || 0).toLocaleString('fr-FR');

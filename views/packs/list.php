@@ -268,23 +268,6 @@ $stats = $stats ?? [
           </div>
         </div>
 
-        <!-- KPI 3 : COTISATION MOYENNE / JOUR -->
-        <div class="pck-kpi-card" style="--kpi-accent: linear-gradient(90deg, #D97706, #B45309); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;">
-          <div class="pck-kpi-header">
-            <span class="pck-kpi-title">Cotisation Moyenne</span>
-            <div class="pck-kpi-icon">
-              <i data-lucide="coins" style="width: 20px; height: 20px;"></i>
-            </div>
-          </div>
-          <div class="pck-kpi-val" id="kpi-avg-prix-jour" style="color: #D97706;">
-            <?= number_format($stats['avg_prix_jour'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700;">FCFA</small>
-          </div>
-          <div class="pck-kpi-footer">
-            <span>Prix moyen / jour</span>
-            <span class="pck-kpi-badge" style="background: #FFFBEB; color: #D97706;">Journalier</span>
-          </div>
-        </div>
-
         <!-- KPI 4 : ARTICLES CATALOGUE -->
         <div class="pck-kpi-card" style="--kpi-accent: linear-gradient(90deg, #0284C7, #0369A1); --kpi-bg-icon: #E0F2FE; --kpi-color-icon: #0284C7;">
           <div class="pck-kpi-header">
