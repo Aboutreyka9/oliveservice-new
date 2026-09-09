@@ -668,6 +668,20 @@ class CaisseCommercialController extends BaseController
                 $item['total_general'] = $totalEspeces + $totalMobileMoney + $totalChequeVirement;
             }
             $item['fond_initial'] = (float)($item['montant_total_attendu'] ?? 0);
+
+            $stmtV = $db->prepare("
+                SELECT id_versement, code_versement_commercial, montant_versement, statut_versement, periode_versement, caisse_code
+                FROM versements_commerciaux
+                WHERE caisse_code = ? OR (commercial_code = ? AND periode_versement = DATE(?))
+                ORDER BY id_versement DESC
+                LIMIT 1
+            ");
+            $stmtV->execute([
+                $item['code_caisse'] ?? '',
+                $item['user_code'] ?? '',
+                $item['date_ouverture'] ?? date('Y-m-d')
+            ]);
+            $versementLinked = $stmtV->fetch(PDO::FETCH_ASSOC) ?: null;
         } catch (Exception $e) {
             error_log("CaisseCommercialController::details error: " . $e->getMessage());
             $this->renderNotFound("Le procès-verbal de clôture de caisse demandé est introuvable.");
@@ -676,7 +690,8 @@ class CaisseCommercialController extends BaseController
         $this->loadView('../views/caisse_commercial/details.php', [
             'item' => $item, 
             'paiements' => $paiements,
-            'encryptedId' => $encryptedId
+            'encryptedId' => $encryptedId,
+            'versementLinked' => $versementLinked
         ]);
     }
 
