@@ -8,8 +8,14 @@ $(function() {
 
   const $tableCotis = $('#table-cotisations');
   if ($tableCotis.length) {
-    $tableCotis.DataTable({
-      ajax: racine + 'cotisation/apiList',
+    const table = $tableCotis.DataTable({
+      ajax: {
+        url: racine + 'cotisation/apiList',
+        data: function(d) {
+          d.date_debut = $('#filter-date-debut').val() || '';
+          d.date_fin = $('#filter-date-fin').val() || '';
+        }
+      },
       processing: true,
       autoWidth: false,
       columns: [
@@ -117,6 +123,57 @@ $(function() {
       drawCallback: function() {
         if (window.lucide) lucide.createIcons();
       }
+    });
+
+    // Mise à jour dynamique des cartes KPI à chaque rechargement DataTables
+    $tableCotis.on('xhr.dt', function(e, settings, json) {
+      if (json && json.stats) {
+        var s = json.stats;
+        $('#kpi-total-montant').html(Number(s.total_montant || 0).toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">FCFA</small>');
+        $('#kpi-total-cotisations').html(Number(s.total_cotisations || 0).toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">opér.</small>');
+        $('#kpi-total-jours').html('+' + Number(s.total_jours || 0).toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">j</small>');
+        $('#kpi-count-valide').text((s.count_valide || 0) + ' Val.');
+        $('#kpi-count-attente').text((s.count_attente || 0) + ' Att.');
+      }
+    });
+
+    // --- EVENEMENTS FILTRE DE PERIODE ---
+    $('#btn-appliquer-filtre').on('click', function() {
+      table.ajax.reload();
+    });
+
+    $('#btn-reset-filtre').on('click', function() {
+      $('#filter-date-debut').val('');
+      $('#filter-date-fin').val('');
+      $('.btn-shortcut-date').css({ 'background': '#F8FAFC', 'color': '#334155', 'border-color': '#CBD5E1' });
+      table.ajax.reload();
+    });
+
+    $('.btn-shortcut-date').on('click', function() {
+      var range = $(this).data('range');
+      var now = new Date();
+      var yyyy = now.getFullYear();
+      var mm = String(now.getMonth() + 1).padStart(2, '0');
+      var dd = String(now.getDate()).padStart(2, '0');
+
+      $('.btn-shortcut-date').css({ 'background': '#F8FAFC', 'color': '#334155', 'border-color': '#CBD5E1' });
+      $(this).css({ 'background': '#1E3A5F', 'color': '#FFFFFF', 'border-color': '#1E3A5F' });
+
+      if (range === 'today') {
+        var todayStr = yyyy + '-' + mm + '-' + dd;
+        $('#filter-date-debut').val(todayStr);
+        $('#filter-date-fin').val(todayStr);
+      } else if (range === 'month') {
+        var firstDay = yyyy + '-' + mm + '-01';
+        var lastDayObj = new Date(yyyy, now.getMonth() + 1, 0);
+        var lastDay = yyyy + '-' + mm + '-' + String(lastDayObj.getDate()).padStart(2, '0');
+        $('#filter-date-debut').val(firstDay);
+        $('#filter-date-fin').val(lastDay);
+      } else if (range === 'year') {
+        $('#filter-date-debut').val(yyyy + '-01-01');
+        $('#filter-date-fin').val(yyyy + '-12-31');
+      }
+      table.ajax.reload();
     });
   }
 });

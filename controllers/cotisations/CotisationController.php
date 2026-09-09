@@ -11,6 +11,9 @@ class CotisationController extends BaseController
     {
         $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
 
+        $dateDebut = $_GET['date_debut'] ?? '';
+        $dateFin = $_GET['date_fin'] ?? '';
+
         $sqlStats = "
             SELECT 
                 COUNT(*) as total_cotisations,
@@ -24,6 +27,16 @@ class CotisationController extends BaseController
         $params = [];
         $conds = [];
         Context::applyTripleFilter('c', $conds, $params, true, false);
+
+        if (!empty($dateDebut)) {
+            $conds[] = "DATE(c.date_cautisation) >= ?";
+            $params[] = $dateDebut;
+        }
+        if (!empty($dateFin)) {
+            $conds[] = "DATE(c.date_cautisation) <= ?";
+            $params[] = $dateFin;
+        }
+
         if (!empty($conds)) {
             $sqlStats .= " AND " . implode(' AND ', $conds);
         }
@@ -47,6 +60,9 @@ class CotisationController extends BaseController
     {
         $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         
+        $dateDebut = $_REQUEST['date_debut'] ?? '';
+        $dateFin = $_REQUEST['date_fin'] ?? '';
+
         $sql = "
             SELECT c.*, 
                    cl.nom_client, cl.telephone_client,
@@ -69,6 +85,16 @@ class CotisationController extends BaseController
         $params = [];
         $conds = [];
         Context::applyTripleFilter('c', $conds, $params, true, false);
+
+        if (!empty($dateDebut)) {
+            $conds[] = "DATE(c.date_cautisation) >= ?";
+            $params[] = $dateDebut;
+        }
+        if (!empty($dateFin)) {
+            $conds[] = "DATE(c.date_cautisation) <= ?";
+            $params[] = $dateFin;
+        }
+
         if (!empty($conds)) {
             $sql .= " AND " . implode(' AND ', $conds);
         }
@@ -102,7 +128,35 @@ class CotisationController extends BaseController
                 'caisse_cloturee' => $caisseCloturee
             ]);
         }
-        $this->json(['data' => $data]);
+
+        // Calcul des statistiques sur la sélection filtrée
+        $sqlStats = "
+            SELECT 
+                COUNT(*) as total_cotisations,
+                COALESCE(SUM(c.montant_cautisation_client), 0) as total_montant,
+                COALESCE(SUM(c.nombre_jour), 0) as total_jours,
+                COUNT(CASE WHEN c.statut_cautisation_client = 'valide' THEN 1 END) as count_valide,
+                COUNT(CASE WHEN c.statut_cautisation_client = 'en_attente' THEN 1 END) as count_attente
+            FROM cautisation_clients c
+            WHERE 1=1
+        ";
+        if (!empty($conds)) {
+            $sqlStats .= " AND " . implode(' AND ', $conds);
+        }
+        $stmtStats = $this->model->getCon()->prepare($sqlStats);
+        $stmtStats->execute($params);
+        $stats = $stmtStats->fetch(PDO::FETCH_ASSOC) ?: [
+            'total_cotisations' => 0,
+            'total_montant' => 0,
+            'total_jours' => 0,
+            'count_valide' => 0,
+            'count_attente' => 0
+        ];
+
+        $this->json([
+            'data' => $data,
+            'stats' => $stats
+        ]);
     }
 
     public function add()
