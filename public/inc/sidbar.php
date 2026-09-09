@@ -383,6 +383,9 @@
                 <a href="<?= RACINE ?>caisse_commercial/list" class="nav-item sub <?= strpos($currentUri, '/caisse_commercial/list') !== false ? 'active' : '' ?>" data-title="Journal des Caisses">
                     <i data-lucide="archive"></i> <span>Journal des Caisses</span>
                 </a>
+                <a href="<?= RACINE ?>user/tresorerieList" class="nav-item sub <?= strpos($currentUri, '/user/tresorerieList') !== false ? 'active' : '' ?>" data-title="Utilisateurs Trésorerie">
+                    <i data-lucide="user-check"></i> <span>Utilisateurs Trésorerie</span>
+                </a>
             </div>
         </div>
         <?php endif; ?>

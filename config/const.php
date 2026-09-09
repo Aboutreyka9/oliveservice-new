@@ -19,8 +19,6 @@ if (!defined('RACINE')) {
         $basePath = '/';
         if (strpos($reqUri, '/oliveservice') !== false || strpos($scriptName, '/oliveservice') !== false) {
             $basePath = '/oliveservice/';
-        } elseif (strpos($reqUri, '/geicg') !== false || strpos($scriptName, '/geicg') !== false) {
-            $basePath = '/geicg/';
         }
         
         define('RACINE', $protocol . $httpHost . $basePath);

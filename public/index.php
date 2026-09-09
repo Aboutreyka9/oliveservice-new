@@ -24,6 +24,8 @@ $route->addRoute('/user/changer', ['UserController', 'changer']);
 $route->addRoute('/user/edition/{param}', ['UserController', 'edition']);
 $route->addRoute('/user/details/{param}', ['UserController', 'details']);
 $route->addRoute('/user/formulaire', ['UserController', 'formulaire']);
+$route->addRoute('/user/tresorerieList', ['UserController', 'tresorerieList']);
+$route->addRoute('/user/apiTresorerieList', ['UserController', 'apiTresorerieList']);
 
 // -------------------------------------------------------------
 // Module: Etablissements & Fonctions

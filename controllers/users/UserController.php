@@ -1071,4 +1071,163 @@ class UserController extends BaseController
             $this->error('Erreur lors de la mise à jour du mot de passe.');
         }
     }
+
+    public function tresorerieList()
+    {
+        $this->requirePermission(['FINANCE_VIEW_ALL_COTISATIONS', 'FINANCE_VALIDATE_VERSEMENT', 'FINANCE_MANAGE_DEPENSES', 'ADMIN_MANAGE_USERS']);
+        $hasJoker = Context::hasJoker();
+        $userZoneCode = Context::zone();
+
+        $etabCode = Context::etablissement();
+        if ($hasJoker) {
+            $stmtZones = $this->model->getCon()->query("
+                SELECT code_zone, libelle_zone 
+                FROM zones 
+                WHERE statut_zone = 'actif' 
+                ORDER BY libelle_zone ASC
+            ");
+            $zones = $stmtZones ? $stmtZones->fetchAll(PDO::FETCH_ASSOC) : [];
+        } else {
+            $stmtZones = $this->model->getCon()->prepare("
+                SELECT code_zone, libelle_zone 
+                FROM zones 
+                WHERE etablissement_code = ? AND statut_zone = 'actif' 
+                ORDER BY libelle_zone ASC
+            ");
+            $stmtZones->execute([$etabCode]);
+            $zones = $stmtZones->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+
+        $userZoneLibelle = 'Zone non définie';
+        if (!empty($userZoneCode)) {
+            foreach ($zones as $z) {
+                if ($z['code_zone'] === $userZoneCode) {
+                    $userZoneLibelle = $z['libelle_zone'];
+                    break;
+                }
+            }
+            if ($userZoneLibelle === 'Zone non définie') {
+                $stmtUserZone = $this->model->getCon()->prepare("SELECT libelle_zone FROM zones WHERE code_zone = ? LIMIT 1");
+                $stmtUserZone->execute([$userZoneCode]);
+                $lbl = $stmtUserZone->fetchColumn();
+                if ($lbl) {
+                    $userZoneLibelle = $lbl;
+                }
+            }
+        }
+
+        // Statistiques globales pour la trésorerie
+        $stats = [
+            'total_users' => 0,
+            'caisses_ouvertes' => 0,
+            'total_versements' => 0,
+            'total_commissions' => 0
+        ];
+
+        $stmtUsersCount = $this->model->getCon()->query("SELECT COUNT(*) FROM users WHERE statut_user = 'actif'");
+        $stats['total_users'] = $stmtUsersCount ? (int)$stmtUsersCount->fetchColumn() : 0;
+
+        $stmtCaissesCount = $this->model->getCon()->query("SELECT COUNT(*) FROM caisses WHERE statut_caisse = 'ouverte'");
+        $stats['caisses_ouvertes'] = $stmtCaissesCount ? (int)$stmtCaissesCount->fetchColumn() : 0;
+
+        $stmtVersStats = $this->model->getCon()->query("
+            SELECT 
+                COALESCE(SUM(v.montant_versement), 0) as total_vers,
+                COALESCE(SUM(v.montant_versement * COALESCE(u.commission, 0) / 100), 0) as total_comm
+            FROM versements_commerciaux v
+            LEFT JOIN users u ON u.code_user = v.commercial_code
+            WHERE v.statut_versement = 'valide'
+        ");
+        if ($stmtVersStats) {
+            $rowV = $stmtVersStats->fetch(PDO::FETCH_ASSOC);
+            $stats['total_versements'] = (float)($rowV['total_vers'] ?? 0);
+            $stats['total_commissions'] = (float)($rowV['total_comm'] ?? 0);
+        }
+
+        $this->loadView('../views/users/tresorerie_list.php', [
+            'zones'           => $zones,
+            'hasJoker'        => $hasJoker,
+            'userZoneCode'    => $userZoneCode,
+            'userZoneLibelle' => $userZoneLibelle,
+            'stats'           => $stats
+        ]);
+    }
+
+    public function apiTresorerieList()
+    {
+        $this->requirePermission(['FINANCE_VIEW_ALL_COTISATIONS', 'FINANCE_VALIDATE_VERSEMENT', 'FINANCE_MANAGE_DEPENSES', 'ADMIN_MANAGE_USERS']);
+
+        $hasJoker = Context::hasJoker();
+        $userZone = Context::zone();
+
+        $conds = [];
+        $params = [];
+
+        $requestedZone = trim($_POST['zone_code'] ?? ($_GET['zone_code'] ?? ''));
+
+        if (!$hasJoker) {
+            $conds[] = "u.zone_code = :forced_zone";
+            $params[':forced_zone'] = $userZone;
+        } else {
+            if (!empty($requestedZone) && $requestedZone !== 'ALL') {
+                $conds[] = "u.zone_code = :selected_zone";
+                $params[':selected_zone'] = $requestedZone;
+            }
+        }
+
+        $whereClause = !empty($conds) ? ("WHERE " . implode(" AND ", $conds)) : "";
+
+        $sql = "SELECT u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code, u.commission,
+                       z.libelle_zone,
+                       f.libelle_fonction,
+                       GROUP_CONCAT(DISTINCT r.libelle_role ORDER BY r.id SEPARATOR '||') as roles_libelles,
+                       GROUP_CONCAT(DISTINCT r.code_role ORDER BY r.id SEPARATOR ',') as roles_codes,
+                       (SELECT COUNT(*) FROM caisses c WHERE c.user_code = u.code_user AND c.statut_caisse = 'ouverte') as active_caisses,
+                       COALESCE((SELECT SUM(v.montant_versement) FROM versements_commerciaux v WHERE (v.commercial_code = u.code_user OR v.user_code = u.code_user) AND v.statut_versement = 'valide'), 0) as total_versements_valides
+                FROM users u
+                LEFT JOIN user_roles ur ON ur.user_code = u.code_user
+                LEFT JOIN roles r ON r.code_role = ur.role_code
+                LEFT JOIN fonctions f ON f.code_fonction = u.fonction_code
+                LEFT JOIN zones z ON z.code_zone = u.zone_code
+                {$whereClause}
+                GROUP BY u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code, u.commission, z.libelle_zone, f.libelle_fonction
+                ORDER BY u.id_user DESC";
+
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $data = [];
+        foreach ($users as $u) {
+            $idCrypte = $this->validator->crypter($u['id_user']);
+            $roleNames = !empty($u['roles_libelles']) ? explode('||', $u['roles_libelles']) : [];
+            $roleCodes = !empty($u['roles_codes']) ? explode(',', $u['roles_codes']) : [];
+            $commRate = (float)($u['commission'] ?? 0);
+            $totalVers = (float)($u['total_versements_valides'] ?? 0);
+            $totalComm = round(($totalVers * $commRate) / 100, 2);
+
+            $data[] = [
+                'code' => $u['code_user'],
+                'nom' => $u['nom_user'],
+                'prenom' => $u['prenom_user'] ?? '',
+                'email' => $u['email_user'] ?? '',
+                'telephone' => $u['telephone_user'] ?? '',
+                'fonction' => $u['libelle_fonction'] ?? '-',
+                'zone' => !empty($u['libelle_zone']) ? $u['libelle_zone'] : (!empty($u['zone_code']) ? $u['zone_code'] : 'Globale'),
+                'zone_code' => $u['zone_code'] ?? '',
+                'role' => !empty($roleNames) ? implode(', ', $roleNames) : 'Non attribué',
+                'roles_list' => $roleNames,
+                'roles_codes' => $roleCodes,
+                'statut' => $u['statut_user'],
+                'caisse_ouverte' => ((int)($u['active_caisses'] ?? 0)) > 0,
+                'total_versements' => $totalVers,
+                'commission_rate' => $commRate,
+                'total_commission' => $totalComm,
+                'id' => $u['id_user'],
+                'editId' => $idCrypte
+            ];
+        }
+
+        $this->json(['data' => $data]);
+    }
 }
