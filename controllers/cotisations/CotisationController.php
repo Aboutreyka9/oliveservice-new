@@ -10,7 +10,37 @@ class CotisationController extends BaseController
     public function list()
     {
         $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
-        $this->loadView('../views/cotisations/list.php');
+
+        $sqlStats = "
+            SELECT 
+                COUNT(*) as total_cotisations,
+                COALESCE(SUM(c.montant_cautisation_client), 0) as total_montant,
+                COALESCE(SUM(c.nombre_jour), 0) as total_jours,
+                COUNT(CASE WHEN c.statut_cautisation_client = 'valide' THEN 1 END) as count_valide,
+                COUNT(CASE WHEN c.statut_cautisation_client = 'en_attente' THEN 1 END) as count_attente
+            FROM cautisation_clients c
+            WHERE 1=1
+        ";
+        $params = [];
+        $conds = [];
+        Context::applyTripleFilter('c', $conds, $params, true, false);
+        if (!empty($conds)) {
+            $sqlStats .= " AND " . implode(' AND ', $conds);
+        }
+
+        $stmtStats = $this->model->getCon()->prepare($sqlStats);
+        $stmtStats->execute($params);
+        $stats = $stmtStats->fetch(PDO::FETCH_ASSOC) ?: [
+            'total_cotisations' => 0,
+            'total_montant' => 0,
+            'total_jours' => 0,
+            'count_valide' => 0,
+            'count_attente' => 0
+        ];
+
+        $this->loadView('../views/cotisations/list.php', [
+            'stats' => $stats
+        ]);
     }
 
     public function apiList()
@@ -53,10 +83,20 @@ class CotisationController extends BaseController
         foreach ($items as $c) {
             $id = $c['id_cautisation_client'];
             $idCrypte = $this->validator->crypter($id);
+            $sousCode = $c['souscription_code'] ?? ($c['code_souscription'] ?? '');
             $caisseCloturee = (($c['statut_caisse_commercial'] ?? '') === 'cloture');
+            
+            $rawDate = $c['date_cautisation'] ?? '';
+            $dateFormatted = !empty($rawDate) ? date('d/m/Y', strtotime($rawDate)) : '-';
+            $timeFormatted = (!empty($rawDate) && strpos($rawDate, ' ') !== false) ? date('H:i', strtotime($rawDate)) : '';
+
             $data[] = array_merge($c, [
                 'id' => $id,
                 'editId' => $idCrypte,
+                'souscription_code' => $sousCode,
+                'code_souscription' => $sousCode,
+                'date_formatted' => $dateFormatted,
+                'time_formatted' => $timeFormatted,
                 'nom_client_complet' => trim(($c['nom_client'] ?? '')),
                 'nom_commercial_complet' => trim(($c['nom_commercial'] ?? '') . ' ' . ($c['prenom_commercial'] ?? '')),
                 'caisse_cloturee' => $caisseCloturee

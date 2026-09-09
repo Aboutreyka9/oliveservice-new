@@ -24,10 +24,13 @@ $(function() {
         { 
           data: 'date_cautisation', 
           defaultContent: '-', 
-          width: '100px',
-          render: function(d) {
+          width: '140px',
+          render: function(d, type, row) {
             if (!d) return '-';
-            return '<span style="font-size:12px; color:#475569; font-weight:600;">' + d + '</span>';
+            var formatted = (row && row.date_formatted) ? row.date_formatted : d;
+            var time = (row && row.time_formatted) ? row.time_formatted : '';
+            var timeBadge = time ? '<span style="color:#64748B; font-size:11px; font-weight:600; background:#F1F5F9; padding:2px 6px; border-radius:4px; margin-left:4px;">' + time + '</span>' : '';
+            return '<div style="display:inline-flex; align-items:center; gap:4px; font-weight:700; color:#1E3A5F; font-size:13px;"><i data-lucide="calendar" style="width:14px;height:14px;color:#059669;"></i> <span>' + formatted + '</span>' + timeBadge + '</div>';
           }
         },
         { 
@@ -38,9 +41,11 @@ $(function() {
         },
         { 
           data: 'souscription_code', 
-          render: function(d) {
-            if (!d) return '-';
-            return '<code style="font-weight:700; color:#059669; background:#ECFDF5; padding:4px 8px; border-radius:6px; font-size:12px; border:1px solid #A7F3D0;">' + d + '</code>';
+          defaultContent: '-',
+          render: function(d, type, row) {
+            var val = d || (row ? (row.souscription_code || row.code_souscription) : '');
+            if (!val) return '-';
+            return '<code style="font-weight:700; color:#059669; background:#ECFDF5; padding:4px 8px; border-radius:6px; font-size:12px; border:1px solid #A7F3D0;">' + val + '</code>';
           }
         },
         { 

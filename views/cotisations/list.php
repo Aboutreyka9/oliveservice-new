@@ -104,6 +104,72 @@
         </div>
       </div>
 
+      <!-- CARTE ET STATISTIQUES (KPI CARDS) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; margin-bottom: 24px;" class="stats-section">
+        
+        <!-- KPI 1 : TOTAL ENCAISSÉ -->
+        <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #E2E8F0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Total Encaissé</span>
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: #ECFDF5; color: #059669; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.15);">
+              <i data-lucide="banknote" style="width: 22px; height: 22px;"></i>
+            </div>
+          </div>
+          <div style="font-size: 22px; font-weight: 900; color: #059669; line-height: 1.2;">
+            <?= number_format((float)($stats['total_montant'] ?? 0), 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700;">FCFA</small>
+          </div>
+          <span style="font-size: 12px; color: #64748B; font-weight: 600; margin-top: 6px; display: block;">Encaissements terrain cumulés</span>
+        </div>
+
+        <!-- KPI 2 : VOLUME DE COTISATIONS -->
+        <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #E2E8F0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Total Cotisations</span>
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: #EFF6FF; color: #1E3A5F; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(30, 58, 95, 0.15);">
+              <i data-lucide="receipt" style="width: 22px; height: 22px;"></i>
+            </div>
+          </div>
+          <div style="font-size: 22px; font-weight: 900; color: #1E3A5F; line-height: 1.2;">
+            <?= number_format((int)($stats['total_cotisations'] ?? 0), 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700;">opér.</small>
+          </div>
+          <span style="font-size: 12px; color: #64748B; font-weight: 600; margin-top: 6px; display: block;">Règlements reçus au journal</span>
+        </div>
+
+        <!-- KPI 3 : JOURS RÉGULARISÉS -->
+        <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #E2E8F0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Jours Régularisés</span>
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: #EEF2FF; color: #2563EB; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);">
+              <i data-lucide="calendar-check" style="width: 22px; height: 22px;"></i>
+            </div>
+          </div>
+          <div style="font-size: 22px; font-weight: 900; color: #2563EB; line-height: 1.2;">
+            +<?= number_format((int)($stats['total_jours'] ?? 0), 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700;">j</small>
+          </div>
+          <span style="font-size: 12px; color: #64748B; font-weight: 600; margin-top: 6px; display: block;">Couverture souscriptions</span>
+        </div>
+
+        <!-- KPI 4 : VALIDATION CAISSE -->
+        <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #E2E8F0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Validation Caisse</span>
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.15);">
+              <i data-lucide="shield-check" style="width: 22px; height: 22px;"></i>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+            <span style="background: #ECFDF5; color: #047857; font-weight: 800; font-size: 11px; padding: 4px 8px; border-radius: 10px; border: 1px solid #A7F3D0;">
+              <?= (int)($stats['count_valide'] ?? 0) ?> Val.
+            </span>
+            <span style="background: #FEF3C7; color: #B45309; font-weight: 800; font-size: 11px; padding: 4px 8px; border-radius: 10px; border: 1px solid #FDE68A;">
+              <?= (int)($stats['count_attente'] ?? 0) ?> Att.
+            </span>
+          </div>
+          <span style="font-size: 12px; color: #64748B; font-weight: 600; margin-top: 6px; display: block;">État des encaissements</span>
+        </div>
+
+      </div>
+
       <!-- CARTE TABLEAU PRINCIPALE (NAVY PREMIUM) -->
       <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 28px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; box-sizing: border-box; overflow: hidden;">
         <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
@@ -129,7 +195,7 @@
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/cotisations.js?v=1.1"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/cotisations.js?v=<?= time() ?>"></script>
 <script>
 function imprimerCotisations() {
   if ($.fn.DataTable.isDataTable('#table-cotisations')) {
