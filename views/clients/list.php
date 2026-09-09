@@ -477,7 +477,7 @@ $stats = $stats ?? [
             <span>Actualiser</span>
           </button>
           
-          <?php if (Context::can('COMMERCIAL_ADD_SOUSCRIPTION', ['ROLE_COMMERCIAL', 'ROLE_ADMIN'])): ?>
+          <?php if (Context::can('COMMERCIAL_ADD_SOUSCRIPTION')): ?>
           <a href="<?= RACINE ?>souscription/wizard" class="btn-add-sous" title="Lancer une nouvelle souscription pack">
             <i data-lucide="plus-circle" style="width: 17px; height: 17px;"></i>
             <span>Nouvelle Souscription</span>

@@ -416,39 +416,39 @@ $isAdmin = Context::isSuperAdmin();
           </div>
         </div>
 
-        <!-- ACTIONS RAPIDES SELON LE RÔLE -->
+        <!-- ACTIONS RAPIDES SELON PERMISSIONS RBAC -->
         <div class="header-actions-group">
-          <?php if ($isCommercial): ?>
+          <?php if (Context::can('COMMERCIAL_ADD_CLIENT')): ?>
             <a href="<?= RACINE ?>client/formulaire" class="action-btn-pill btn-pill-primary">
               <i data-lucide="user-plus" style="width: 17px; height: 17px;"></i> Nouveau Client
             </a>
-            <a href="<?= RACINE ?>cotisation/formulaire" class="action-btn-pill btn-pill-success">
-              <i data-lucide="coins" style="width: 17px; height: 17px;"></i> Encasser Cotisation
+          <?php endif; ?>
+          <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION')): ?>
+            <a href="<?= RACINE ?>cautisation-payment/search-form" class="action-btn-pill btn-pill-success">
+              <i data-lucide="coins" style="width: 17px; height: 17px;"></i> Encaisser Cotisation
             </a>
+          <?php endif; ?>
+          <?php if (Context::can('COMMERCIAL_MAKE_VERSEMENT')): ?>
             <a href="<?= RACINE ?>versement/formulaire" class="action-btn-pill btn-pill-primary" style="background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);">
               <i data-lucide="arrow-down-left" style="width: 17px; height: 17px;"></i> Déclarer Versement
             </a>
-          <?php elseif ($isGestionnaire): ?>
+          <?php endif; ?>
+          <?php if (Context::can('GESTIONNAIRE_MANAGE_PACKS')): ?>
             <a href="<?= RACINE ?>pack/formulaire" class="action-btn-pill btn-pill-primary">
               <i data-lucide="package-plus" style="width: 17px; height: 17px;"></i> Nouveau Pack
             </a>
+          <?php endif; ?>
+          <?php if (Context::can('GESTIONNAIRE_MANAGE_DISTRIBUTIONS')): ?>
             <a href="<?= RACINE ?>distribution/list" class="action-btn-pill btn-pill-success">
               <i data-lucide="truck" style="width: 17px; height: 17px;"></i> Remettre Livraisons
             </a>
-          <?php elseif ($isFinance): ?>
+          <?php endif; ?>
+          <?php if (Context::can('FINANCE_VALIDATE_VERSEMENT')): ?>
             <a href="<?= RACINE ?>versement/list" class="action-btn-pill btn-pill-success">
               <i data-lucide="check-circle-2" style="width: 17px; height: 17px;"></i> Valider Versements
             </a>
-            <a href="<?= RACINE ?>depense/formulaire" class="action-btn-pill btn-pill-danger">
-              <i data-lucide="arrow-up-right" style="width: 17px; height: 17px;"></i> Saisir Dépense
-            </a>
-          <?php else: ?>
-            <a href="<?= RACINE ?>souscription/formulaire" class="action-btn-pill btn-pill-primary">
-              <i data-lucide="plus-circle" style="width: 17px; height: 17px;"></i> Nouvelle Souscription
-            </a>
-            <a href="<?= RACINE ?>versement/formulaire" class="action-btn-pill btn-pill-success">
-              <i data-lucide="arrow-down-left" style="width: 17px; height: 17px;"></i> Versement Commercial
-            </a>
+          <?php endif; ?>
+          <?php if (Context::can('FINANCE_MANAGE_DEPENSES')): ?>
             <a href="<?= RACINE ?>depense/formulaire" class="action-btn-pill btn-pill-danger">
               <i data-lucide="arrow-up-right" style="width: 17px; height: 17px;"></i> Saisir Dépense
             </a>

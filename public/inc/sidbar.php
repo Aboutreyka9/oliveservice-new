@@ -19,9 +19,8 @@
   $isSuperAdmin = Context::isSuperAdmin();
   $userPermissions = Context::permissions();
 
-  $canAccess = function(array $requiredPerms = [], array $allowedRoles = []) use ($isSuperAdmin, $userRoles, $userPermissions) {
+  $canAccess = function(array $requiredPerms = []) use ($isSuperAdmin, $userPermissions) {
       if ($isSuperAdmin) return true;
-      if (!empty($allowedRoles) && !empty(array_intersect($userRoles, $allowedRoles))) return true;
       if (in_array('*', $userPermissions, true)) return true;
       foreach ($requiredPerms as $perm) {
           if (in_array($perm, $userPermissions, true)) return true;
@@ -247,8 +246,8 @@
             <i data-lucide="layout-dashboard"></i> <span>Tableau de bord</span>
         </a>
 
-        <!-- === MODULE COMMERCIAL (ROLE_COMMERCIAL) === -->
-        <?php if ($canAccess(['COMMERCIAL_VIEW_OWN_CLIENTS', 'COMMERCIAL_ADD_CLIENT'], ['ROLE_COMMERCIAL', 'ROLE_ADMIN'])): ?>
+        <!-- === MODULE COMMERCIAL (COMMERCIAL) === -->
+        <?php if ($canAccess(['COMMERCIAL_VIEW_OWN_CLIENTS', 'COMMERCIAL_ADD_CLIENT', 'COMMERCIAL_ADD_SOUSCRIPTION', 'COMMERCIAL_COLLECT_COTISATION'])): ?>
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-commercial" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -295,7 +294,7 @@
         <?php endif; ?>
 
         <!-- === MODULE GESTIONNAIRE : CATALOGUE ARTICLES & PACKS === -->
-        <?php if ($canAccess(['GESTIONNAIRE_MANAGE_PACKS', 'GESTIONNAIRE_MANAGE_ARTICLES'], ['ROLE_GESTIONNAIRE', 'ROLE_ADMIN'])): ?>
+        <?php if ($canAccess(['GESTIONNAIRE_MANAGE_PACKS', 'GESTIONNAIRE_MANAGE_ARTICLES', 'GESTIONNAIRE_MANAGE_CATEGORIE_PACKS'])): ?>
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-catalogue" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -307,9 +306,6 @@
                 <a href="<?= RACINE ?>article/list" class="nav-item sub <?= strpos($currentUri, '/article/') !== false ? 'active' : '' ?>" data-title="Articles Produits">
                     <i data-lucide="shopping-bag"></i> <span>Articles Produits</span>
                 </a>
-                <!-- <a href="<?= RACINE ?>categories_articles/list" class="nav-item sub <?= strpos($currentUri, '/categories_articles/') !== false ? 'active' : '' ?>" data-title="Catégories d'Articles">
-                    <i data-lucide="layers"></i> <span>Catégories Articles</span>
-                </a> -->
                 <a href="<?= RACINE ?>categorie_pack/list" class="nav-item sub <?= strpos($currentUri, '/categorie_pack/') !== false ? 'active' : '' ?>" data-title="Catégories de Packs">
                     <i data-lucide="tags"></i> <span>Catégories Packs</span>
                 </a>
@@ -336,7 +332,7 @@
         <?php endif; ?>
 
         <!-- === MODULE FINANCE : FINANCES & CAISSE CENTRALE === -->
-        <?php if ($canAccess(['FINANCE_VIEW_ALL_COTISATIONS', 'FINANCE_VALIDATE_VERSEMENT'], ['ROLE_FINANCE', 'ROLE_ADMIN'])): ?>
+        <?php if ($canAccess(['FINANCE_VIEW_ALL_COTISATIONS', 'FINANCE_VALIDATE_VERSEMENT', 'FINANCE_MANAGE_DEPENSES'])): ?>
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-finance" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -370,8 +366,8 @@
         </div>
         <?php endif; ?>
 
-        <!-- === MODULE ADMINISTRATION & RBAC (ROLE_ADMIN) === -->
-        <?php if ($canAccess(['ADMIN_MANAGE_USERS', 'ADMIN_MANAGE_ROLES'], ['ROLE_ADMIN'])): ?>
+        <!-- === MODULE ADMINISTRATION & RBAC === -->
+        <?php if ($canAccess(['ADMIN_MANAGE_USERS', 'ADMIN_MANAGE_ROLES', 'ADMIN_MANAGE_PERMISSIONS', 'ADMIN_MANAGE_ZONES', 'ADMIN_MANAGE_ETABLISSEMENTS'])): ?>
         <div class="nav-section">
             <div class="sidebar-accordion-toggle" data-bs-target="#sec-admin" aria-expanded="false">
                 <div style="display: flex; align-items: center; gap: 8px;">

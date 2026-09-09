@@ -283,7 +283,7 @@ $stats = $stats ?? [
             <i data-lucide="rotate-cw" style="width: 15px; height: 15px;"></i>
             <span>Actualiser</span>
           </button>
-          <?php if (Context::can('FINANCE_MANAGE_DEPENSES', ['ROLE_FINANCE', 'ROLE_ADMIN'])): ?>
+          <?php if (Context::can('FINANCE_MANAGE_DEPENSES')): ?>
           <a href="<?= RACINE ?>depense/formulaire" class="btn-add-dep">
             <i data-lucide="plus-circle" style="width: 17px; height: 17px;"></i>
             <span>Nouvelle Dépense</span>

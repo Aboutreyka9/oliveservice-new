@@ -21,7 +21,7 @@
           </div>
         </div>
 
-        <?php if (Context::can('ADMIN_MANAGE_USERS', ['ROLE_ADMIN', 'ROLE_SUPERADMIN'])): ?>
+        <?php if (Context::can('ADMIN_MANAGE_USERS')): ?>
         <a href="<?= RACINE ?>fonction/formulaire" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); text-decoration: none; cursor: pointer;">
           <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Ajouter Fonction / Poste
         </a>
