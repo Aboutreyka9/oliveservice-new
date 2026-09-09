@@ -85,12 +85,15 @@ class VersementController extends BaseController
             return;
         }
 
+        $periodeDebut = !empty($data['periode_versement_debut']) ? $data['periode_versement_debut'] : (!empty($data['periode_versement']) ? $data['periode_versement'] : date('Y-m-d'));
+
         $versementData = [
             'code_versement_commercial' => $codeVersement,
             'reference_versement' => $data['reference_versement'] ?? $codeVersement,
             'montant_versement' => (int)$data['montant_versement'],
             'commercial_code' => $commercialCode,
-            'periode_versement_debut' => !empty($data['periode_versement_debut']) ? $data['periode_versement_debut'] : date('Y-m-d'),
+            'periode_versement' => $periodeDebut,
+            'periode_versement_debut' => $periodeDebut,
             'periode_versement_fin' => !empty($data['periode_versement_fin']) ? $data['periode_versement_fin'] : date('Y-m-d'),
             'zone_code' => $zoneCode,
             'statut_versement' => 'En attente',
