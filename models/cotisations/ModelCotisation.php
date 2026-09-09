@@ -92,16 +92,16 @@ class ModelCotisation extends BaseModel
             if ($souscriptionCode && ($montant > 0 || $nbJours > 0)) {
                 $stmtUpd = $this->getCon()->prepare("
                     UPDATE souscriptions 
-                    SET montant_total_cotise = montant_total_cotise + ?,
-                        nombre_jour_cotise = nombre_jour_cotise + ?,
-                        statut_souscription = CASE 
-                            WHEN (nombre_jour_cotise + ?) >= nombre_jour_total THEN 'solde' 
+                    SET statut_souscription = CASE 
+                            WHEN (montant_total_cotise + ?) >= montant_total_prevu OR (nombre_jour_cotise + ?) >= nombre_jour_total THEN 'solde' 
                             ELSE statut_souscription 
                         END,
+                        montant_total_cotise = montant_total_cotise + ?,
+                        nombre_jour_cotise = nombre_jour_cotise + ?,
                         updated_at_souscription = ?
                     WHERE code_souscription = ?
                 ");
-                $stmtUpd->execute([$montant, $nbJours, $nbJours, date('Y-m-d H:i:s'), $souscriptionCode]);
+                $stmtUpd->execute([$montant, $nbJours, $montant, $nbJours, date('Y-m-d H:i:s'), $souscriptionCode]);
             }
 
             $this->getCon()->commit();

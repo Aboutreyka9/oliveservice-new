@@ -264,17 +264,17 @@ class ModelSouscription extends BaseModel
         try {
             $sql = "
                 UPDATE souscriptions 
-                SET montant_total_cotise = montant_total_cotise + ?,
-                    nombre_jour_cotise = nombre_jour_cotise + ?,
-                    statut_souscription = CASE 
-                        WHEN (nombre_jour_cotise + ?) >= nombre_jour_total THEN 'solde' 
+                SET statut_souscription = CASE 
+                        WHEN (montant_total_cotise + ?) >= montant_total_prevu OR (nombre_jour_cotise + ?) >= nombre_jour_total THEN 'solde' 
                         ELSE statut_souscription 
                     END,
+                    montant_total_cotise = montant_total_cotise + ?,
+                    nombre_jour_cotise = nombre_jour_cotise + ?,
                     updated_at_souscription = ?
                 WHERE code_souscription = ?
             ";
             $stmt = $this->getCon()->prepare($sql);
-            return $stmt->execute([$montantAjoute, $joursAjoutes, $joursAjoutes, date('Y-m-d H:i:s'), $souscriptionCode]);
+            return $stmt->execute([$montantAjoute, $joursAjoutes, $montantAjoute, $joursAjoutes, date('Y-m-d H:i:s'), $souscriptionCode]);
         } catch (Exception $e) {
             error_log("ModelSouscription::updateTotals error: " . $e->getMessage());
             return false;

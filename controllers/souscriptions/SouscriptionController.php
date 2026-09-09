@@ -363,7 +363,7 @@ class SouscriptionController extends BaseController
 
     public function wizardData()
     {
-        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
+        $this->requirePermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_ADD_SOUSCRIPTION']);
         $sessionCode = $_GET['session_code'] ?? '';
         $categorieCode = $_GET['categorie_code'] ?? '';
 
@@ -666,11 +666,21 @@ class SouscriptionController extends BaseController
     {
         $this->requirePermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_ADD_SOUSCRIPTION']);
 
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
+        $stmtS = $this->model->getCon()->prepare("SELECT * FROM sessions WHERE statut_session='actif' AND etablissement_code = ? AND zone_code = ? AND annee_code = ?");
+        $stmtS->execute([$etabCode, $zoneCode, $anneeCode]);
+        $sessions = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+
+        $modelCat = new ModelCategoriePack();
+        $categories = $modelCat->getAll();
+
         $clientCode = trim($_GET['client_code'] ?? ($_GET['client'] ?? ''));
         $preselectedClient = null;
 
         if (!empty($clientCode)) {
-            $etabCode = Context::etablissement();
             $stmt = $this->model->getCon()->prepare("
                 SELECT c.id_client, c.code_client, c.nom_client, c.telephone_client, c.sexe_client, 
                        c.lieu_residence_client, c.email_client, c.profession_client, c.numero_cni, c.statut_client,
@@ -685,6 +695,8 @@ class SouscriptionController extends BaseController
         }
 
         $this->loadView('../views/souscriptions/ressouscription.php', [
+            'sessions' => $sessions,
+            'categories' => $categories,
             'preselectedClient' => $preselectedClient
         ]);
     }
