@@ -37,9 +37,10 @@ $(function() {
           }
         },
         { 
-          data: 'libelle_pack', 
+          data: 'souscription_code', 
           render: function(d) {
-            return '<span style="font-weight:600; color:#334155;">' + (d || '-') + '</span>';
+            if (!d) return '-';
+            return '<code style="font-weight:700; color:#059669; background:#ECFDF5; padding:4px 8px; border-radius:6px; font-size:12px; border:1px solid #A7F3D0;">' + d + '</code>';
           }
         },
         { 
@@ -91,8 +92,17 @@ $(function() {
           className: 'text-end',
           render: function(d) {
             const editId = d.editId || d.id_cautisation_client;
+            const isCloturee = d.caisse_cloturee || (d.statut_caisse_commercial === 'cloture');
+            
+            let editBtn = '';
+            if (isCloturee) {
+              editBtn = '<button type="button" class="btn" style="background:#F1F5F9; color:#94A3B8; font-weight:700; border-radius:8px; padding:6px 12px; border:1px solid #E2E8F0; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:not-allowed; opacity:0.65;" disabled title="Caisse clôturée - Édition impossible"><i data-lucide="lock" style="width:14px;height:14px;"></i> Éditer</button>';
+            } else {
+              editBtn = '<a href="' + racine + 'cotisation/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>';
+            }
+
             return '<div style="display:flex; justify-content:flex-end; gap:6px;">' +
-                   '<a href="' + racine + 'cotisation/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
+                   editBtn +
                    '<a href="' + racine + 'cotisation/details/' + editId + '" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir reçu"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>' +
                    '</div>';
           } 
