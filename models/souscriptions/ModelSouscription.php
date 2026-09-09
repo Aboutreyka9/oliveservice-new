@@ -259,22 +259,44 @@ class ModelSouscription extends BaseModel
         }
     }
 
-    public function updateTotals(string $souscriptionCode, float $montantAjoute, int $joursAjoutes): bool
+    public function updateTotals(string $souscriptionCode, float $montantAjoute = 0, int $joursAjoutes = 0): bool
     {
         try {
             $sql = "
-                UPDATE souscriptions 
-                SET statut_souscription = CASE 
-                        WHEN (montant_total_cotise + ?) >= montant_total_prevu OR (nombre_jour_cotise + ?) >= nombre_jour_total THEN 'solde' 
-                        ELSE statut_souscription 
+                UPDATE souscriptions s
+                SET s.montant_total_cotise = (
+                        SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) 
+                        FROM cautisation_clients mc 
+                        WHERE mc.souscription_code = s.code_souscription 
+                          AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
+                    ),
+                    s.nombre_jour_cotise = (
+                        SELECT COALESCE(SUM(mc.nombre_jour), 0) 
+                        FROM cautisation_clients mc 
+                        WHERE mc.souscription_code = s.code_souscription 
+                          AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
+                    ),
+                    s.statut_souscription = CASE 
+                        WHEN (
+                            SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) 
+                            FROM cautisation_clients mc 
+                            WHERE mc.souscription_code = s.code_souscription 
+                              AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
+                        ) >= s.montant_total_prevu 
+                        OR (
+                            SELECT COALESCE(SUM(mc.nombre_jour), 0) 
+                            FROM cautisation_clients mc 
+                            WHERE mc.souscription_code = s.code_souscription 
+                              AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
+                        ) >= s.nombre_jour_total 
+                        THEN 'solde' 
+                        ELSE 'valide'
                     END,
-                    montant_total_cotise = montant_total_cotise + ?,
-                    nombre_jour_cotise = nombre_jour_cotise + ?,
-                    updated_at_souscription = ?
-                WHERE code_souscription = ?
+                    s.updated_at_souscription = NOW()
+                WHERE s.code_souscription = ?
             ";
             $stmt = $this->getCon()->prepare($sql);
-            return $stmt->execute([$montantAjoute, $joursAjoutes, $montantAjoute, $joursAjoutes, date('Y-m-d H:i:s'), $souscriptionCode]);
+            return $stmt->execute([$souscriptionCode]);
         } catch (Exception $e) {
             error_log("ModelSouscription::updateTotals error: " . $e->getMessage());
             return false;
