@@ -329,6 +329,24 @@
                 </a>
             </div>
         </div>
+
+        <!-- MODULE GESTIONNAIRE : RECRUTEMENT COMMERCIAL -->
+        <div class="nav-section">
+            <div class="sidebar-accordion-toggle" data-bs-target="#sec-recrutement" aria-expanded="false">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="user-plus" style="width: 16px; height: 16px; color: #10B981;"></i> <span>Recrutement Commercial</span>
+                </div>
+                <i data-lucide="chevron-down" class="chevron-icon"></i>
+            </div>
+            <div class="nav-section-items" id="sec-recrutement">
+                <a href="<?= RACINE ?>user/formulaire" class="nav-item sub <?= strpos($currentUri, '/user/formulaire') !== false ? 'active' : '' ?>" data-title="Nouveau Commercial">
+                    <i data-lucide="user-plus"></i> <span>Recruter un Commercial</span>
+                </a>
+                <a href="<?= RACINE ?>user/list" class="nav-item sub <?= (strpos($currentUri, '/user/list') !== false || strpos($currentUri, '/user/edition') !== false || strpos($currentUri, '/user/details') !== false) ? 'active' : '' ?>" data-title="Liste des Commerciaux">
+                    <i data-lucide="users"></i> <span>Liste des Commerciaux</span>
+                </a>
+            </div>
+        </div>
         <?php endif; ?>
 
         <!-- === MODULE FINANCE : FINANCES & CAISSE CENTRALE === -->

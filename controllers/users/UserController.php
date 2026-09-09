@@ -9,7 +9,7 @@ class UserController extends BaseController
 
     public function list()
     {
-        $this->requirePermission('ADMIN_MANAGE_USERS');
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);
         $hasJoker = Context::hasJoker();
         $userZoneCode = Context::zone();
 
@@ -62,7 +62,7 @@ class UserController extends BaseController
 
     public function apiList()
     {
-        $this->requirePermission('ADMIN_MANAGE_USERS');
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);
 
         $currentUserId = Context::userId() ?? ($_SESSION[USERS_AUTH]['id_user'] ?? null);
         $currentUserCode = Context::user() ?? ($_SESSION[USERS_AUTH]['code_user'] ?? null);
@@ -166,7 +166,7 @@ class UserController extends BaseController
     public function add()
     {
         $this->requirePost(false);
-        $this->requirePermission('ADMIN_MANAGE_USERS');
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);
 
         $nom = trim($_POST['nom'] ?? '');
         $prenom = trim($_POST['prenom'] ?? '');
@@ -346,7 +346,7 @@ class UserController extends BaseController
     public function edit()
     {
         $this->requirePost(false);
-        $this->requirePermission('ADMIN_MANAGE_USERS');
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);
         $id = (int)$this->post('id_user');
         if (!$id) { $this->error('Identifiant invalide'); return; }
 
@@ -512,7 +512,7 @@ class UserController extends BaseController
 
     public function formulaire()
     {
-        $this->requirePermission('ADMIN_MANAGE_USERS');
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);
         $hasJoker = Context::hasJoker();
         $userZoneCode = Context::zone();
         $roles = (new ModelRole())->getAll();
@@ -540,7 +540,7 @@ class UserController extends BaseController
 
     public function edition($details)
     {
-        $this->requirePermission('ADMIN_MANAGE_USERS');
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);
         $hasJoker = Context::hasJoker();
         $userZoneCode = Context::zone();
         try {
