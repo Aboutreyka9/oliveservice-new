@@ -560,26 +560,76 @@ class CaisseCommercialController extends BaseController
     {
         $this->requirePermission(['COMMERCIAL_MANAGE_OWN_CAISSE', 'FINANCE_VIEW_CLOTURES_CAISSE']);
         try {
-            $id = $this->validator->decrypter($param);
-            $sqlCaisse = "
-                SELECT c.*, u.nom_user, u.prenom_user
-                FROM caisses c
-                LEFT JOIN users u ON u.code_user = c.user_code
-                WHERE c.id_caisse = ?
-            ";
-            $pCaisse = [$id];
-            $cCaisse = [];
-            Context::applyTripleFilter('c', $cCaisse, $pCaisse, false);
-            if (!empty($cCaisse)) $sqlCaisse .= " AND " . implode(' AND ', $cCaisse);
-            $stmt = $this->model->getCon()->prepare($sqlCaisse);
-            $stmt->execute($pCaisse);
-            $item = $stmt->fetch(PDO::FETCH_ASSOC);
+            $id = null;
+            try {
+                $id = $this->validator->decrypter($param);
+            } catch (Exception $e) {
+                $id = null;
+            }
+
+            $db = $this->model->getCon();
+            $item = null;
+
+            if ($id) {
+                $sqlCaisse = "
+                    SELECT c.*, u.nom_user, u.prenom_user
+                    FROM caisses c
+                    LEFT JOIN users u ON u.code_user = c.user_code
+                    WHERE c.id_caisse = ?
+                ";
+                $pCaisse = [$id];
+                $cCaisse = [];
+                Context::applyTripleFilter('c', $cCaisse, $pCaisse, false);
+                if (!empty($cCaisse)) $sqlCaisse .= " AND " . implode(' AND ', $cCaisse);
+                $stmt = $db->prepare($sqlCaisse);
+                $stmt->execute($pCaisse);
+                $item = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // Si non trouvé par id_caisse, vérifier si $id est l'id_versement dans versements_commerciaux
+                if (!$item) {
+                    $stmtV = $db->prepare("SELECT caisse_code FROM versements_commerciaux WHERE id_versement = ?");
+                    $stmtV->execute([$id]);
+                    $vItem = $stmtV->fetch(PDO::FETCH_ASSOC);
+                    if ($vItem && !empty($vItem['caisse_code'])) {
+                        $sqlCaisse = "
+                            SELECT c.*, u.nom_user, u.prenom_user
+                            FROM caisses c
+                            LEFT JOIN users u ON u.code_user = c.user_code
+                            WHERE c.code_caisse = ?
+                        ";
+                        $pCaisse = [$vItem['caisse_code']];
+                        $cCaisse = [];
+                        Context::applyTripleFilter('c', $cCaisse, $pCaisse, false);
+                        if (!empty($cCaisse)) $sqlCaisse .= " AND " . implode(' AND ', $cCaisse);
+                        $stmt = $db->prepare($sqlCaisse);
+                        $stmt->execute($pCaisse);
+                        $item = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
+                }
+            }
+
+            if (!$item && $param) {
+                $sqlCaisse = "
+                    SELECT c.*, u.nom_user, u.prenom_user
+                    FROM caisses c
+                    LEFT JOIN users u ON u.code_user = c.user_code
+                    WHERE c.code_caisse = ?
+                ";
+                $pCaisse = [$param];
+                $cCaisse = [];
+                Context::applyTripleFilter('c', $cCaisse, $pCaisse, false);
+                if (!empty($cCaisse)) $sqlCaisse .= " AND " . implode(' AND ', $cCaisse);
+                $stmt = $db->prepare($sqlCaisse);
+                $stmt->execute($pCaisse);
+                $item = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
             if (!$item) {
                 $this->renderNotFound("Le procès-verbal de clôture de caisse demandé est introuvable.");
                 return;
             }
 
-            $encryptedId = $this->validator->crypter($id);
+            $encryptedId = $this->validator->crypter($item['id_caisse']);
             
             $sqlP = "
                 SELECT cc.*, cl.nom_client, cl.telephone_client

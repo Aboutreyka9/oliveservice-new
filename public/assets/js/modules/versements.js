@@ -102,11 +102,12 @@ $(function() {
                 </button>
               `;
             }
+            const caisseTarget = d.caisseIdCrypte || (d.editId || d.id_versement);
             return `
               <div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">
                 ${validerBtn}
                 ${!isCommercial ? `<a href="${racine}versement/edition/${editId}" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>` : ''}
-                <a href="${racine}versement/details/${editId}" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir détails"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>
+                <a href="${racine}caisse_commercial/details/${caisseTarget}" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir procès-verbal de caisse"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>
               </div>
             `;
           } 

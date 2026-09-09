@@ -21,11 +21,12 @@ class VersementController extends BaseController
         $anneeCode = Context::annee();
 
         $sql = "
-            SELECT v.*, 
+            SELECT v.*, c.id_caisse,
                    uc.nom_user as nom_commercial, uc.prenom_user as prenom_commercial,
                    uv.nom_user as nom_validator, uv.prenom_user as prenom_validator,
                    z.libelle_zone
             FROM versements_commerciaux v
+            LEFT JOIN caisses c ON c.code_caisse = v.caisse_code
             LEFT JOIN users uc ON uc.code_user = v.commercial_code
             LEFT JOIN users uv ON uv.code_user = v.user_validate
             LEFT JOIN zones z ON z.code_zone = v.zone_code
@@ -50,9 +51,13 @@ class VersementController extends BaseController
         foreach ($items as $v) {
             $id = $v['id_versement'];
             $idCrypte = $this->validator->crypter($id);
+            $caisseId = $v['id_caisse'] ?? null;
+            $caisseIdCrypte = $caisseId ? $this->validator->crypter($caisseId) : $idCrypte;
+
             $data[] = array_merge($v, [
                 'id' => $id,
                 'editId' => $idCrypte,
+                'caisseIdCrypte' => $caisseIdCrypte,
                 'nom_commercial_complet' => trim(($v['nom_commercial'] ?? '') . ' ' . ($v['prenom_commercial'] ?? '')),
                 'nom_validator_complet' => trim(($v['nom_validator'] ?? '') . ' ' . ($v['prenom_validator'] ?? ''))
             ]);
