@@ -599,7 +599,20 @@ class VersementController extends BaseController
     public function commissions()
     {
         $this->requirePermission(['COMMERCIAL_MAKE_VERSEMENT', 'FINANCE_VALIDATE_VERSEMENT']);
-        $this->loadView('../views/versements/commissions.php');
+        $commerciaux = [];
+        if (!Context::isCommercial()) {
+            $db = $this->model->getCon();
+            $stmt = $db->query("
+                SELECT u.code_user, u.nom_user, u.prenom_user 
+                FROM users u
+                ORDER BY u.nom_user ASC, u.prenom_user ASC
+            ");
+            $commerciaux = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+        }
+
+        $this->loadView('../views/versements/commissions.php', [
+            'commerciaux' => $commerciaux
+        ]);
     }
 
     public function apiCommissions()
@@ -608,6 +621,10 @@ class VersementController extends BaseController
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
         $anneeCode = Context::annee();
+
+        $dateDebut = trim((string)($this->get('date_debut') ?? $this->post('date_debut')));
+        $dateFin = trim((string)($this->get('date_fin') ?? $this->post('date_fin')));
+        $commCodeFilter = trim((string)($this->get('commercial_code') ?? $this->post('commercial_code')));
 
         $sql = "
             SELECT v.*, c.id_caisse,
@@ -629,6 +646,22 @@ class VersementController extends BaseController
             $sql .= " AND (v.commercial_code = ? OR v.user_code = ?)";
             $params[] = Context::user();
             $params[] = Context::user();
+        } else if (!empty($commCodeFilter)) {
+            $sql .= " AND (v.commercial_code = ? OR v.user_code = ?)";
+            $params[] = $commCodeFilter;
+            $params[] = $commCodeFilter;
+        }
+
+        if (!empty($dateDebut)) {
+            $sql .= " AND (DATE(v.date_validation) >= ? OR DATE(v.periode_versement) >= ?)";
+            $params[] = $dateDebut;
+            $params[] = $dateDebut;
+        }
+
+        if (!empty($dateFin)) {
+            $sql .= " AND (DATE(v.date_validation) <= ? OR DATE(v.periode_versement) <= ?)";
+            $params[] = $dateFin;
+            $params[] = $dateFin;
         }
 
         $sql .= " ORDER BY v.date_validation DESC, v.created_at_versement DESC";

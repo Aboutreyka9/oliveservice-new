@@ -1,6 +1,6 @@
 /**
  * Module Mes Commissions - Administration Olive Service / GEICG
- * Calcul dynamique des commissions sur versements commerciaux validés
+ * Calcul dynamique des commissions sur versements commerciaux validés avec filtres avancés
  */
 
 $(function() {
@@ -12,14 +12,22 @@ $(function() {
     dataTableInstance = $tableComm.DataTable({
       ajax: {
         url: racine + 'versement/apiCommissions',
+        data: function(d) {
+          d.date_debut = $('#filter-date-debut').val() || '';
+          d.date_fin = $('#filter-date-fin').val() || '';
+          d.commercial_code = $('#filter-commercial').val() || '';
+        },
         dataSrc: function(json) {
-          if (json.summary) {
+          if (json && json.summary) {
             $('#kpi-total-commissions').text(json.summary.total_commissions_fmt || '0 FCFA');
             $('#kpi-taux-commission').text(json.summary.taux_commission_fmt || '0.00 %');
             $('#kpi-total-versements').text(json.summary.total_versements_fmt || '0 FCFA');
             $('#kpi-count-versements').text(json.summary.count_versements || 0);
           }
-          return json.data || [];
+          return (json && json.data) ? json.data : [];
+        },
+        error: function(xhr, error, thrown) {
+          console.error("Erreur de chargement des commissions DataTables :", xhr.responseText || thrown);
         }
       },
       processing: true,
@@ -107,6 +115,69 @@ $(function() {
         if (typeof lucide !== 'undefined') {
           lucide.createIcons();
         }
+      }
+    });
+
+    // -------------------------------------------------------------
+    // Gestion du bouton "Filtrer"
+    // -------------------------------------------------------------
+    $('#btn-appliquer-filtre').on('click', function() {
+      if (dataTableInstance) {
+        dataTableInstance.ajax.reload();
+      }
+    });
+
+    // -------------------------------------------------------------
+    // Gestion du bouton "Effacer"
+    // -------------------------------------------------------------
+    $('#btn-reset-filtre').on('click', function() {
+      $('#filter-date-debut').val('');
+      $('#filter-date-fin').val('');
+      if ($('#filter-commercial').length) {
+        $('#filter-commercial').val('');
+      }
+      if (dataTableInstance) {
+        dataTableInstance.ajax.reload();
+      }
+    });
+
+    // -------------------------------------------------------------
+    // Raccourcis Rapides de Date
+    // -------------------------------------------------------------
+    $('.btn-shortcut-date').on('click', function() {
+      const range = $(this).data('range');
+      const now = new Date();
+      let debut = '';
+      let fin = '';
+
+      const formatDate = function(dateObj) {
+        const yyyy = dateObj.getFullYear();
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      };
+
+      if (range === 'today') {
+        debut = formatDate(now);
+        fin = formatDate(now);
+      } else if (range === 'month') {
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        debut = formatDate(firstDay);
+        fin = formatDate(now);
+      } else if (range === 'year') {
+        const firstDayYear = new Date(now.getFullYear(), 0, 1);
+        debut = formatDate(firstDayYear);
+        fin = formatDate(now);
+      } else if (range === 'all') {
+        debut = '';
+        fin = '';
+      }
+
+      $('#filter-date-debut').val(debut);
+      $('#filter-date-fin').val(fin);
+
+      if (dataTableInstance) {
+        dataTableInstance.ajax.reload();
       }
     });
   }
