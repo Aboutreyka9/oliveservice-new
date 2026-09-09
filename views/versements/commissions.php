@@ -1,4 +1,79 @@
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
+<style>
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  body, html {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .sidebar,
+  .topbar,
+  .header,
+  .page-header-actions,
+  .dataTables_length,
+  .dataTables_filter,
+  .dataTables_info,
+  .dataTables_paginate,
+  .btn,
+  .no-print {
+    display: none !important;
+  }
+  .app-layout,
+  .main-content,
+  .content-wrapper,
+  .card-premium,
+  div {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+  .page-header {
+    margin-bottom: 16px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  table#table-commissions {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 11px !important;
+  }
+  table#table-commissions th {
+    background: #F1F5F9 !important;
+    color: #0F172A !important;
+    border: 1px solid #CBD5E1 !important;
+    padding: 8px 10px !important;
+    font-weight: 800 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  table#table-commissions td {
+    border: 1px solid #E2E8F0 !important;
+    padding: 8px 10px !important;
+    color: #0F172A !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  table#table-commissions span,
+  table#table-commissions code {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+</style>
 <div class="app-layout">
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
   <main class="main-content">
@@ -21,8 +96,11 @@
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <a href="<?= RACINE ?>versement/list" class="btn" style="background: #FFFFFF; color: #334155; font-weight: 700; border-radius: 10px; padding: 10px 18px; font-size: 13px; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer;">
+        <div class="page-header-actions" style="display: flex; align-items: center; gap: 10px;">
+          <button type="button" onclick="imprimerCommissions()" class="btn no-print" style="background: #F8FAFC; border: 1px solid #CBD5E1; color: #1E3A5F; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <i data-lucide="printer" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Imprimer
+          </button>
+          <a href="<?= RACINE ?>versement/list" class="btn no-print" style="background: #FFFFFF; color: #334155; font-weight: 700; border-radius: 10px; padding: 10px 18px; font-size: 13px; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer;">
             <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Voir Versements
           </a>
         </div>
@@ -188,4 +266,21 @@
 </div>
 
 <script src="<?= RACINE ?>public/assets/js/modules/commissions.js?v=1.0"></script>
+<script>
+function imprimerCommissions() {
+  if ($.fn.DataTable.isDataTable('#table-commissions')) {
+    var dt = $('#table-commissions').DataTable();
+    var origLen = dt.page.len();
+    dt.page.len(-1).draw();
+    setTimeout(function() {
+      window.print();
+      setTimeout(function() {
+        dt.page.len(origLen).draw();
+      }, 500);
+    }, 300);
+  } else {
+    window.print();
+  }
+}
+</script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>
