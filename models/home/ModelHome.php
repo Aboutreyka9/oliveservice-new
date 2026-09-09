@@ -108,7 +108,7 @@ class ModelHome extends BaseModel
             $totalSouscriptionsSoldees = $this->safeCount($db, $sqlSoldees, $pSoldees);
 
             // ── 4. Cotisations ────────────────────────────────────────────────
-            $sqlCotis = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE statut_cautisation_client != 'ennule'";
+            $sqlCotis = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL)";
             $pCotis = []; $condsCotis = [];
             Context::applyTripleFilter('', $condsCotis, $pCotis, true, false);
             if (!empty($condsCotis)) $sqlCotis .= " AND " . implode(' AND ', $condsCotis);

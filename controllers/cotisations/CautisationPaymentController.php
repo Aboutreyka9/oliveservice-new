@@ -486,13 +486,6 @@ class CautisationPaymentController extends BaseController
         $totalCotise = (float) ($totaux['total_cotise'] ?? 0);
         $nombreJoursPayes = (int) ($totaux['nombre_jours_payes'] ?? 0);
 
-        if ($totalCotise <= 0 && !empty($souscription['montant_total_cotise'])) {
-            $totalCotise = (float) $souscription['montant_total_cotise'];
-        }
-        if ($nombreJoursPayes <= 0 && !empty($souscription['nombre_jour_cotise'])) {
-            $nombreJoursPayes = (int) $souscription['nombre_jour_cotise'];
-        }
-
         $soldeRestant = max(0, $montantTotalPrevu - $totalCotise);
         $joursRestants = max(0, $nombreJourSession - $nombreJoursPayes);
         $progression = CautisationValidator::calculateProgressPercentage($totalCotise, $montantTotalPrevu);
