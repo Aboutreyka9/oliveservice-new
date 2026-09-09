@@ -289,6 +289,9 @@
                 <a href="<?= RACINE ?>versement/list" class="nav-item sub <?= strpos($currentUri, '/versement/list') !== false ? 'active' : '' ?>" data-title="Mes Versements">
                     <i data-lucide="history"></i> <span>Mes Versements</span>
                 </a>
+                <a href="<?= RACINE ?>versement/commissions" class="nav-item sub <?= strpos($currentUri, '/versement/commissions') !== false ? 'active' : '' ?>" data-title="Mes Commissions">
+                    <i data-lucide="percent"></i> <span>Mes Commissions</span>
+                </a>
             </div>
         </div>
         <?php endif; ?>

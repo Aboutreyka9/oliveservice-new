@@ -595,4 +595,100 @@ class VersementController extends BaseController
             'zones' => $zones
         ]);
     }
+
+    public function commissions()
+    {
+        $this->requirePermission(['COMMERCIAL_MAKE_VERSEMENT', 'FINANCE_VALIDATE_VERSEMENT']);
+        $this->loadView('../views/versements/commissions.php');
+    }
+
+    public function apiCommissions()
+    {
+        $this->requirePermission(['COMMERCIAL_MAKE_VERSEMENT', 'FINANCE_VALIDATE_VERSEMENT']);
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
+        $sql = "
+            SELECT v.*, c.id_caisse,
+                   uc.nom_user as nom_commercial, uc.prenom_user as prenom_commercial, uc.commission as commission_user,
+                   uv.nom_user as nom_validator, uv.prenom_user as prenom_validator,
+                   z.libelle_zone
+            FROM versements_commerciaux v
+            LEFT JOIN caisses c ON c.code_caisse = v.caisse_code
+            LEFT JOIN users uc ON uc.code_user = v.commercial_code
+            LEFT JOIN users uv ON uv.code_user = v.user_validate
+            LEFT JOIN zones z ON z.code_zone = v.zone_code
+            WHERE v.etablissement_code = ? AND v.zone_code = ? AND v.annee_code = ?
+              AND LOWER(v.statut_versement) = 'valide'
+        ";
+        $params = [$etabCode, $zoneCode, $anneeCode];
+
+        // RÈGLE RBAC : Le commercial ne voit que ses propres versements
+        if (Context::isCommercial()) {
+            $sql .= " AND (v.commercial_code = ? OR v.user_code = ?)";
+            $params[] = Context::user();
+            $params[] = Context::user();
+        }
+
+        $sql .= " ORDER BY v.date_validation DESC, v.created_at_versement DESC";
+
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $data = [];
+
+        $totalVersementsValides = 0;
+        $totalCommissions = 0;
+
+        foreach ($items as $v) {
+            $id = $v['id_versement'];
+            $idCrypte = $this->validator->crypter($id);
+            $caisseId = $v['id_caisse'] ?? null;
+            $caisseIdCrypte = $caisseId ? $this->validator->crypter($caisseId) : $idCrypte;
+
+            $montantVersement = (float)$v['montant_versement'];
+            $tauxCommission = floatval($v['commission_user'] ?? 0);
+            $montantCommission = round(($montantVersement * $tauxCommission) / 100, 2);
+
+            $totalVersementsValides += $montantVersement;
+            $totalCommissions += $montantCommission;
+
+            $data[] = array_merge($v, [
+                'id' => $id,
+                'editId' => $idCrypte,
+                'caisseIdCrypte' => $caisseIdCrypte,
+                'nom_commercial_complet' => trim(($v['nom_commercial'] ?? '') . ' ' . ($v['prenom_commercial'] ?? '')),
+                'nom_validator_complet' => trim(($v['nom_validator'] ?? '') . ' ' . ($v['prenom_validator'] ?? '')),
+                'taux_commission' => $tauxCommission,
+                'taux_commission_fmt' => number_format($tauxCommission, 2, ',', ' ') . ' %',
+                'montant_commission' => $montantCommission,
+                'montant_commission_fmt' => number_format($montantCommission, 0, ',', ' ') . ' FCFA',
+                'montant_versement_fmt' => number_format($montantVersement, 0, ',', ' ') . ' FCFA'
+            ]);
+        }
+
+        $userCommissionRate = 0;
+        if (Context::isCommercial()) {
+            $stmtU = $this->model->getCon()->prepare("SELECT commission FROM users WHERE code_user = ?");
+            $stmtU->execute([Context::user()]);
+            $uRow = $stmtU->fetch(PDO::FETCH_ASSOC);
+            $userCommissionRate = floatval($uRow['commission'] ?? 0);
+        } else {
+            $userCommissionRate = $totalVersementsValides > 0 ? round(($totalCommissions / $totalVersementsValides) * 100, 2) : 0;
+        }
+
+        $this->json([
+            'data' => $data,
+            'summary' => [
+                'count_versements' => count($data),
+                'total_versements' => $totalVersementsValides,
+                'total_versements_fmt' => number_format($totalVersementsValides, 0, ',', ' ') . ' FCFA',
+                'total_commissions' => $totalCommissions,
+                'total_commissions_fmt' => number_format($totalCommissions, 0, ',', ' ') . ' FCFA',
+                'taux_commission' => $userCommissionRate,
+                'taux_commission_fmt' => number_format($userCommissionRate, 2, ',', ' ') . ' %'
+            ]
+        ]);
+    }
 }

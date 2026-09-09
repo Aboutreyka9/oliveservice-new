@@ -226,6 +226,8 @@ $route->addRoute('/versement/changer', ['VersementController', 'changer']);
 $route->addRoute('/versement/details/{param}', ['VersementController', 'details']);
 $route->addRoute('/versement/edition/{param}', ['VersementController', 'edition']);
 $route->addRoute('/versement/formulaire', ['VersementController', 'formulaire']);
+$route->addRoute('/versement/commissions', ['VersementController', 'commissions']);
+$route->addRoute('/versement/apiCommissions', ['VersementController', 'apiCommissions']);
 
 // -------------------------------------------------------------
 // Module: Rôles, Permissions & Notifications
