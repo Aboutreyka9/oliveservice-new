@@ -120,7 +120,7 @@ $(function () {
             return (zone || lieu) ? `${zone}${lieu}` : '<span style="color: #94A3B8;">-</span>';
           }
         },
-        // 6. Souscriptions Packs
+        // 6. Souscription (nombre de souscriptions du client)
         {
           data: 'nb_souscriptions',
           className: 'text-center',
@@ -128,32 +128,20 @@ $(function () {
             const count = parseInt(d, 10) || 0;
             if (count > 0) {
               return `
-                <span class="badge" style="background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; font-weight: 800; font-size: 12px; padding: 4px 9px;">
-                  <i data-lucide="package-check" style="width: 13px; height: 13px; display: inline-block; vertical-align: -1px;"></i>
-                  <span>${count} pack${count > 1 ? 's' : ''}</span>
+                <span class="badge" style="background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; font-weight: 800; font-size: 12px; padding: 4px 9px; display: inline-flex; align-items: center; gap: 4px;">
+                  <i data-lucide="file-text" style="width: 13px; height: 13px; display: inline-block; vertical-align: -1px;"></i>
+                  <span>${count} souscription${count > 1 ? 's' : ''}</span>
                 </span>
               `;
             }
             return `
-              <span class="badge" style="background: #F8FAFC; color: #94A3B8; border: 1px solid #E2E8F0; font-weight: 600; font-size: 11px; padding: 3px 8px;">
-                0 pack
+              <span class="badge" style="background: #F8FAFC; color: #94A3B8; border: 1px solid #E2E8F0; font-weight: 600; font-size: 11px; padding: 3px 8px; display: inline-flex; align-items: center; gap: 4px;">
+                0 souscription
               </span>
             `;
           }
         },
-        // 7. Cumul Cotisé
-        {
-          data: 'total_cotise',
-          className: 'text-end',
-          render: (d) => {
-            const val = parseFloat(d) || 0;
-            if (val > 0) {
-              return `<strong style="color: #059669; font-size: 13.5px; font-weight: 800;">${Number(val).toLocaleString('fr-FR')} <small style="font-size: 11px; font-weight: 700;">FCFA</small></strong>`;
-            }
-            return '<span style="color: #94A3B8; font-weight: 600; font-size: 12px;">0 FCFA</span>';
-          }
-        },
-        // 8. Statut (Toggle interactif si gestionnaire/admin)
+        // 7. Statut (Toggle interactif si gestionnaire/admin)
         {
           data: 'statut_client',
           width: '110px',
@@ -181,7 +169,7 @@ $(function () {
             return `<span class="badge ${isActif ? 'bg-success' : 'bg-secondary'}" style="font-size: 11.5px; padding: 4px 8px;">${isActif ? 'Actif' : 'Inactif'}</span>`;
           }
         },
-        // 9. Actions Directes
+        // 8. Actions Directes
         {
           data: null,
           width: '130px',

@@ -611,8 +611,7 @@ $stats = $stats ?? [
                 <th style="padding: 12px;">Contact Téléphonique</th>
                 <th style="padding: 12px;">N° CNI</th>
                 <th style="padding: 12px;">Zone & Résidence</th>
-                <th style="padding: 12px; text-align: center;">Souscriptions</th>
-                <th style="padding: 12px; text-align: right;">Cumul Cotisé</th>
+                <th style="padding: 12px; text-align: center;">Souscription</th>
                 <th style="padding: 12px; text-align: center;">Statut</th>
                 <th style="padding: 12px; text-align: right;">Actions</th>
               </tr>
@@ -625,5 +624,5 @@ $stats = $stats ?? [
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/clients.js?v=2.1"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/clients.js?v=2.2"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

@@ -598,16 +598,20 @@ $isAdmin = Context::isSuperAdmin();
 
         <?php elseif ($isFinance): ?>
 
-          <!-- KPI Finance 1 : CA Encaisse -->
+          <!-- KPI Finance 1 : CA Encaisse Validé -->
           <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #10B981, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #047857;">
             <div class="kpi-header">
-              <span class="kpi-title">Chiffre d'Affaires Encaissé</span>
+              <span class="kpi-title">Chiffre d'Affaires Encaissé Validé</span>
               <div class="kpi-icon-wrapper"><i data-lucide="coins" style="width: 22px; height: 22px;"></i></div>
             </div>
             <div class="kpi-value" style="color: #047857;"><?= number_format($stats['ca_encaisse'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
             <div class="kpi-footer">
-              <span>Recettes globales terrain</span>
-              <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">Recettes</span>
+              <?php if (!empty($stats['total_cotisations_en_attente'])): ?>
+                <span style="color: #D97706; font-weight: 700;"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <?= number_format($stats['total_cotisations_en_attente'], 0, ',', ' ') ?> FCFA en attente</span>
+              <?php else: ?>
+                <span>Fonds confirmés</span>
+                <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">Validés</span>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -693,16 +697,20 @@ $isAdmin = Context::isSuperAdmin();
             </div>
           </div>
 
-          <!-- KPI 3 : Cotisations Encaissées -->
+          <!-- KPI 3 : Cotisations Validées -->
           <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #10B981, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #047857;">
             <div class="kpi-header">
-              <span class="kpi-title">Cotisations Terrain</span>
+              <span class="kpi-title">Cotisations Validées</span>
               <div class="kpi-icon-wrapper"><i data-lucide="coins" style="width: 22px; height: 22px;"></i></div>
             </div>
-            <div class="kpi-value" style="color: #047857;"><?= number_format($stats['total_cotisations'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-value" style="color: #047857;"><?= number_format($stats['ca_encaisse'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
             <div class="kpi-footer">
-              <span>Encaissement clients</span>
-              <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">En direct</span>
+              <?php if (!empty($stats['total_cotisations_en_attente'])): ?>
+                <span style="color: #D97706; font-weight: 700;"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <?= number_format($stats['total_cotisations_en_attente'], 0, ',', ' ') ?> FCFA à valider</span>
+              <?php else: ?>
+                <span>Encaissement clients</span>
+                <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">100% validé</span>
+              <?php endif; ?>
             </div>
           </div>
 

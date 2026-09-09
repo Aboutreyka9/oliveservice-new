@@ -18,17 +18,22 @@ class ClientController extends BaseController
         $params = [$etabCode];
 
         if (Context::isCommercial()) {
-            $whereClause .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.user_code = ? AND sub.etablissement_code = ? AND sub.annee_code = ?))";
+            $whereClause .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.user_code = ? AND sub.etablissement_code = ?))";
             $params[] = $userCode;
             $params[] = $userCode;
             $params[] = $etabCode;
-            $params[] = $anneeCode;
         } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
-            $whereClause .= " AND (c.zone_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.zone_code = ? AND sub.etablissement_code = ? AND sub.annee_code = ?))";
+            $whereClause .= " AND (c.zone_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.zone_code = ? AND sub.etablissement_code = ?))";
             $params[] = $zoneCode;
             $params[] = $zoneCode;
             $params[] = $etabCode;
-            $params[] = $anneeCode;
+        }
+
+        $subSousExists = "SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.etablissement_code = c.etablissement_code";
+        $subExistsParams = [];
+        if (Context::isCommercial()) {
+            $subSousExists .= " AND sub.user_code = ?";
+            $subExistsParams[] = $userCode;
         }
 
         $sql = "
@@ -36,21 +41,29 @@ class ClientController extends BaseController
                 COUNT(*) as total_clients,
                 COUNT(CASE WHEN c.statut_client = 'actif' THEN 1 END) as clients_actifs,
                 COUNT(CASE WHEN c.statut_client != 'actif' OR c.statut_client IS NULL THEN 1 END) as clients_inactifs,
-                COUNT(CASE WHEN EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.etablissement_code = ? AND sub.zone_code = ? AND sub.annee_code = ?) THEN 1 END) as clients_souscripteurs,
+                COUNT(CASE WHEN EXISTS ({$subSousExists}) THEN 1 END) as clients_souscripteurs,
                 COUNT(CASE WHEN c.created_at_client >= DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01') THEN 1 END) as nouveaux_ce_mois
             FROM clients c
             {$whereClause}
         ";
-        $statsParams = array_merge([$etabCode, $zoneCode, $anneeCode], $params);
+        $statsParams = array_merge($subExistsParams, $params);
 
         // Cumul des cotisations encaissées pour les clients du périmètre
         $sqlCot = "
             SELECT COALESCE(SUM(cc.montant_cautisation_client), 0) as total_cotise
             FROM cautisation_clients cc
-            WHERE cc.etablissement_code = ? AND cc.zone_code = ? AND cc.annee_code = ?
+            WHERE cc.etablissement_code = ?
               AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)
         ";
-        $cotParams = [$etabCode, $zoneCode, $anneeCode];
+        $cotParams = [$etabCode];
+        if (!empty($zoneCode)) {
+            $sqlCot .= " AND cc.zone_code = ?";
+            $cotParams[] = $zoneCode;
+        }
+        if (!empty($anneeCode)) {
+            $sqlCot .= " AND cc.annee_code = ?";
+            $cotParams[] = $anneeCode;
+        }
         if (Context::isCommercial()) {
             $sqlCot .= " AND (cc.user_code = ? OR cc.commercial_code = ?)";
             $cotParams[] = $userCode;
@@ -117,38 +130,45 @@ class ClientController extends BaseController
         $userCode = Context::user();
         $etabCode = Context::etablissement();
 
+        $subSousSql = "SELECT COUNT(*) FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.etablissement_code = c.etablissement_code";
+        $subSousParams = [];
+        if (Context::isCommercial()) {
+            $subSousSql .= " AND sub.user_code = ?";
+            $subSousParams[] = $userCode;
+        }
+
+        $subCotSql = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients cc 
+                      WHERE cc.client_code = c.code_client 
+                        AND cc.etablissement_code = c.etablissement_code 
+                        AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)";
+        $subCotParams = [];
+        if (Context::isCommercial()) {
+            $subCotSql .= " AND (cc.user_code = ? OR cc.commercial_code = ?)";
+            $subCotParams[] = $userCode;
+            $subCotParams[] = $userCode;
+        }
+
         $sql = "
             SELECT c.*, z.libelle_zone,
-                   (SELECT COUNT(*) FROM souscriptions sub 
-                    WHERE sub.client_code = c.code_client 
-                      AND sub.etablissement_code = ? AND sub.zone_code = ? AND sub.annee_code = ?) as nb_souscriptions,
-                   (SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients cc 
-                    WHERE cc.client_code = c.code_client 
-                      AND cc.etablissement_code = ? AND cc.zone_code = ? AND cc.annee_code = ? 
-                      AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)) as total_cotise
+                   ({$subSousSql}) as nb_souscriptions,
+                   ({$subCotSql}) as total_cotise
             FROM clients c
             LEFT JOIN zones z ON z.code_zone = c.zone_code
             WHERE c.etablissement_code = ?
         ";
-        $params = [
-            $etabCode, $zoneCode, $anneeCode,
-            $etabCode, $zoneCode, $anneeCode,
-            $etabCode
-        ];
+        $params = array_merge($subSousParams, $subCotParams, [$etabCode]);
 
         // Application du filtrage strict selon le rôle RBAC (Context)
         if (Context::isCommercial()) {
-            $sql .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.user_code = ? AND sub2.etablissement_code = ? AND sub2.annee_code = ?))";
+            $sql .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.user_code = ? AND sub2.etablissement_code = ?))";
             $params[] = $userCode;
             $params[] = $userCode;
             $params[] = $etabCode;
-            $params[] = $anneeCode;
         } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
-            $sql .= " AND (c.zone_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.zone_code = ? AND sub2.etablissement_code = ? AND sub2.annee_code = ?))";
+            $sql .= " AND (c.zone_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.zone_code = ? AND sub2.etablissement_code = ?))";
             $params[] = $zoneCode;
             $params[] = $zoneCode;
             $params[] = $etabCode;
-            $params[] = $anneeCode;
         }
 
         $sql .= " ORDER BY c.created_at_client DESC, c.id_client DESC";
