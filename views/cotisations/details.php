@@ -90,11 +90,6 @@ $initials = mb_substr(strtoupper($initials), 0, 2) ?: 'CL';
           <button type="button" onclick="window.print()" class="btn" style="background: #F8FAFC; border: 1px solid #CBD5E1; color: #1E3A5F; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
             <i data-lucide="printer" style="width: 16px; height: 16px; color: #1E3A5F;"></i> Imprimer Reçu
           </button>
-          <?php if (Context::can('FINANCE_EDIT_COTISATION') && !empty($encryptedId)): ?>
-          <a href="<?= RACINE ?>cotisation/edition/<?= $encryptedId ?>" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; font-weight: 800; border-radius: 10px; padding: 10px 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);">
-            <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Modifier Reçu
-          </a>
-          <?php endif; ?>
         </div>
       </div>
 
