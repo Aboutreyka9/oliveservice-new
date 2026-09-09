@@ -345,6 +345,12 @@
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
             <div class="nav-section-items" id="sec-finance">
+                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= strpos($currentUri, '/souscription/list') !== false ? 'active' : '' ?>" data-title="Liste souscriptions">
+                    <i data-lucide="file-text"></i> <span>Liste souscriptions</span>
+                </a>
+                <a href="<?= RACINE ?>client/list" class="nav-item sub <?= strpos($currentUri, '/client/list') !== false ? 'active' : '' ?>" data-title="Liste clients">
+                    <i data-lucide="users"></i> <span>Liste clients</span>
+                </a>
                 <a href="<?= RACINE ?>cotisation/list" class="nav-item sub <?= strpos($currentUri, '/cotisation/list') !== false ? 'active' : '' ?>" data-title="Suivi des Cotisations">
                     <i data-lucide="search"></i> <span>Suivi Cotisations</span>
                 </a>
