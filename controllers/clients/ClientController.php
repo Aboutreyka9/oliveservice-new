@@ -403,7 +403,20 @@ class ClientController extends BaseController
         $this->requirePermission(['COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         try {
             $id = $this->validator->decrypter($details);
-            $item = $this->model->getById($id);
+            $stmtClient = $this->model->getCon()->prepare("
+                SELECT c.*, 
+                       z.libelle_zone,
+                       u.nom_user as commercial_nom,
+                       u.prenom_user as commercial_prenom,
+                       u.matricule_user as commercial_matricule
+                FROM clients c
+                LEFT JOIN zones z ON z.code_zone = c.zone_code
+                LEFT JOIN users u ON u.code_user = c.user_code
+                WHERE c.id_client = ?
+                LIMIT 1
+            ");
+            $stmtClient->execute([$id]);
+            $item = $stmtClient->fetch(PDO::FETCH_ASSOC);
             if (!$item) {
                 $this->renderNotFound("Le client demandé est introuvable.");
                 return;

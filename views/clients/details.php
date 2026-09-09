@@ -32,6 +32,63 @@ $dernierVersement = !empty($cotisations) ? $cotisations[0] : null;
 
 $canCollect = Context::hasPermission('COMMERCIAL_COLLECT_COTISATION');
 $canEdit = Context::hasPermission('GESTIONNAIRE_EDIT_SOUSCRIPTION');
+
+// Numéro de téléphone nettoyé et lien WhatsApp direct
+$rawTel = trim($item['telephone_client'] ?? '');
+$cleanTel = preg_replace('/[^0-9]/', '', $rawTel);
+$waLink = null;
+if (!empty($cleanTel)) {
+    if (strlen($cleanTel) === 10) {
+        $waNumber = '225' . $cleanTel;
+    } elseif (strpos($cleanTel, '225') === 0) {
+        $waNumber = $cleanTel;
+    } else {
+        $waNumber = $cleanTel;
+    }
+    $waLink = "https://wa.me/{$waNumber}";
+}
+
+// Formatage du genre / sexe
+$sexeRaw = strtolower(trim($item['sexe_client'] ?? ''));
+$isFemme = in_array($sexeRaw, ['f', 'femme', 'féminin', 'feminin']);
+$isHomme = in_array($sexeRaw, ['m', 'homme', 'masculin']);
+if ($isFemme) {
+    $sexeBadge = '<span style="background: #FDF2F8; color: #BE185D; border: 1px solid #FBCFE8; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="user" style="width: 12px; height: 12px;"></i> Femme</span>';
+} elseif ($isHomme) {
+    $sexeBadge = '<span style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="user" style="width: 12px; height: 12px;"></i> Homme</span>';
+} else {
+    $sexeBadge = '';
+}
+
+// Profession
+$profession = trim($item['profession_client'] ?? '');
+
+// Ancienneté du compte
+$createdDate = !empty($item['created_at_client']) ? new DateTime($item['created_at_client']) : null;
+$now = new DateTime();
+if ($createdDate) {
+    $interval = $createdDate->diff($now);
+    if ($interval->y > 0) {
+        $anciennete = "Client depuis {$interval->y} an" . ($interval->y > 1 ? 's' : '');
+    } elseif ($interval->m > 0) {
+        $anciennete = "Client depuis {$interval->m} mois";
+    } elseif ($interval->d > 0) {
+        $anciennete = "Client depuis {$interval->d} jour" . ($interval->d > 1 ? 's' : '');
+    } else {
+        $anciennete = "Inscrit aujourd'hui";
+    }
+    $dateCreationFmt = $createdDate->format('d/m/Y à H:i');
+} else {
+    $anciennete = '-';
+    $dateCreationFmt = '-';
+}
+
+// Commercial référent
+$nomCommercial = trim(($item['commercial_nom'] ?? '') . ' ' . ($item['commercial_prenom'] ?? ''));
+if (empty($nomCommercial)) {
+    $nomCommercial = !empty($item['user_code']) ? $item['user_code'] : 'Non assigné';
+}
+$commercialMatricule = !empty($item['commercial_matricule']) ? $item['commercial_matricule'] : ($item['user_code'] ?? '');
 ?>
 <div class="app-layout">
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
@@ -150,48 +207,132 @@ $canEdit = Context::hasPermission('GESTIONNAIRE_EDIT_SOUSCRIPTION');
 
       <!-- CARTE 1 : SIGNALÉTIQUE & INFORMATIONS DU CLIENT -->
       <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 26px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05); margin-bottom: 24px; width: 100%; box-sizing: border-box;">
-        <h3 style="font-size: 15px; font-weight: 800; color: #0F172A; margin: 0 0 20px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px;">
-          <i data-lucide="user-check" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Informations & Coordonnées Client
-        </h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #F1F5F9; flex-wrap: wrap; gap: 12px;">
+          <h3 style="font-size: 15px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="user-check" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Informations & Coordonnées Client
+          </h3>
+          <span style="font-size: 12px; color: #64748B; font-weight: 600;">
+            <i data-lucide="shield-check" style="width: 14px; height: 14px; color: #059669; display: inline-block; vertical-align: -2px;"></i> Fiche profil vérifiée
+          </span>
+        </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px;">
-          <div>
-            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Identité Complète</span>
-            <div style="font-size: 16px; font-weight: 800; color: #0F172A; margin-top: 6px;"><?= htmlspecialchars($nomComplet) ?></div>
-            <div style="font-size: 12px; color: #64748B; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
-              <i data-lucide="credit-card" style="width: 13px; height: 13px; color: #94A3B8;"></i> CNI : <strong><?= htmlspecialchars($item['cni_client'] ?? $item['numero_cni'] ?? '-') ?></strong>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px;">
+
+          <!-- BLOC 1 : IDENTITÉ & PROFIL -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Identité & Profil</span>
+                <div style="width: 28px; height: 28px; border-radius: 8px; background: #EEF2FF; color: #4F46E5; display: flex; align-items: center; justify-content: center;">
+                  <i data-lucide="user" style="width: 15px; height: 15px;"></i>
+                </div>
+              </div>
+              <div style="font-size: 16px; font-weight: 800; color: #0F172A; line-height: 1.25; margin-bottom: 8px;">
+                <?= htmlspecialchars($nomComplet) ?>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;">
+                <?= $sexeBadge ?>
+                <?php if (!empty($profession)): ?>
+                  <span style="background: #FFFFFF; color: #334155; border: 1px solid #CBD5E1; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                    <i data-lucide="briefcase" style="width: 11px; height: 11px; color: #64748B;"></i> <?= htmlspecialchars($profession) ?>
+                  </span>
+                <?php endif; ?>
+              </div>
+            </div>
+            <div style="font-size: 12px; color: #475569; background: #FFFFFF; border: 1px solid #E2E8F0; padding: 6px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; color: #64748B; font-weight: 600;">
+                <i data-lucide="credit-card" style="width: 13px; height: 13px; color: #1E3A5F;"></i> CNI :
+              </span>
+              <strong style="color: #0F172A; font-family: monospace; font-size: 12px;"><?= htmlspecialchars($item['cni_client'] ?? $item['numero_cni'] ?? '-') ?></strong>
             </div>
           </div>
 
-          <div>
-            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Contacts & Joignabilité</span>
-            <div style="font-size: 16px; font-weight: 800; color: #059669; margin-top: 6px; display: flex; align-items: center; gap: 6px;">
-              <i data-lucide="phone" style="width: 15px; height: 15px;"></i> <?= htmlspecialchars($item['telephone_client'] ?? '-') ?>
+          <!-- BLOC 2 : CONTACTS & ACTIONS RAPIDES -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Contacts & Joignabilité</span>
+                <div style="width: 28px; height: 28px; border-radius: 8px; background: #ECFDF5; color: #059669; display: flex; align-items: center; justify-content: center;">
+                  <i data-lucide="phone-call" style="width: 15px; height: 15px;"></i>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                <a href="tel:<?= htmlspecialchars($cleanTel) ?>" style="font-size: 15px; font-weight: 800; color: #059669; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;" title="Cliquer pour appeler">
+                  <i data-lucide="phone" style="width: 15px; height: 15px;"></i> <?= htmlspecialchars($item['telephone_client'] ?? '-') ?>
+                </a>
+                <?php if (!empty($waLink)): ?>
+                  <a href="<?= $waLink ?>" target="_blank" rel="noopener noreferrer" style="background: #25D366; color: #FFFFFF; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(37,211,102,0.25); transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" title="Démarrer une discussion WhatsApp">
+                    <i data-lucide="message-circle" style="width: 13px; height: 13px;"></i> WhatsApp
+                  </a>
+                <?php endif; ?>
+              </div>
             </div>
-            <div style="font-size: 12px; color: #64748B; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
-              <i data-lucide="mail" style="width: 13px; height: 13px; color: #94A3B8;"></i> Email : <strong><?= htmlspecialchars($item['email_client'] ?? 'Non renseigné') ?></strong>
+            <div style="font-size: 12px; color: #475569; background: #FFFFFF; border: 1px solid #E2E8F0; padding: 6px 10px; border-radius: 8px;">
+              <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <i data-lucide="mail" style="width: 13px; height: 13px; color: #2563EB; flex-shrink: 0;"></i>
+                <?php if (!empty($item['email_client'])): ?>
+                  <a href="mailto:<?= htmlspecialchars($item['email_client']) ?>" style="color: #2563EB; font-weight: 600; text-decoration: none; overflow: hidden; text-overflow: ellipsis;" title="Envoyer un e-mail">
+                    <?= htmlspecialchars($item['email_client']) ?>
+                  </a>
+                <?php else: ?>
+                  <span style="color: #94A3B8; font-style: italic;">Email non renseigné</span>
+                <?php endif; ?>
+              </div>
             </div>
           </div>
 
-          <div>
-            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Localisation & Zone</span>
-            <div style="font-size: 15px; font-weight: 800; color: #1E3A5F; margin-top: 6px; display: flex; align-items: center; gap: 6px;">
-              <i data-lucide="map-pin" style="width: 15px; height: 15px; color: #2563EB;"></i> <?= htmlspecialchars($item['libelle_zone'] ?? '-') ?>
+          <!-- BLOC 3 : LOCALISATION GÉOGRAPHIQUE -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Localisation & Zone</span>
+                <div style="width: 28px; height: 28px; border-radius: 8px; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center;">
+                  <i data-lucide="map-pin" style="width: 15px; height: 15px;"></i>
+                </div>
+              </div>
+              <div style="margin-bottom: 10px;">
+                <span style="background: #EFF6FF; color: #1D4ED8; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 6px; border: 1px solid #BFDBFE; display: inline-flex; align-items: center; gap: 5px;">
+                  <i data-lucide="map-pin" style="width: 12px; height: 12px;"></i> <?= htmlspecialchars($item['libelle_zone'] ?? 'Zone Non assignée') ?>
+                </span>
+              </div>
             </div>
-            <div style="font-size: 12px; color: #64748B; margin-top: 4px;">
-              Résidence : <strong><?= htmlspecialchars($item['lieu_residence_client'] ?? $item['quartier_client'] ?? 'Non renseignée') ?></strong>
+            <div style="font-size: 12px; color: #475569; background: #FFFFFF; border: 1px solid #E2E8F0; padding: 6px 10px; border-radius: 8px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="home" style="width: 13px; height: 13px; color: #64748B; flex-shrink: 0;"></i>
+                <span style="color: #64748B; font-weight: 600;">Résidence :</span>
+                <strong style="color: #0F172A;"><?= htmlspecialchars($item['lieu_residence_client'] ?? $item['quartier_client'] ?? 'Non renseignée') ?></strong>
+              </div>
             </div>
           </div>
 
-          <div>
-            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Enregistrement</span>
-            <div style="font-size: 13px; font-weight: 700; color: #334155; margin-top: 6px;">
-              Créé le : <?= !empty($item['created_at_client']) ? date('d/m/Y à H:i', strtotime($item['created_at_client'])) : '-' ?>
+          <!-- BLOC 4 : SUIVI COMMERCIAL & ENREGISTREMENT -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Gestion Commerciale</span>
+                <div style="width: 28px; height: 28px; border-radius: 8px; background: #F0FDF4; color: #16A34A; display: flex; align-items: center; justify-content: center;">
+                  <i data-lucide="briefcase" style="width: 15px; height: 15px;"></i>
+                </div>
+              </div>
+              <div style="font-size: 14px; font-weight: 800; color: #1E3A5F; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="user-check" style="width: 15px; height: 15px; color: #059669;"></i> <?= htmlspecialchars($nomCommercial) ?>
+              </div>
+              <?php if (!empty($commercialMatricule)): ?>
+                <div style="margin-bottom: 10px;">
+                  <span style="font-size: 11px; color: #64748B; background: #FFFFFF; border: 1px solid #E2E8F0; padding: 2px 7px; border-radius: 4px; font-family: monospace; font-weight: 700;">
+                    Code : <?= htmlspecialchars($commercialMatricule) ?>
+                  </span>
+                </div>
+              <?php endif; ?>
             </div>
-            <div style="font-size: 12px; color: #64748B; margin-top: 4px;">
-              Commercial : <strong><?= htmlspecialchars($item['user_code'] ?? 'N/A') ?></strong>
+            <div style="font-size: 11.5px; color: #475569; background: #FFFFFF; border: 1px solid #E2E8F0; padding: 6px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; color: #64748B; font-weight: 600;">
+                <i data-lucide="calendar" style="width: 13px; height: 13px; color: #64748B;"></i> <?= $dateCreationFmt ?>
+              </span>
+              <span style="color: #059669; font-weight: 700; font-size: 11px;"><?= $anciennete ?></span>
             </div>
           </div>
+
         </div>
       </div>
 

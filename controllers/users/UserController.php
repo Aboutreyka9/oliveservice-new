@@ -82,16 +82,11 @@ class UserController extends BaseController
             $params[':curr_user_code'] = $currentUserCode;
         }
 
-        // 2. Exclure tout utilisateur qui possède le Joker (ROLE_SUPERADMIN, ROLE_DIR_GENERAL ou permission MAIN_ACCESS)
-        $conds[] = "u.code_user NOT IN (
+        // 2. Inclure strictement uniquement les utilisateurs ayant le rôle commercial (ROLE_COMMERCIAL)
+        $conds[] = "u.code_user IN (
             SELECT DISTINCT ur.user_code 
             FROM user_roles ur 
-            WHERE ur.role_code IN ('ROLE_SUPERADMIN', 'ROLE_DIR_GENERAL') 
-               OR ur.role_code IN (SELECT role_code FROM role_permissions WHERE permission_code = 'MAIN_ACCESS')
-            UNION
-            SELECT DISTINCT up.user_code
-            FROM user_permissions up
-            WHERE up.permission_code = 'MAIN_ACCESS' AND up.accorded = 1
+            WHERE ur.role_code = 'ROLE_COMMERCIAL'
         )";
 
         // 3. Filtrage selon la zone sélectionnée / assignée
@@ -238,6 +233,8 @@ class UserController extends BaseController
             $zoneCodeTarget = !empty($_POST['zone_code']) ? trim($_POST['zone_code']) : (!empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null);
         }
 
+        $commission = (isset($_POST['commission']) && $_POST['commission'] !== '') ? (float)$_POST['commission'] : null;
+
         $data = [
             'id_user' => $id_user,
             'code_user' => $code_user,
@@ -249,6 +246,7 @@ class UserController extends BaseController
             'password_user' => $password,
             'token_user' => $activationToken,
             'fonction_code' => $fonctionCode,
+            'commission' => $commission,
             'zone_code' => $zoneCodeTarget,
             'etablissement_code' => $etabCode,
             'statut_user' => 'inactif',
@@ -405,6 +403,8 @@ class UserController extends BaseController
             $zoneCodeTarget = !empty($_POST['zone_code']) ? trim($_POST['zone_code']) : (!empty($_POST['zone_user']) ? trim($_POST['zone_user']) : null);
         }
 
+        $commission = (isset($_POST['commission']) && $_POST['commission'] !== '') ? (float)$_POST['commission'] : null;
+
         $data = [
             'id_user' => $id,
             'nom_user' => $nom,
@@ -413,6 +413,7 @@ class UserController extends BaseController
             'email_user' => $email ?: null,
             'sexe_user' => $_POST['sexe_user'] ?? 'M',
             'fonction_code' => $fonctionCode,
+            'commission' => $commission,
             'zone_code' => $zoneCodeTarget,
             'statut_user' => $statut,
             'updated_at_user' => date('Y-m-d H:i:s')
