@@ -404,5 +404,5 @@ $stats = $stats ?? [
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/depenses.js?v=1.3"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/depenses.js?v=1.4"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

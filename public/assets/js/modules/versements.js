@@ -46,10 +46,15 @@ $(function() {
             return `<span style="color:#64748B; font-size:12px; font-weight:500;">${debut} &rarr; ${fin}</span>`;
           }
         },
-        { data: 'reference_versement', defaultContent: '-', render: (d, type) => {
-          if (type !== 'display') return d || '';
-          return `<span style="color:#475569; font-weight:600; font-family:monospace;">${d || '-'}</span>`;
-        }},
+        { 
+          data: null, 
+          defaultContent: '-', 
+          render: (d, type) => {
+            const codeC = d.caisse_code || (d.reference_versement || '-');
+            if (type !== 'display') return codeC;
+            return `<span style="color:#475569; font-weight:600; font-family:monospace;">${codeC}</span>`;
+          }
+        },
         { 
           data: 'montant_versement', 
           className: 'text-end',
@@ -89,7 +94,7 @@ $(function() {
                   data-zone="${d.libelle_zone || ''}"
                   data-montant="${d.montant_versement || 0}"
                   data-periode="${(d.periode_versement_debut || '-') + ' → ' + (d.periode_versement_fin || '-')}"
-                  data-ref="${d.reference_versement || '-'}"
+                  data-ref="${d.caisse_code || (d.reference_versement || '-')}"
                   data-statut="${d.statut_versement || ''}"
                   style="background:#059669; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; border:none; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer;" 
                   title="Contrôler et Valider le versement">
@@ -114,8 +119,36 @@ $(function() {
     });
   }
 
-  // --- GESTION DE LA MODALE DE VALIDATION COMPTABLE ---
+  // --- GESTION DE LA MODALE DE VALIDATION COMPTABLE ET HISTORIQUE CAISSE ---
   const $modalVal = $('#modalValiderVersement');
+
+  // Gestion des onglets de l'historique
+  $(document).on('click', '#tab-btn-caisse-cotis', function() {
+    $('#tab-btn-caisse-cotis').addClass('active').css({ 'background': '#FFFFFF', 'color': '#059669', 'border-color': '#CBD5E1' });
+    $('#tab-btn-cotis').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
+    $('#tab-btn-sessions').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
+    $('#tab-content-caisse-cotis').show();
+    $('#tab-content-cotis').hide();
+    $('#tab-content-sessions').hide();
+  });
+
+  $(document).on('click', '#tab-btn-cotis', function() {
+    $('#tab-btn-cotis').addClass('active').css({ 'background': '#FFFFFF', 'color': '#1E3A5F', 'border-color': '#CBD5E1' });
+    $('#tab-btn-caisse-cotis').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
+    $('#tab-btn-sessions').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
+    $('#tab-content-cotis').show();
+    $('#tab-content-caisse-cotis').hide();
+    $('#tab-content-sessions').hide();
+  });
+
+  $(document).on('click', '#tab-btn-sessions', function() {
+    $('#tab-btn-sessions').addClass('active').css({ 'background': '#FFFFFF', 'color': '#1E3A5F', 'border-color': '#CBD5E1' });
+    $('#tab-btn-caisse-cotis').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
+    $('#tab-btn-cotis').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
+    $('#tab-content-sessions').show();
+    $('#tab-content-caisse-cotis').hide();
+    $('#tab-content-cotis').hide();
+  });
 
   $(document).on('click', '.btn-valider-versement', function() {
     const btn = $(this);
@@ -138,8 +171,158 @@ $(function() {
 
     $('input[name="statut_versement"][value="valide"]').prop('checked', true);
 
+    // Re-initialiser l'onglet actif par défaut sur les cotisations de la caisse
+    $('#tab-btn-caisse-cotis').trigger('click');
+
+    // Afficher le loader pour l'historique
+    $('#caisse_history_loading').show();
+    $('#caisse_history_content').hide();
+
     $modalVal.fadeIn(200).css('display', 'flex');
     if (window.lucide) lucide.createIcons();
+
+    // Charger l'historique de caisse du commercial via API
+    $.ajax({
+      url: racine + 'versement/apiCommercialCaisseHistory',
+      type: 'GET',
+      data: { id_versement: id },
+      dataType: 'json',
+      success: function(res) {
+        $('#caisse_history_loading').hide();
+        $('#caisse_history_content').show();
+
+        if (res.status === 1 && res.data) {
+          const d = res.data;
+          $('#hist_total_encaisse').text(d.total_collecte_fmt);
+          $('#hist_details_modes').text(`Esp: ${d.total_especes_fmt} | MoMo: ${d.total_momo_fmt}`);
+          $('#hist_versements_valides').text(d.total_versements_valides_fmt);
+          $('#hist_reste_a_verser').text(d.solde_reste_a_verser_fmt);
+
+          // Caisse liée
+          if (d.has_linked_caisse) {
+            $('#hist_linked_caisse_code').text(d.linked_caisse_code);
+            $('#hist_caisse_attendu').text(d.caisse_attendu_fmt);
+            $('#hist_caisse_pot').text(d.versement_actuel_fmt);
+
+            if (d.caisse_ecart === 0) {
+              $('#hist_caisse_ecart').text('0 FCFA (Conforme)').css('color', '#059669');
+            } else if (d.caisse_ecart > 0) {
+              $('#hist_caisse_ecart').text('+' + d.caisse_ecart_fmt + ' (Surplus)').css('color', '#2563EB');
+            } else {
+              $('#hist_caisse_ecart').text('-' + d.caisse_ecart_fmt + ' (Manquant)').css('color', '#DC2626');
+            }
+            $('#box-linked-caisse').show();
+          } else {
+            $('#box-linked-caisse').hide();
+          }
+
+          // Cotisations spécifiques de la séance de caisse
+          const caisseCotis = d.caisse_cotisations || [];
+          $('#hist_nb_caisse_cotis').text(caisseCotis.length);
+          let htmlCaisseCotis = '';
+          if (caisseCotis.length === 0) {
+            htmlCaisseCotis = '<tr><td colspan="6" style="text-align: center; padding: 14px; color: #94A3B8;">Aucune cotisation attachée à cette caisse</td></tr>';
+          } else {
+            caisseCotis.forEach(c => {
+              let stBadge = '<span style="color:#D97706; font-weight:700; background:#FEF3C7; padding:2px 8px; border-radius:12px; font-size:10px;">En attente</span>';
+              if (c.statut === 'valide') stBadge = '<span style="color:#059669; font-weight:700; background:#ECFDF5; padding:2px 8px; border-radius:12px; font-size:10px;">Validée</span>';
+              if (c.statut === 'annule') stBadge = '<span style="color:#DC2626; font-weight:700; background:#FEE2E2; padding:2px 8px; border-radius:12px; font-size:10px;">Annulée</span>';
+
+              htmlCaisseCotis += `
+                <tr style="border-bottom: 1px solid #F1F5F9;">
+                  <td style="padding: 6px 10px;">
+                    <code style="font-weight:700; color:#1E3A5F; font-size:10px; background:#F1F5F9; padding:2px 5px; border-radius:4px;">${c.souscription}</code>
+                  </td>
+                  <td style="padding: 6px 10px; font-weight:700; color:#0F172A;">
+                    ${c.client}
+                    <small style="color:#64748B; display:block; font-weight:normal;">${c.telephone}</small>
+                  </td>
+                  <td style="padding: 6px 10px; font-size:10px; color:#475569;">
+                    <span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-weight:700;">${c.mode}</span>
+                  </td>
+                  <td style="padding: 6px 10px; font-size:10px; color:#64748B;">${c.date}</td>
+                  <td style="padding: 6px 10px; text-align:right; font-weight:800; color:#059669;">+${c.montant_fmt}</td>
+                  <td style="padding: 6px 10px; text-align:center;">${stBadge}</td>
+                </tr>
+              `;
+            });
+          }
+          $('#hist_tbody_caisse_cotis').html(htmlCaisseCotis);
+
+          // Écart & Conformité Globale
+          const ecart = d.ecart_comparaison;
+          if (ecart === 0) {
+            $('#hist_ecart_verif').text('0 FCFA').css('color', '#059669');
+            $('#hist_ecart_badge').text('Conforme').css({'color': '#059669', 'background': '#ECFDF5'});
+          } else if (ecart > 0) {
+            $('#hist_ecart_verif').text('+' + d.ecart_comparaison_fmt).css('color', '#2563EB');
+            $('#hist_ecart_badge').text('Surplus (+' + d.ecart_comparaison_fmt + ')').css({'color': '#2563EB', 'background': '#EFF6FF'});
+          } else {
+            $('#hist_ecart_verif').text('-' + d.ecart_comparaison_fmt).css('color', '#DC2626');
+            $('#hist_ecart_badge').text('Sous-versement (-' + d.ecart_comparaison_fmt + ')').css({'color': '#DC2626', 'background': '#FEE2E2'});
+          }
+
+          // Cotisations récentes
+          const cotis = d.recent_cotisations || [];
+          $('#hist_nb_cotis').text(cotis.length);
+          let htmlCotis = '';
+          if (cotis.length === 0) {
+            htmlCotis = '<tr><td colspan="5" style="text-align: center; padding: 12px; color: #94A3B8;">Aucune cotisation récente</td></tr>';
+          } else {
+            cotis.forEach(c => {
+              let stBadge = '<span style="color:#D97706; font-weight:700;">Attente</span>';
+              if (c.statut === 'valide') stBadge = '<span style="color:#059669; font-weight:700;">Validée</span>';
+              if (c.statut === 'annule') stBadge = '<span style="color:#DC2626; font-weight:700;">Annulée</span>';
+
+              htmlCotis += `
+                <tr style="border-bottom: 1px solid #F1F5F9;">
+                  <td style="padding: 6px 10px;">
+                    <code style="font-weight:700; color:#1E3A5F; font-size:10px;">${c.code}</code>
+                    <div style="font-size:10px; color:#64748B;">${c.date}</div>
+                  </td>
+                  <td style="padding: 6px 10px; font-weight:600; color:#0F172A;">${c.client}</td>
+                  <td style="padding: 6px 10px; font-size:10px; color:#475569;">${c.mode}</td>
+                  <td style="padding: 6px 10px; text-align:right; font-weight:800; color:#059669;">+${c.montant_fmt}</td>
+                  <td style="padding: 6px 10px; text-align:center; font-size:10px;">${stBadge}</td>
+                </tr>
+              `;
+            });
+          }
+          $('#hist_tbody_cotis').html(htmlCotis);
+
+          // Sessions de caisse
+          const sessions = d.sessions || [];
+          $('#hist_nb_sessions').text(sessions.length);
+          let htmlSessions = '';
+          if (sessions.length === 0) {
+            htmlSessions = '<tr><td colspan="5" style="text-align: center; padding: 12px; color: #94A3B8;">Aucune session de caisse</td></tr>';
+          } else {
+            sessions.forEach(s => {
+              const stClass = s.statut_caisse === 'cloture' ? '<span style="color:#059669; font-weight:700;">Clôturée</span>' : '<span style="color:#D97706; font-weight:700;">Ouverte</span>';
+              htmlSessions += `
+                <tr style="border-bottom: 1px solid #F1F5F9;">
+                  <td style="padding: 6px 10px;">
+                    <code style="font-weight:700; color:#1E3A5F; font-size:10px;">${s.code_caisse}</code>
+                  </td>
+                  <td style="padding: 6px 10px; font-size:10px; color:#475569;">${s.date_ouverture}</td>
+                  <td style="padding: 6px 10px; font-size:10px; color:#475569;">${s.date_cloture}</td>
+                  <td style="padding: 6px 10px; text-align:right; font-weight:800; color:#0F172A;">${s.montant_depot_fmt}</td>
+                  <td style="padding: 6px 10px; text-align:center; font-size:10px;">${stClass}</td>
+                </tr>
+              `;
+            });
+          }
+          $('#hist_tbody_sessions').html(htmlSessions);
+        } else {
+          $('#hist_tbody_cotis').html('<tr><td colspan="5" style="text-align: center; padding: 12px; color: #EF4444;">Erreur de chargement de l\'historique</td></tr>');
+        }
+      },
+      error: function() {
+        $('#caisse_history_loading').hide();
+        $('#caisse_history_content').show();
+        $('#hist_tbody_cotis').html('<tr><td colspan="5" style="text-align: center; padding: 12px; color: #EF4444;">Erreur réseau lors du chargement de l\'historique</td></tr>');
+      }
+    });
   });
 
   $(document).on('click', '#modalValiderClose, .modal-close-btn', function() {

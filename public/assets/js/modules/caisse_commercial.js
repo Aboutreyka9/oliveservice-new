@@ -142,6 +142,7 @@ $(function() {
   const $caisseLoader = $('#caisse-loader');
   if ($caisseLoader.length) {
     let currentCotisations = [];
+    let activeTotalAttendu = 0;
     const $modalCotisations = $('#modalCotisationsDetails');
 
     function loadCommercialSession() {
@@ -161,6 +162,7 @@ $(function() {
               // CAISSE OUVERTE
               const s = res.session;
               currentCotisations = s.cotisations || [];
+              activeTotalAttendu = Number(s.total_general || 0);
 
               $('#open_session_code').text(s.code_caisse);
               $('#open_session_date').text(s.date_caisse);
@@ -173,6 +175,12 @@ $(function() {
               $('#open_especes').text(Number(s.total_especes).toLocaleString('fr-FR') + ' FCFA');
               $('#open_mobile').text(Number(s.total_mobile_money).toLocaleString('fr-FR') + ' FCFA');
               $('#open_cheques').text(Number(s.total_cheque_virement).toLocaleString('fr-FR') + ' FCFA');
+
+              // Init pot controls
+              $('#cloture_montant_attendu_hidden').val(activeTotalAttendu);
+              $('#pot_montant_attendu_txt').text(Number(activeTotalAttendu).toLocaleString('fr-FR') + ' FCFA');
+              $('#cloture_montant_pot').val('');
+              verifierConformitePot();
 
               renderCotisationsTable(currentCotisations);
               $('#section-caisse-ouverte').fadeIn(200);
@@ -213,6 +221,90 @@ $(function() {
         }
       });
     }
+
+    // Fonction de vérification dynamique du Montant du Pot avec blocage strict
+    function verifierConformitePot() {
+      const valRaw = $('#cloture_montant_pot').val();
+      if (valRaw === '' || valRaw === null) {
+        $('#pot_montant_declare_txt').text('0 FCFA');
+        $('#pot_ecart_txt').text('0 FCFA').css('color', '#64748B');
+        $('#pot_ecart_badge_sub').text('En attente').css('color', '#64748B');
+        $('#pot_status_alert').css({
+          'background': '#F1F5F9',
+          'border': '1px solid #CBD5E1',
+          'color': '#475569'
+        }).html('<i data-lucide="info" style="width: 18px; height: 18px; color: #0284C7; flex-shrink: 0;"></i><span>Veuillez renseigner le montant de votre pot pour vérifier la conformité avec la recette de caisse.</span>');
+        
+        $('#btn-submit-cloture').prop('disabled', true).css({
+          'background': '#94A3B8',
+          'cursor': 'not-allowed',
+          'box-shadow': 'none'
+        });
+        $('#txt-bloque-avertissement').hide();
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      const montantPot = parseFloat(valRaw) || 0;
+      const ecart = Math.round(montantPot - activeTotalAttendu);
+      $('#pot_montant_declare_txt').text(montantPot.toLocaleString('fr-FR') + ' FCFA');
+
+      if (ecart === 0) {
+        // Conforme : Débloquer le bouton
+        $('#pot_ecart_txt').text('0 FCFA').css('color', '#059669');
+        $('#pot_ecart_badge_sub').text('Conforme (0 F)').css('color', '#059669');
+        $('#pot_status_alert').css({
+          'background': '#ECFDF5',
+          'border': '1.5px solid #A7F3D0',
+          'color': '#065F46'
+        }).html('<i data-lucide="check-circle" style="width: 18px; height: 18px; color: #059669; flex-shrink: 0;"></i><span><strong>Montant conforme !</strong> Le montant du pot correspond exactement aux encaissements enregistrés (' + activeTotalAttendu.toLocaleString('fr-FR') + ' FCFA). Vous pouvez valider la clôture.</span>');
+
+        $('#btn-submit-cloture').prop('disabled', false).css({
+          'background': 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+          'cursor': 'pointer',
+          'box-shadow': '0 4px 12px rgba(5, 150, 105, 0.25)'
+        });
+        $('#txt-bloque-avertissement').hide();
+      } else if (ecart < 0) {
+        // Manquant : Bloquer strictement
+        const manquant = Math.abs(ecart);
+        $('#pot_ecart_txt').text('-' + manquant.toLocaleString('fr-FR') + ' FCFA').css('color', '#DC2626');
+        $('#pot_ecart_badge_sub').text('Manquant').css('color', '#DC2626');
+        $('#pot_status_alert').css({
+          'background': '#FEF2F2',
+          'border': '1.5px solid #FECACA',
+          'color': '#991B1B'
+        }).html('<i data-lucide="alert-triangle" style="width: 18px; height: 18px; color: #DC2626; flex-shrink: 0;"></i><span><strong>Écart détecté (-' + manquant.toLocaleString('fr-FR') + ' FCFA) :</strong> Le pot est inférieur à la recette attendue. La clôture est <u>strictement bloquée</u> jusqu\'à régularisation.</span>');
+
+        $('#btn-submit-cloture').prop('disabled', true).css({
+          'background': '#94A3B8',
+          'cursor': 'not-allowed',
+          'box-shadow': 'none'
+        });
+        $('#txt-bloque-avertissement').show().text('⚠️ Bouton verrouillé : Un manquant de ' + manquant.toLocaleString('fr-FR') + ' FCFA est détecté. Clôture interdite.');
+      } else {
+        // Surplus : Bloquer strictement
+        const surplus = ecart;
+        $('#pot_ecart_txt').text('+' + surplus.toLocaleString('fr-FR') + ' FCFA').css('color', '#2563EB');
+        $('#pot_ecart_badge_sub').text('Surplus').css('color', '#2563EB');
+        $('#pot_status_alert').css({
+          'background': '#EFF6FF',
+          'border': '1.5px solid #BFDBFE',
+          'color': '#1E40AF'
+        }).html('<i data-lucide="alert-circle" style="width: 18px; height: 18px; color: #2563EB; flex-shrink: 0;"></i><span><strong>Écart détecté (+' + surplus.toLocaleString('fr-FR') + ' FCFA) :</strong> Le pot est supérieur à la recette enregistrée. La clôture est <u>strictement bloquée</u>.</span>');
+
+        $('#btn-submit-cloture').prop('disabled', true).css({
+          'background': '#94A3B8',
+          'cursor': 'not-allowed',
+          'box-shadow': 'none'
+        });
+        $('#txt-bloque-avertissement').show().text('⚠️ Bouton verrouillé : Un surplus de ' + surplus.toLocaleString('fr-FR') + ' FCFA est détecté. Clôture interdite.');
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    $(document).on('input keyup change', '#cloture_montant_pot', verifierConformitePot);
 
     function renderCotisationsTable(list) {
       const $tbody = $('#tbl_cotisations_body');
@@ -269,9 +361,22 @@ $(function() {
       });
     });
 
-    // Action Clôture de Caisse
+    // Action Clôture de Caisse avec vérification stricte
     $('#form-cloturer-caisse').on('submit', function(e) {
       e.preventDefault();
+
+      const valRaw = $('#cloture_montant_pot').val();
+      if (valRaw === '' || valRaw === null) {
+        if (window.toastr) toastr.warning('Veuillez saisir le montant de votre pot.');
+        return;
+      }
+
+      const montantPot = parseFloat(valRaw) || 0;
+      if (Math.round(montantPot - activeTotalAttendu) !== 0) {
+        if (window.toastr) toastr.error('Clôture strictement bloquée : Le montant du pot ne correspond pas au montant attendu.');
+        return;
+      }
+
       const formData = $(this).serialize();
 
       $.ajax({
@@ -281,7 +386,7 @@ $(function() {
         dataType: 'json',
         success: function(res) {
           if (res.status === 1 || res.success) {
-            if (window.toastr) toastr.success(res.message || 'Clôture transmise avec succès !');
+            if (window.toastr) toastr.success(res.message || 'Clôture et versement transmis avec succès !');
             loadCommercialSession();
           } else {
             if (window.toastr) toastr.error(res.message || 'Erreur lors de la clôture');

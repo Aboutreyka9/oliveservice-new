@@ -94,27 +94,86 @@
           </div>
         </div>
 
-        <!-- FORMULAIRE DE CLÔTURE DIRECTE -->
+        <!-- FORMULAIRE DE CLÔTURE & VERSEMENT DU POT -->
         <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 32px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);">
-          <div style="font-size: 15px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 20px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px;">
-            <i data-lucide="lock" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Procéder à la Clôture de Caisse du Jour
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid #F1F5F9; padding-bottom: 14px; margin-bottom: 24px;">
+            <div>
+              <div style="font-size: 15px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="arrow-down-left" style="width: 20px; height: 20px; color: #059669;"></i> Clôture de Caisse & Déclaration du Versement
+              </div>
+              <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0; font-weight: 500;">
+                Saisissez le montant physique du pot en espèces remis au comptable pour vérification et clôture.
+              </p>
+            </div>
+            <button type="button" class="btn btn-open-modal-details" style="background: #F1F5F9; color: #1E3A5F; font-weight: 700; border-radius: 8px; padding: 8px 16px; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+              <i data-lucide="list" style="width: 15px; height: 15px;"></i> Revoir les Transactions
+            </button>
           </div>
           
           <form id="form-cloturer-caisse">
             <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
+            <input type="hidden" id="cloture_montant_attendu_hidden" name="montant_attendu" value="0">
             
-            <div class="form-group" style="margin-bottom: 24px;">
-              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Note / Observations de clôture (Optionnel)</label>
-              <textarea class="form-control" name="observations" style="width: 100%; box-sizing: border-box; padding: 14px; font-size: 14px; font-weight: 600; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; min-height: 100px;" placeholder="Ex: Clôture de caisse effectuée sans écart. Monnaie restante au guichet." rows="3"></textarea>
+            <!-- BLOC SAISIE DU POT & CONTRÔLE D'ÉCART -->
+            <div style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 14px; padding: 24px; margin-bottom: 24px;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: center;">
+                
+                <!-- CHAMP SAISIE MONTANT DU POT -->
+                <div class="form-group" style="margin: 0;">
+                  <label for="cloture_montant_pot" style="display: block; font-weight: 800; font-size: 14px; color: #0F172A; margin-bottom: 8px;">
+                    Montant Physique du Pot (FCFA) <span style="color: #EF4444;">*</span>
+                  </label>
+                  <div style="position: relative;">
+                    <input type="number" step="any" min="0" id="cloture_montant_pot" name="montant_pot" class="form-control" style="width: 100%; box-sizing: border-box; padding: 14px 16px 14px 44px; font-size: 18px; font-weight: 900; color: #0F172A; border-radius: 10px; border: 2px solid #CBD5E1; outline: none; background: #FFFFFF; transition: all 0.2s;" placeholder="0" required autocomplete="off">
+                    <i data-lucide="coins" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #64748B;"></i>
+                  </div>
+                  <span style="font-size: 12px; color: #64748B; font-weight: 500; display: block; margin-top: 6px;">
+                    Comptabilisez l'argent liquide total que vous déposez auprès du service financier.
+                  </span>
+                </div>
+
+                <!-- BOX COMPARATIF EN TEMPS RÉEL -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px;">
+                  <div>
+                    <span style="font-size: 10px; font-weight: 800; color: #64748B; text-transform: uppercase; display: block;">Attendu Caisse</span>
+                    <strong id="pot_montant_attendu_txt" style="font-size: 15px; font-weight: 900; color: #1E3A5F; display: block; margin-top: 4px;">0 FCFA</strong>
+                    <span style="font-size: 10px; color: #94A3B8;">Calculé du système</span>
+                  </div>
+                  <div>
+                    <span style="font-size: 10px; font-weight: 800; color: #64748B; text-transform: uppercase; display: block;">Pot Déclaré</span>
+                    <strong id="pot_montant_declare_txt" style="font-size: 15px; font-weight: 900; color: #059669; display: block; margin-top: 4px;">0 FCFA</strong>
+                    <span style="font-size: 10px; color: #94A3B8;">Saisi par vous</span>
+                  </div>
+                  <div>
+                    <span style="font-size: 10px; font-weight: 800; color: #64748B; text-transform: uppercase; display: block;">Écart Constaté</span>
+                    <strong id="pot_ecart_txt" style="font-size: 15px; font-weight: 900; color: #64748B; display: block; margin-top: 4px;">0 FCFA</strong>
+                    <span id="pot_ecart_badge_sub" style="font-size: 10px; font-weight: 700; color: #64748B;">En attente</span>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- BANDEAU ALERTE ÉCART / CONFORMITÉ -->
+              <div id="pot_status_alert" style="margin-top: 18px; padding: 14px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569;">
+                <i data-lucide="info" style="width: 18px; height: 18px; color: #0284C7; flex-shrink: 0;"></i>
+                <span>Veuillez renseigner le montant de votre pot pour vérifier la conformité avec la recette de caisse.</span>
+              </div>
             </div>
 
-            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; border-top: 1px solid #E2E8F0; padding-top: 24px;">
-              <button type="submit" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
-                <i data-lucide="lock" style="width: 18px; height: 18px;"></i> Clôturer Ma Caisse du Jour
+            <!-- OBSERVATIONS OPTIONNELLES -->
+            <div class="form-group" style="margin-bottom: 24px;">
+              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Observations ou Note de clôture (Optionnel)</label>
+              <textarea class="form-control" name="observations" style="width: 100%; box-sizing: border-box; padding: 14px; font-size: 14px; font-weight: 600; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; min-height: 80px;" placeholder="Ex: Clôture de caisse effectuée sans écart. Monnaie restante au guichet." rows="2"></textarea>
+            </div>
+
+            <!-- BOUTONS D'ACTION AVEC BLOCAGE STRICT -->
+            <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; border-top: 1px solid #E2E8F0; padding-top: 24px;">
+              <button type="submit" id="btn-submit-cloture" class="btn" style="background: #94A3B8; color: #FFFFFF; font-weight: 800; border-radius: 10px; padding: 14px 30px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: none; cursor: not-allowed; transition: all 0.2s;" disabled>
+                <i data-lucide="lock" style="width: 18px; height: 18px;"></i> Clôturer & Transmettre le Versement
               </button>
-              <button type="button" class="btn btn-open-modal-details" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 10px; padding: 12px 24px; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
-                <i data-lucide="list" style="width: 18px; height: 18px;"></i> Revoir la Liste des Encaissements
-              </button>
+              <span id="txt-bloque-avertissement" style="font-size: 12px; font-weight: 700; color: #EF4444; display: none;">
+                ⚠️ Bouton verrouillé : Le montant du pot doit correspondre exactement au montant attendu.
+              </span>
             </div>
           </form>
         </div>

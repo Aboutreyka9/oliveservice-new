@@ -98,8 +98,8 @@ $zones = $zones ?? [];
               </div>
 
               <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Référence Versement / Bordereau</label>
-                <input type="text" name="reference_versement" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #1E3A5F; font-family: monospace; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" value="<?= htmlspecialchars($item['reference_versement'] ?? '') ?>" placeholder="Ex: VRS-2026-001">
+                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Code Caisse / Référence Versement</label>
+                <input type="text" name="caisse_code" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #1E3A5F; font-family: monospace; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" value="<?= htmlspecialchars($item['caisse_code'] ?? ($item['reference_versement'] ?? '')) ?>" placeholder="Ex: CAISSE-2026-001">
               </div>
             </div>
           </div>

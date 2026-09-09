@@ -78,8 +78,8 @@ $statut = $item['statut_versement'] ?? 'En attente';
           </div>
 
           <div style="background: #F8FAFC; border-radius: 12px; padding: 18px; border: 1px solid #E2E8F0;">
-            <span style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Référence Versement</span>
-            <div style="font-size: 16px; font-weight: 800; color: #1E3A5F; margin-top: 4px; font-family: monospace;"><?= htmlspecialchars($item['reference_versement'] ?? 'Aucune') ?></div>
+            <span style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Code Caisse / Référence</span>
+            <div style="font-size: 16px; font-weight: 800; color: #1E3A5F; margin-top: 4px; font-family: monospace;"><?= htmlspecialchars($item['caisse_code'] ?? ($item['reference_versement'] ?? 'Aucun')) ?></div>
           </div>
 
           <div style="background: #F8FAFC; border-radius: 12px; padding: 18px; border: 1px solid #E2E8F0;">

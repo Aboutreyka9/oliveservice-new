@@ -7,6 +7,21 @@ class ModelUser extends BaseModel
     protected ?string $statusField = 'statut_user';
 
     /**
+     * Récupère un utilisateur par son code_user unique
+     */
+    public function getByCode(string $code): ?array
+    {
+        try {
+            $stmt = $this->getCon()->prepare("SELECT * FROM users WHERE code_user = ?");
+            $stmt->execute([$code]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (Exception $e) {
+            error_log("ModelUser::getByCode error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Récupère tous les rôles et privilèges d'un utilisateur
      */
     public function getUserRoles(string $userCode): array

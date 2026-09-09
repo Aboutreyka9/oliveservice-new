@@ -252,6 +252,10 @@ class DepenseController extends BaseController
                 $this->error('Dépense introuvable');
                 return;
             }
+            if (($item['statut_depense'] ?? '') === 'actif') {
+                $this->error('Cette dépense est déjà active. La modification de son statut est verrouillée.');
+                return;
+            }
             if ($this->model->toggleStatus($id)) {
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
