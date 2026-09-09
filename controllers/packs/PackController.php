@@ -7,10 +7,60 @@ class PackController extends BaseController
         return new ModelPack();
     }
 
+    public function getStats(): array
+    {
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
+        $sql = "
+            SELECT p.*, 
+                   s.nombre_jour_session
+            FROM packs p
+            LEFT JOIN sessions s ON s.code_session = p.session_code AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
+            WHERE p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
+        ";
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute([
+            $etabCode, $zoneCode, $anneeCode,
+            $etabCode, $zoneCode, $anneeCode
+        ]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $totalPacks = count($items);
+        $nbActif = 0;
+        $nbInactif = 0;
+        $sumPrixJour = 0;
+
+        foreach ($items as $p) {
+            $isActif = (($p['statut_pack'] ?? '') === 'actif');
+            if ($isActif) {
+                $nbActif++;
+                $sumPrixJour += (float)($p['prix_cotisation_pack'] ?? 0);
+            } else {
+                $nbInactif++;
+            }
+        }
+
+        $avgPrixJour = $nbActif > 0 ? round($sumPrixJour / $nbActif, 2) : 0;
+
+        $stmtArt = $this->model->getCon()->query("SELECT COUNT(*) FROM articles WHERE statut_article = 'actif'");
+        $totalArticles = $stmtArt ? (int)$stmtArt->fetchColumn() : 0;
+
+        return [
+            'total_packs' => $totalPacks,
+            'nb_actif' => $nbActif,
+            'nb_inactif' => $nbInactif,
+            'avg_prix_jour' => $avgPrixJour,
+            'total_articles' => $totalArticles
+        ];
+    }
+
     public function list()
     {
         $this->requirePermission('GESTIONNAIRE_MANAGE_PACKS');
-        $this->loadView('../views/packs/list.php');
+        $stats = $this->getStats();
+        $this->loadView('../views/packs/list.php', ['stats' => $stats]);
     }
 
     public function apiList()
@@ -61,7 +111,11 @@ class PackController extends BaseController
                 'montant_total' => $montantTotal
             ]);
         }
-        $this->json(['data' => $data]);
+        $stats = $this->getStats();
+        $this->json([
+            'data' => $data,
+            'stats' => $stats
+        ]);
     }
 
     public function add()

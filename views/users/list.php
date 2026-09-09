@@ -183,7 +183,12 @@ $(document).ready(function() {
         html += '</label>';
 
         if (isPending) {
+          var copyBtn = '';
+          if (row.activation_url) {
+            copyBtn = '<button type="button" onclick="copyActivationUrl(\'' + row.activation_url + '\', this)" style="background:#FEF3C7; border:1px solid #FDE68A; color:#B45309; font-size:10.5px; font-weight:700; border-radius:4px; padding:2px 6px; cursor:pointer; display:inline-flex; align-items:center; gap:3px; margin-top:2px;" title="Copier le lien d\'activation du compte"><i data-lucide="copy" style="width:11px;height:11px;"></i> <span>Copier lien</span></button>';
+          }
           html += '<span style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; font-size:10px; padding:2px 6px; border-radius:6px; font-weight:800; white-space:nowrap; display:inline-block;" title="En attente de validation du lien mail">Jeton non activé</span>';
+          if (copyBtn) html += copyBtn;
         }
 
         html += '</div>';
@@ -251,6 +256,47 @@ $(document).ready(function() {
       }
     });
   });
+
+  window.copyActivationUrl = function(url, btnEl) {
+    if (!url) return;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(function() {
+        showCopyListFeedback(btnEl);
+      }).catch(function() {
+        fallbackCopyList(url, btnEl);
+      });
+    } else {
+      fallbackCopyList(url, btnEl);
+    }
+  };
+
+  function fallbackCopyList(text, btnEl) {
+    var temp = $('<input>');
+    $('body').append(temp);
+    temp.val(text).select();
+    try {
+      document.execCommand('copy');
+      showCopyListFeedback(btnEl);
+    } catch (err) {
+      if (window.toastr) toastr.warning("Veuillez copier manuellement le lien.");
+    }
+    temp.remove();
+  }
+
+  function showCopyListFeedback(btnEl) {
+    var $btn = $(btnEl);
+    var $span = $btn.find('span');
+    var oldText = $span.length ? $span.text() : $btn.text();
+    if ($span.length) $span.text('Copié !');
+    else $btn.text('Copié !');
+    $btn.css({'background': '#059669', 'color': '#FFF', 'border-color': '#059669'});
+    if (window.toastr) toastr.success("Lien d'activation copié dans le presse-papier !");
+    setTimeout(function() {
+      if ($span.length) $span.text(oldText);
+      else $btn.text(oldText);
+      $btn.css({'background': '#FEF3C7', 'color': '#B45309', 'border-color': '#FDE68A'});
+    }, 2000);
+  }
 });
 </script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

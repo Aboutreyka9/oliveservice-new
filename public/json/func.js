@@ -143,3 +143,13 @@ function showConfirm(message, callback, title = 'Confirmation', confirmText = 'C
         if (e.target === overlay) closeOverlay();
     });
 }
+
+// Alias de compatibilité globale pour window.toastr
+if (typeof window !== 'undefined') {
+    window.toastr = window.toastr || {
+        success: function(msg, title) { showToast(msg, 'success', title); },
+        error: function(msg, title) { showToast(msg, 'error', title); },
+        warning: function(msg, title) { showToast(msg, 'warning', title); },
+        info: function(msg, title) { showToast(msg, 'info', title); }
+    };
+}
