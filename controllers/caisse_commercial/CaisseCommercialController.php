@@ -458,6 +458,7 @@ class CaisseCommercialController extends BaseController
     {
         $this->requirePermission(['COMMERCIAL_MANAGE_OWN_CAISSE', 'FINANCE_VIEW_CLOTURES_CAISSE']);
         try {
+            $id = $this->validator->decrypter($param);
             $sqlCaisse = "
                 SELECT c.*, u.nom_user, u.prenom_user
                 FROM caisses c
@@ -479,7 +480,7 @@ class CaisseCommercialController extends BaseController
             $encryptedId = $this->validator->crypter($id);
             
             $sqlP = "
-                SELECT cc.*, cl.nom_client, cl.prenom_client, cl.telephone_client
+                SELECT cc.*, cl.nom_client, cl.telephone_client
                 FROM cautisation_clients cc
                 LEFT JOIN clients cl ON cl.code_client = cc.client_code
                 WHERE (cc.caisse_code = ? OR DATE(cc.date_cautisation) = DATE(?))
@@ -492,6 +493,29 @@ class CaisseCommercialController extends BaseController
             $stmtP = $this->model->getCon()->prepare($sqlP);
             $stmtP->execute($pP);
             $paiements = $stmtP->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $totalEspeces = 0;
+            $totalMobileMoney = 0;
+            $totalChequeVirement = 0;
+            foreach ($paiements as $p) {
+                $m = (float)($p['montant_cautisation_client'] ?? 0);
+                $mode = strtolower(trim($p['mode_paiement'] ?? 'espece'));
+                if (in_array($mode, ['espece', 'especes', 'cash'])) {
+                    $totalEspeces += $m;
+                } elseif (in_array($mode, ['mobile_money', 'wave', 'orange', 'mtn', 'moov'])) {
+                    $totalMobileMoney += $m;
+                } else {
+                    $totalChequeVirement += $m;
+                }
+            }
+            $item['total_especes'] = $totalEspeces;
+            $item['total_mobile_money'] = $totalMobileMoney;
+            $item['total_cheque_virement'] = $totalChequeVirement;
+            $item['total_general'] = (float)($item['montant_total_depot'] ?? 0);
+            if ($item['total_general'] <= 0) {
+                $item['total_general'] = $totalEspeces + $totalMobileMoney + $totalChequeVirement;
+            }
+            $item['fond_initial'] = (float)($item['montant_total_attendu'] ?? 0);
         } catch (Exception $e) {
             error_log("CaisseCommercialController::details error: " . $e->getMessage());
             $this->renderNotFound("Le procès-verbal de clôture de caisse demandé est introuvable.");
