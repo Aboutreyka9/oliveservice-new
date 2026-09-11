@@ -74,6 +74,8 @@ class AnneeController extends BaseController
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->create($filteredData)) {
             if (($filteredData['statut_annee'] ?? '') === 'actif') {
+                $_SESSION['annee_active_code'] = $filteredData['code_annee'] ?? ($data['code_annee'] ?? '');
+                $_SESSION['annee_active_libelle'] = $filteredData['libelle_annee'] ?? ($data['libelle_annee'] ?? '');
                 NotificationService::resolveAnneeNonActive($etabCode);
             }
             $this->success('Année académique créée avec succès !');
@@ -98,6 +100,11 @@ class AnneeController extends BaseController
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->update($filteredData, $id)) {
             if (($filteredData['statut_annee'] ?? '') === 'actif') {
+                $existing = $this->model->getById($id);
+                if ($existing) {
+                    $_SESSION['annee_active_code'] = $existing['code_annee'];
+                    $_SESSION['annee_active_libelle'] = $existing['libelle_annee'];
+                }
                 NotificationService::resolveAnneeNonActive(Context::etablissement());
             }
             $this->success('Année académique modifiée avec succès !');
@@ -115,6 +122,8 @@ class AnneeController extends BaseController
             if ($this->model->toggleStatus($id)) {
                 $updated = $this->model->getById($id);
                 if ($updated && ($updated['statut_annee'] ?? '') === 'actif') {
+                    $_SESSION['annee_active_code'] = $updated['code_annee'];
+                    $_SESSION['annee_active_libelle'] = $updated['libelle_annee'];
                     NotificationService::resolveAnneeNonActive(Context::etablissement());
                 }
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);

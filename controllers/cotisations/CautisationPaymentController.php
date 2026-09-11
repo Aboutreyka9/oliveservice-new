@@ -275,12 +275,27 @@ class CautisationPaymentController extends BaseController
         }
 
         $userCode = Context::user();
-        $anneeCode = Context::annee();
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone() ?: ($souscription['zone_code'] ?? '');
 
-        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+        // Priorité : annee_code soumis > souscription['annee_code'] > Context::annee()
+        $anneeCode = !empty($data['annee_code']) ? trim($data['annee_code']) : (!empty($souscription['annee_code']) ? $souscription['annee_code'] : Context::annee());
+
+        if (empty($anneeCode)) {
+            $this->error("L'année d'exercice est obligatoire pour enregistrer un versement/cotisation. Veuillez configurer une année active.");
+            return;
+        }
+
+        // Vérification dans annees
+        $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+        $stmtAnneeCheck->execute([$anneeCode]);
+        if (!$stmtAnneeCheck->fetch()) {
+            $this->error("L'année d'activité associée à la cotisation est invalide ou introuvable.");
+            return;
+        }
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
             return;
         }
 

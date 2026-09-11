@@ -268,11 +268,26 @@ class VersementController extends BaseController
 
         $userCode = Context::user();
         $etabCode = Context::etablissement();
-        $anneeCode = Context::annee();
         $zoneCode = !empty($data['zone_code']) ? $data['zone_code'] : Context::zone();
 
-        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+        // Priorité : annee_code soumis > Context::annee()
+        $anneeCode = !empty($data['annee_code']) ? trim($data['annee_code']) : Context::annee();
+
+        if (empty($anneeCode)) {
+            $this->error("L'année d'exercice est obligatoire pour déclarer un versement. Veuillez sélectionner une année valide ou configurer une année active.");
+            return;
+        }
+
+        // Vérification de l'existence dans la table annees
+        $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+        $stmtAnneeCheck->execute([$anneeCode]);
+        if (!$stmtAnneeCheck->fetch()) {
+            $this->error("L'année d'exercice sélectionnée pour le versement est invalide ou introuvable.");
+            return;
+        }
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
             return;
         }
 

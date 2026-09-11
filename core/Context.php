@@ -17,7 +17,22 @@ class Context
 
     public static function annee(): string
     {
-        return $_SESSION['annee_active_code'] ?? '';
+        $code = $_SESSION['annee_active_code'] ?? '';
+        if (empty($code) || is_numeric($code)) {
+            try {
+                $db = (new Database())->getCon();
+                $stmt = $db->query("SELECT code_annee, libelle_annee FROM annees WHERE statut_annee = 'actif' ORDER BY id_annee DESC LIMIT 1");
+                $active = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
+                if ($active && !empty($active['code_annee'])) {
+                    $_SESSION['annee_active_code'] = $active['code_annee'];
+                    $_SESSION['annee_active_libelle'] = $active['libelle_annee'];
+                    return $active['code_annee'];
+                }
+            } catch (\Throwable $e) {
+                // Erreur silencieuse
+            }
+        }
+        return $code;
     }
 
     public static function etablissement(): string

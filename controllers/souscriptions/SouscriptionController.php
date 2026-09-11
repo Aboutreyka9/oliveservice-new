@@ -132,12 +132,27 @@ class SouscriptionController extends BaseController
         }
 
         $etabCode = Context::etablissement();
-        $anneeCode = Context::annee();
-        $zoneCode = $data['zone_code'] ?? Context::zone();
         $userCode = Context::user();
+        $zoneCode = $data['zone_code'] ?? Context::zone();
 
-        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+        // Priorité : annee_code soumis > Context::annee()
+        $anneeCode = !empty($data['annee_code']) ? trim($data['annee_code']) : Context::annee();
+
+        if (empty($anneeCode)) {
+            $this->error("L'année d'activité est obligatoire pour enregistrer une souscription. Veuillez sélectionner une année valide ou configurer une année active.");
+            return;
+        }
+
+        // Vérification de l'existence dans annees
+        $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+        $stmtAnneeCheck->execute([$anneeCode]);
+        if (!$stmtAnneeCheck->fetch()) {
+            $this->error("L'année d'activité sélectionnée pour la souscription est invalide ou introuvable.");
+            return;
+        }
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone et l'établissement sont obligatoires et ne peuvent pas être null.");
             return;
         }
 
@@ -424,8 +439,23 @@ class SouscriptionController extends BaseController
 
         $userCode = Context::user() ?? '';
         $etabCode = Context::etablissement();
-        $anneeCode = Context::annee();
         $zoneCode = $data['zone_code'] ?? Context::zone();
+        
+        // Priorité : annee_code soumis > Context::annee()
+        $anneeCode = !empty($data['annee_code']) ? trim($data['annee_code']) : Context::annee();
+
+        if (empty($anneeCode)) {
+            $this->error("L'année d'activité est obligatoire pour finaliser la souscription. Veuillez configurer une année active.");
+            return;
+        }
+
+        $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+        $stmtAnneeCheck->execute([$anneeCode]);
+        if (!$stmtAnneeCheck->fetch()) {
+            $this->error("L'année d'activité associée est invalide ou introuvable.");
+            return;
+        }
+
         $sessionCode = $data['session_code'] ?? '';
         $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
 

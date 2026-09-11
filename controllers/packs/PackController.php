@@ -126,12 +126,35 @@ class PackController extends BaseController
         unset($data['csrf_token']);
 
         $userCode = Context::user();
-        $anneeCode = Context::annee();
         $etabCode = Context::etablissement();
         $zoneCode = !empty($data['zone_code']) ? $data['zone_code'] : Context::zone();
 
-        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+        // Priorité : 1. annee_code soumis > 2. annee de la session sélectionnée > 3. Context::annee()
+        $anneeCode = !empty($data['annee_code']) ? trim($data['annee_code']) : '';
+        if (empty($anneeCode) && !empty($data['session_code'])) {
+            $stmtSess = $this->model->getCon()->prepare("SELECT annee_code FROM sessions WHERE code_session = ? LIMIT 1");
+            $stmtSess->execute([$data['session_code']]);
+            $anneeCode = $stmtSess->fetchColumn() ?: '';
+        }
+        if (empty($anneeCode)) {
+            $anneeCode = Context::annee();
+        }
+
+        if (empty($anneeCode)) {
+            $this->error("L'année d'activité est obligatoire pour créer un pack. Veuillez sélectionner une session avec une année valide ou configurer une année active.");
+            return;
+        }
+
+        // Vérifier l'existence dans annees
+        $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+        $stmtAnneeCheck->execute([$anneeCode]);
+        if (!$stmtAnneeCheck->fetch()) {
+            $this->error("L'année d'activité sélectionnée pour le pack est invalide ou introuvable.");
+            return;
+        }
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
             return;
         }
 
