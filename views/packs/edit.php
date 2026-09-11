@@ -244,7 +244,7 @@ $packArticles = $packArticles ?? [];
               <button type="button" id="btn-step-3-prev" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 10px; padding: 12px 24px; text-decoration: none; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 8px;">
                 <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> Précédent
               </button>
-              <button type="submit" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
+              <button type="submit" id="btn-submit-pack" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
                 <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> <?= $isEdit ? 'Enregistrer les modifications' : 'Créer le Pack' ?>
               </button>
             </div>
@@ -483,6 +483,12 @@ $(document).ready(function() {
 
   $('#form-pack').on('submit', function(e) {
     e.preventDefault();
+    var $btnSubmit = $('#btn-submit-pack');
+    var origHtml = $btnSubmit.html();
+    $btnSubmit.prop('disabled', true).css({ 'opacity': '0.65', 'pointer-events': 'none' })
+              .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Enregistrement en cours...');
+    if (window.lucide) lucide.createIcons();
+
     var formData = new FormData(this);
     $.ajax({
       url: $(this).attr('action'),
@@ -497,12 +503,19 @@ $(document).ready(function() {
           setTimeout(function() { window.location.href = '<?= RACINE ?>pack/list'; }, 1500);
         } else {
           showMessage('danger', res.message || 'Erreur lors de l\'enregistrement');
+          resetBtn();
         }
       },
       error: function() {
         showMessage('danger', 'Erreur réseau ou serveur indisponible');
+        resetBtn();
       }
     });
+
+    function resetBtn() {
+      $btnSubmit.prop('disabled', false).css({ 'opacity': '1', 'pointer-events': 'auto' }).html(origHtml);
+      if (window.lucide) lucide.createIcons();
+    }
   });
 
   <?php if ($isEdit): ?>

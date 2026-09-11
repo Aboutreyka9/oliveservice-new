@@ -147,7 +147,7 @@ $commerciaux = $commerciaux ?? [];
 
           <!-- BOUTONS D'ACTION -->
           <div style="display: flex; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #E2E8F0; width: 100%; flex-wrap: wrap;">
-            <button type="submit" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
+            <button type="submit" id="btn-submit-cotisation" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
               <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> <?= $isEdit ? 'Enregistrer les modifications' : 'Valider la Cotisation' ?>
             </button>
             <a href="<?= RACINE ?>cotisation/list" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 10px; padding: 12px 24px; text-decoration: none; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 6px;">
@@ -206,6 +206,12 @@ $(document).ready(function() {
 
   $('#form-cotisation').on('submit', function(e) {
     e.preventDefault();
+    var $btnSubmit = $('#btn-submit-cotisation');
+    var origHtml = $btnSubmit.html();
+    $btnSubmit.prop('disabled', true).css({ 'opacity': '0.65', 'pointer-events': 'none' })
+              .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Enregistrement en cours...');
+    if (window.lucide) lucide.createIcons();
+
     var formData = new FormData(this);
     $.ajax({
       url: $(this).attr('action'),
@@ -220,12 +226,19 @@ $(document).ready(function() {
           setTimeout(function() { window.location.href = '<?= RACINE ?>cotisation/list'; }, 1000);
         } else {
           if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
+          resetBtn();
         }
       },
       error: function() {
         if (window.toastr) toastr.error('Erreur réseau');
+        resetBtn();
       }
     });
+
+    function resetBtn() {
+      $btnSubmit.prop('disabled', false).css({ 'opacity': '1', 'pointer-events': 'auto' }).html(origHtml);
+      if (window.lucide) lucide.createIcons();
+    }
   });
 });
 </script>

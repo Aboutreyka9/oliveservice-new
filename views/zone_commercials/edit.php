@@ -54,7 +54,7 @@ $title = $isEdit ? 'Éditer l\'Affectation Zone' : 'Nouvelle Affectation Commerc
 
           <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
             <a href="<?= RACINE ?>zone_commercial/list" class="btn btn-light" style="border:1px solid #CBD5E1;">Annuler</a>
-            <button type="submit" class="btn btn-success" style="background:#15803D; border-color:#15803D; font-weight:700;">
+            <button type="submit" id="btn-submit-zc" class="btn btn-success" style="background:#15803D; border-color:#15803D; font-weight:700;">
               <?= $isEdit ? 'Enregistrer les modifications' : 'Affecter le commercial' ?>
             </button>
           </div>
@@ -67,6 +67,12 @@ $title = $isEdit ? 'Éditer l\'Affectation Zone' : 'Nouvelle Affectation Commerc
 $(document).ready(function() {
   $('#form-zc').on('submit', function(e) {
     e.preventDefault();
+    var $btnSubmit = $('#btn-submit-zc');
+    var origHtml = $btnSubmit.html();
+    $btnSubmit.prop('disabled', true).css({ 'opacity': '0.65', 'pointer-events': 'none' })
+              .html('<i data-lucide="loader" style="width:16px;height:16px;animation:spin 1s linear infinite;"></i> Enregistrement...');
+    if (window.lucide) lucide.createIcons();
+
     $.ajax({
       url: $(this).attr('action'),
       type: 'POST',
@@ -78,12 +84,19 @@ $(document).ready(function() {
           setTimeout(function() { window.location.href = '<?= RACINE ?>zone_commercial/list'; }, 1000);
         } else {
           if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
+          resetBtn();
         }
       },
       error: function() {
         if (window.toastr) toastr.error('Erreur réseau');
+        resetBtn();
       }
     });
+
+    function resetBtn() {
+      $btnSubmit.prop('disabled', false).css({ 'opacity': '1', 'pointer-events': 'auto' }).html(origHtml);
+      if (window.lucide) lucide.createIcons();
+    }
   });
 });
 </script>

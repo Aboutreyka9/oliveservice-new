@@ -124,7 +124,7 @@ $sessions = $sessions ?? [];
 
           <!-- BOUTONS D'ACTION -->
           <div style="display: flex; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #E2E8F0; width: 100%;">
-            <button type="submit" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; font-weight: 700; border-radius: 8px; padding: 10px 24px; display: inline-flex; align-items: center; gap: 8px;">
+            <button type="submit" id="btn-submit-souscription" class="btn btn-primary" style="background: #1E3A5F; border-color: #1E3A5F; font-weight: 700; border-radius: 8px; padding: 10px 24px; display: inline-flex; align-items: center; gap: 8px;">
               <i data-lucide="check" style="width: 18px; height: 18px;"></i> <?= $isEdit ? 'Enregistrer les modifications' : 'Valider la Souscription' ?>
             </button>
             <a href="<?= RACINE ?>souscription/list" class="btn btn-secondary" style="font-weight: 600; border-radius: 8px; padding: 10px 24px; text-decoration: none;">Annuler</a>
@@ -153,6 +153,12 @@ $(document).ready(function() {
 
   $('#form-souscription').on('submit', function(e) {
     e.preventDefault();
+    var $btnSubmit = $('#btn-submit-souscription');
+    var origHtml = $btnSubmit.html();
+    $btnSubmit.prop('disabled', true).css({ 'opacity': '0.65', 'pointer-events': 'none' })
+              .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Enregistrement en cours...');
+    if (window.lucide) lucide.createIcons();
+
     $.ajax({
       url: $(this).attr('action'),
       type: 'POST',
@@ -164,12 +170,19 @@ $(document).ready(function() {
           setTimeout(function() { window.location.href = '<?= RACINE ?>souscription/list'; }, 1000);
         } else {
           if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
+          resetBtn();
         }
       },
       error: function() {
         if (window.toastr) toastr.error('Erreur réseau');
+        resetBtn();
       }
     });
+
+    function resetBtn() {
+      $btnSubmit.prop('disabled', false).css({ 'opacity': '1', 'pointer-events': 'auto' }).html(origHtml);
+      if (window.lucide) lucide.createIcons();
+    }
   });
 });
 </script>

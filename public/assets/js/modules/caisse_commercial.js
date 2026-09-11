@@ -340,6 +340,12 @@ $(function() {
     // Action Ouverture de Caisse
     $('#form-ouvrir-caisse').on('submit', function(e) {
       e.preventDefault();
+      const $btn = $(this).find('button[type="submit"]');
+      const origHtml = $btn.html();
+      $btn.prop('disabled', true).css({ 'opacity': '0.65', 'pointer-events': 'none' })
+          .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Ouverture...');
+      if (window.lucide) lucide.createIcons();
+
       const formData = $(this).serialize();
 
       $.ajax({
@@ -353,12 +359,19 @@ $(function() {
             loadCommercialSession();
           } else {
             if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'ouverture');
+            resetBtn();
           }
         },
         error: function() {
           if (window.toastr) toastr.error('Erreur réseau');
+          resetBtn();
         }
       });
+
+      function resetBtn() {
+        $btn.prop('disabled', false).css({ 'opacity': '1', 'pointer-events': 'auto' }).html(origHtml);
+        if (window.lucide) lucide.createIcons();
+      }
     });
 
     // Action Clôture de Caisse avec vérification stricte
@@ -377,6 +390,12 @@ $(function() {
         return;
       }
 
+      const $btn = $(this).find('button[type="submit"]');
+      const origHtml = $btn.html();
+      $btn.prop('disabled', true).css({ 'opacity': '0.65', 'pointer-events': 'none' })
+          .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Traitement...');
+      if (window.lucide) lucide.createIcons();
+
       const formData = $(this).serialize();
 
       $.ajax({
@@ -390,12 +409,19 @@ $(function() {
             loadCommercialSession();
           } else {
             if (window.toastr) toastr.error(res.message || 'Erreur lors de la clôture');
+            resetBtn();
           }
         },
         error: function() {
           if (window.toastr) toastr.error('Erreur réseau');
+          resetBtn();
         }
       });
+
+      function resetBtn() {
+        $btn.prop('disabled', false).css({ 'opacity': '1', 'pointer-events': 'auto' }).html(origHtml);
+        if (window.lucide) lucide.createIcons();
+      }
     });
 
     // GESTION DU DÉCLENCHEMENT DE LA MODALE
