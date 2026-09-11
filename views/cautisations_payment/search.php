@@ -329,7 +329,7 @@ $(document).ready(function() {
     }
 
     $.ajax({
-      url: '<?= RACINE ?>cautisation-payment/situationDetails',
+      url: '<?= RACINE ?>cautisation-payment/situation-details',
       type: 'POST',
       data: { code_souscription: codeSouscription },
       dataType: 'json',

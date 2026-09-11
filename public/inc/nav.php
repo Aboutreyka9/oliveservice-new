@@ -67,6 +67,16 @@
         </div>
     </div>
     <div class="topbar-actions">
+        <?php
+        $showSouscriptionShortcut = Context::can(['GESTIONNAIRE_MANAGE_SOUSCRIPTIONS', 'COMMERCIAL_COLLECT_COTISATION']);
+        $showCotisationShortcut  = Context::can('COMMERCIAL_COLLECT_COTISATION');
+        $showCaisseShortcut      = Context::can('COMMERCIAL_MANAGE_OWN_CAISSE');
+        $showClientShortcut      = Context::can(['COMMERCIAL_VIEW_CLIENTS', 'COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_MANAGE_SOUSCRIPTIONS']);
+        $showPackShortcut        = Context::can('GESTIONNAIRE_MANAGE_PACKS');
+        $showVersementShortcut   = Context::can(['COMMERCIAL_VIEW_OWN_VERSEMENTS', 'FINANCE_VALIDATE_VERSEMENT', 'FINANCE_VIEW_CLOTURES_CAISSE']);
+        $hasAnyShortcut = $showSouscriptionShortcut || $showCotisationShortcut || $showCaisseShortcut || $showClientShortcut || $showPackShortcut || $showVersementShortcut;
+        ?>
+        <?php if ($hasAnyShortcut): ?>
         <div class="quick-actions" style="position: relative;">
             <button class="btn-icon" id="quickActionsBtn" title="Actions rapides">
                 <i data-lucide="zap"></i>
@@ -76,33 +86,51 @@
                     <h3>Raccourcis Olive Service</h3>
                 </div>
                 <div class="dropdown-grid">
+                    <?php if ($showSouscriptionShortcut): ?>
                     <a href="<?= RACINE ?>souscription/wizard" class="dropdown-card">
                         <i data-lucide="file-plus"></i>
                         <span>Nouvelle Souscription</span>
                     </a>
+                    <?php endif; ?>
+
+                    <?php if ($showCotisationShortcut): ?>
                     <a href="<?= RACINE ?>cautisation-payment/search-form" class="dropdown-card">
                         <i data-lucide="wallet"></i>
                         <span>Collecter Cotisation</span>
                     </a>
+                    <?php endif; ?>
+
+                    <?php if ($showCaisseShortcut): ?>
                     <a href="<?= RACINE ?>caisse_commercial/formulaire" class="dropdown-card">
                         <i data-lucide="lock"></i>
                         <span>Ma Caisse</span>
                     </a>
+                    <?php endif; ?>
+
+                    <?php if ($showClientShortcut): ?>
                     <a href="<?= RACINE ?>client/list" class="dropdown-card">
                         <i data-lucide="users"></i>
                         <span>Clients</span>
                     </a>
+                    <?php endif; ?>
+
+                    <?php if ($showPackShortcut): ?>
                     <a href="<?= RACINE ?>pack/list" class="dropdown-card">
                         <i data-lucide="boxes"></i>
                         <span>Packs Articles</span>
                     </a>
+                    <?php endif; ?>
+
+                    <?php if ($showVersementShortcut): ?>
                     <a href="<?= RACINE ?>versement/list" class="dropdown-card">
                         <i data-lucide="send"></i>
                         <span>Versements</span>
                     </a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
+        <?php endif; ?>
         <div class="theme-wrapper" style="position: relative;">
             <button class="btn-icon" id="themeBtn" title="Personnaliser les couleurs & thèmes">
                 <i data-lucide="palette"></i>
