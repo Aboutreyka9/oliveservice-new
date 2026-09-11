@@ -266,142 +266,77 @@ $ecart = (float)($item['ecart_caisse'] ?? ($soldePhysique - $soldeAttendu));
           </div>
         </div>
 
-        <!-- BLOC HISTORIQUE ACTIVITÉ CAISSE COMMERCIAL -->
-        <div style="background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <!-- PROCÈS-VERBAL COMPACT & DÉPOUILLEMENT DE LA CAISSE -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 2px solid #F1F5F9; padding-bottom: 10px; flex-wrap: wrap; gap: 8px;">
             <h4 style="font-size: 13px; font-weight: 800; color: #1E3A5F; margin: 0; display: flex; align-items: center; gap: 8px;">
-              <i data-lucide="wallet" style="width: 16px; height: 16px; color: #059669;"></i> Contrôle de la Caisse & Activité Commercial
+              <i data-lucide="receipt" style="width: 16px; height: 16px; color: #059669;"></i> Procès-Verbal de Caisse & Dépouillement
             </h4>
-            <span style="font-size: 11px; font-weight: 700; color: #059669; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 2px 10px; border-radius: 12px;">
-              Dépouillement des transactions
+            <span style="font-size: 11px; font-weight: 700; color: #059669; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 3px 10px; border-radius: 12px;">
+              Séance Associée : <code id="hist_linked_caisse_code" style="font-weight: 800; color: #1E3A5F; font-family: monospace;">-</code>
             </span>
           </div>
 
           <!-- LOADER / SPINNER -->
           <div id="caisse_history_loading" style="display: none; text-align: center; padding: 20px; color: #64748B;">
             <i class="fa fa-spinner fa-spin" style="font-size: 20px; color: #1E3A5F;"></i>
-            <p style="font-size: 12px; margin-top: 8px; font-weight: 600;">Chargement des transactions de la caisse...</p>
+            <p style="font-size: 12px; margin-top: 8px; font-weight: 600;">Chargement du procès-verbal de caisse...</p>
           </div>
 
-          <!-- CONTENU HISTORIQUE CAISSE -->
+          <!-- CONTENU COMPACT -->
           <div id="caisse_history_content">
-            
-            <!-- BANDEAU SYNTHÈSE CAISSE LIÉE -->
-            <div id="box-linked-caisse" style="background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 10px; padding: 14px; margin-bottom: 14px; display: none;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px dashed #E2E8F0; padding-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                <span style="font-size: 11px; font-weight: 800; color: #1E3A5F; text-transform: uppercase;">Séance de Caisse Associée</span>
-                <code id="hist_linked_caisse_code" style="font-weight: 800; color: #1E3A5F; background: #F1F5F9; padding: 2px 8px; border-radius: 4px; font-size: 12px; border: 1px solid #CBD5E1;">-</code>
+            <!-- GRILLE DE SYNTHÈSE DE LA SÉANCE -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px;">
+              <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px;">
+                <span style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; display: block;">Espèces Collectées</span>
+                <strong id="hist_caisse_attendu" style="font-size: 14px; font-weight: 900; color: #1E3A5F; display: block; margin-top: 2px;">0 FCFA</strong>
+                <span style="font-size: 10px; color: #64748B;">Cash guichet attendu</span>
               </div>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
-                <div>
-                  <span style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase;">Attendu Caisse</span>
-                  <strong id="hist_caisse_attendu" style="font-size: 14px; font-weight: 900; color: #1E3A5F; display: block; margin-top: 2px;">0 FCFA</strong>
-                </div>
-                <div>
-                  <span style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase;">Pot Déclaré</span>
-                  <strong id="hist_caisse_pot" style="font-size: 14px; font-weight: 900; color: #059669; display: block; margin-top: 2px;">0 FCFA</strong>
-                </div>
-                <div>
-                  <span style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase;">Écart Séance</span>
-                  <strong id="hist_caisse_ecart" style="font-size: 14px; font-weight: 900; color: #059669; display: block; margin-top: 2px;">0 FCFA</strong>
-                </div>
-              </div>
-            </div>
 
-            <!-- GRILLE KPI GLOBAUX DU COMMERCIAL -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px;">
-              <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px;">
-                <span style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; display: block;">Cumul Encaissé</span>
-                <strong id="hist_total_encaisse" style="font-size: 13px; font-weight: 800; color: #0F172A; display: block; margin-top: 2px;">0 FCFA</strong>
-                <span id="hist_details_modes" style="font-size: 10px; color: #64748B; font-weight: 500;">Esp: 0 | MoMo: 0</span>
+              <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px;">
+                <span style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; display: block;">Mobile Money / Autre</span>
+                <strong id="hist_total_momo" style="font-size: 14px; font-weight: 900; color: #7E22CE; display: block; margin-top: 2px;">0 FCFA</strong>
+                <span style="font-size: 10px; color: #64748B;">Paiements digitaux</span>
               </div>
-              <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px;">
-                <span style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; display: block;">Versements Validés</span>
-                <strong id="hist_versements_valides" style="font-size: 13px; font-weight: 800; color: #059669; display: block; margin-top: 2px;">0 FCFA</strong>
-                <span style="font-size: 10px; color: #64748B; font-weight: 500;">Déjà régularisés</span>
+
+              <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px;">
+                <span style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; display: block;">Montant Déclaré (Pot)</span>
+                <strong id="hist_caisse_pot" style="font-size: 14px; font-weight: 900; color: #059669; display: block; margin-top: 2px;">0 FCFA</strong>
+                <span style="font-size: 10px; color: #059669; font-weight: 600;">Versement transmitted</span>
               </div>
-              <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px;">
-                <span style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; display: block;">Reste à Verser</span>
-                <strong id="hist_reste_a_verser" style="font-size: 13px; font-weight: 800; color: #D97706; display: block; margin-top: 2px;">0 FCFA</strong>
-                <span style="font-size: 10px; color: #64748B; font-weight: 500;">Attendu global</span>
-              </div>
-              <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px;">
-                <span style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; display: block;">Conformité</span>
-                <strong id="hist_ecart_verif" style="font-size: 13px; font-weight: 800; color: #2563EB; display: block; margin-top: 2px;">0 FCFA</strong>
+
+              <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px;">
+                <span style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; display: block;">Écart Constated</span>
+                <strong id="hist_caisse_ecart" style="font-size: 14px; font-weight: 900; color: #059669; display: block; margin-top: 2px;">0 FCFA</strong>
                 <span id="hist_ecart_badge" style="font-size: 10px; font-weight: 700; color: #059669;">Conforme</span>
               </div>
             </div>
 
-            <!-- ONGLETS / SECTIONS SOUS-TABLEAUX -->
+            <!-- TABLEAU DES COTISATIONS ENCAISSÉES DANS CETTE CAISSE -->
             <div style="margin-top: 10px;">
-              <div style="display: flex; gap: 8px; border-bottom: 1px solid #CBD5E1; margin-bottom: 8px; flex-wrap: wrap;">
-                <button type="button" id="tab-btn-caisse-cotis" class="tab-hist-btn active" style="background: #FFFFFF; border: 1px solid #CBD5E1; border-bottom: none; border-radius: 6px 6px 0 0; padding: 6px 14px; font-size: 11px; font-weight: 800; color: #059669; cursor: pointer;">
-                  Cotisations de cette Caisse (<span id="hist_nb_caisse_cotis">0</span>)
-                </button>
-                <button type="button" id="tab-btn-cotis" class="tab-hist-btn" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-bottom: none; border-radius: 6px 6px 0 0; padding: 6px 12px; font-size: 11px; font-weight: 700; color: #64748B; cursor: pointer;">
-                  Toutes Récentes (<span id="hist_nb_cotis">0</span>)
-                </button>
-                <button type="button" id="tab-btn-sessions" class="tab-hist-btn" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-bottom: none; border-radius: 6px 6px 0 0; padding: 6px 12px; font-size: 11px; font-weight: 700; color: #64748B; cursor: pointer;">
-                  Sessions Caisse (<span id="hist_nb_sessions">0</span>)
-                </button>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 12px; font-weight: 800; color: #0F172A;">
+                  Détail des cotisations collectées (<span id="hist_nb_caisse_cotis">0</span>)
+                </span>
               </div>
-
-              <!-- TABLEAU COTISATIONS DE CETTE CAISSE (DÉPOUILLEMENT) -->
-              <div id="tab-content-caisse-cotis" style="max-height: 200px; overflow-y: auto; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px;">
+              <div style="max-height: 220px; overflow-y: auto; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                   <thead>
                     <tr style="background: #F8FAFC; color: #64748B; border-bottom: 1px solid #E2E8F0; text-align: left;">
-                      <th style="padding: 6px 10px;">Souscription</th>
-                      <th style="padding: 6px 10px;">Client</th>
-                      <th style="padding: 6px 10px;">Mode</th>
-                      <th style="padding: 6px 10px;">Date & Heure</th>
-                      <th style="padding: 6px 10px; text-align: right;">Montant</th>
-                      <th style="padding: 6px 10px; text-align: center;">Statut</th>
+                      <th style="padding: 8px 10px; font-weight: 800;">Souscription</th>
+                      <th style="padding: 8px 10px; font-weight: 800;">Client</th>
+                      <th style="padding: 8px 10px; font-weight: 800;">Mode</th>
+                      <th style="padding: 8px 10px; font-weight: 800;">Date & Heure</th>
+                      <th style="padding: 8px 10px; font-weight: 800; text-align: right;">Montant</th>
+                      <th style="padding: 8px 10px; font-weight: 800; text-align: center;">Statut</th>
                     </tr>
                   </thead>
                   <tbody id="hist_tbody_caisse_cotis">
-                    <tr><td colspan="6" style="text-align: center; padding: 12px; color: #94A3B8;">Aucune cotisation attachée à cette caisse</td></tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- TABLEAU TOUTES COTISATIONS RÉCENTES -->
-              <div id="tab-content-cotis" style="display: none; max-height: 200px; overflow-y: auto; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                  <thead>
-                    <tr style="background: #F8FAFC; color: #64748B; border-bottom: 1px solid #E2E8F0; text-align: left;">
-                      <th style="padding: 6px 10px;">Code / Date</th>
-                      <th style="padding: 6px 10px;">Client</th>
-                      <th style="padding: 6px 10px;">Mode</th>
-                      <th style="padding: 6px 10px; text-align: right;">Montant</th>
-                      <th style="padding: 6px 10px; text-align: center;">Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody id="hist_tbody_cotis">
-                    <tr><td colspan="5" style="text-align: center; padding: 12px; color: #94A3B8;">Aucune cotisation récente</td></tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- TABLEAU SESSIONS DE CAISSE -->
-              <div id="tab-content-sessions" style="display: none; max-height: 200px; overflow-y: auto; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                  <thead>
-                    <tr style="background: #F8FAFC; color: #64748B; border-bottom: 1px solid #E2E8F0; text-align: left;">
-                      <th style="padding: 6px 10px;">Code Caisse</th>
-                      <th style="padding: 6px 10px;">Ouverture</th>
-                      <th style="padding: 6px 10px;">Clôture</th>
-                      <th style="padding: 6px 10px; text-align: right;">Dépôt</th>
-                      <th style="padding: 6px 10px; text-align: center;">Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody id="hist_tbody_sessions">
-                    <tr><td colspan="5" style="text-align: center; padding: 12px; color: #94A3B8;">Aucune session de caisse</td></tr>
+                    <tr><td colspan="6" style="text-align: center; padding: 14px; color: #94A3B8;">Aucune cotisation attachée à cette caisse</td></tr>
                   </tbody>
                 </table>
               </div>
             </div>
-
           </div>
         </div>
 

@@ -234,31 +234,32 @@ $(function() {
 
         if (res.status === 1 && res.data) {
           const d = res.data;
-          $('#hist_total_encaisse').text(d.total_collecte_fmt);
-          $('#hist_details_modes').text(`Esp: ${d.total_especes_fmt} | MoMo: ${d.total_momo_fmt}`);
-          $('#hist_versements_valides').text(d.total_versements_valides_fmt);
-          $('#hist_reste_a_verser').text(d.solde_reste_a_verser_fmt);
+          $('#hist_total_momo').text(d.total_momo_fmt || '0 FCFA');
 
-          // Caisse liée
           if (d.has_linked_caisse) {
             $('#hist_linked_caisse_code').text(d.linked_caisse_code);
             $('#hist_caisse_attendu').text(d.caisse_attendu_fmt);
             $('#hist_caisse_pot').text(d.versement_actuel_fmt);
 
             if (d.caisse_ecart === 0) {
-              $('#hist_caisse_ecart').text('0 FCFA (Conforme)').css('color', '#059669');
+              $('#hist_caisse_ecart').text('0 FCFA').css('color', '#059669');
+              $('#hist_ecart_badge').text('Conforme').css({'color': '#059669', 'background': '#ECFDF5'});
             } else if (d.caisse_ecart > 0) {
-              $('#hist_caisse_ecart').text('+' + d.caisse_ecart_fmt + ' (Surplus)').css('color', '#2563EB');
+              $('#hist_caisse_ecart').text('+' + d.caisse_ecart_fmt).css('color', '#2563EB');
+              $('#hist_ecart_badge').text('Surplus').css({'color': '#2563EB', 'background': '#EFF6FF'});
             } else {
-              $('#hist_caisse_ecart').text('-' + d.caisse_ecart_fmt + ' (Manquant)').css('color', '#DC2626');
+              $('#hist_caisse_ecart').text('-' + d.caisse_ecart_fmt).css('color', '#DC2626');
+              $('#hist_ecart_badge').text('Manquant').css({'color': '#DC2626', 'background': '#FEE2E2'});
             }
-            $('#box-linked-caisse').show();
           } else {
-            $('#box-linked-caisse').hide();
+            $('#hist_linked_caisse_code').text(d.linked_caisse_code || '-');
+            $('#hist_caisse_attendu').text(d.total_especes_fmt || d.total_collecte_fmt || '0 FCFA');
+            $('#hist_caisse_pot').text(d.versement_actuel_fmt || '0 FCFA');
+            $('#hist_caisse_ecart').text(d.ecart_comparaison_fmt || '0 FCFA');
           }
 
           // Cotisations spécifiques de la séance de caisse
-          const caisseCotis = d.caisse_cotisations || [];
+          const caisseCotis = (d.caisse_cotisations && d.caisse_cotisations.length > 0) ? d.caisse_cotisations : (d.recent_cotisations || []);
           $('#hist_nb_caisse_cotis').text(caisseCotis.length);
           let htmlCaisseCotis = '';
           if (caisseCotis.length === 0) {
