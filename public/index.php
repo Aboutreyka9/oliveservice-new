@@ -224,6 +224,8 @@ $route->addRoute('/depense/formulaire', ['DepenseController', 'formulaire']);
 
 $route->addRoute('/versement/list', ['VersementController', 'list']);
 $route->addRoute('/versement/apiList', ['VersementController', 'apiList']);
+$route->addRoute('/versement/apiCommercialCaisseHistory', ['VersementController', 'apiCommercialCaisseHistory']);
+$route->addRoute('/versement/valider', ['VersementController', 'valider']);
 $route->addRoute('/versement/add', ['VersementController', 'add']);
 $route->addRoute('/versement/edit', ['VersementController', 'edit']);
 $route->addRoute('/versement/changer', ['VersementController', 'changer']);
