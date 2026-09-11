@@ -151,10 +151,11 @@ $packArticles = $packArticles ?? [];
                   <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                     Zone <span style="color: #EF4444;">*</span>
                   </label>
+                  <?php $defaultZonePack = !empty($item['zone_code']) ? $item['zone_code'] : Context::zone(); ?>
                   <select name="zone_code" id="zone_code" class="form-control select2" style="width: 100%; box-sizing: border-box;" required>
                     <option value="">-- Sélectionner une zone --</option>
                     <?php foreach ($zones as $z): ?>
-                      <option value="<?= $z['code_zone'] ?>" <?= ($item['zone_code'] ?? '') === $z['code_zone'] ? 'selected' : '' ?>>
+                      <option value="<?= $z['code_zone'] ?>" <?= ($defaultZonePack === $z['code_zone']) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($z['libelle_zone']) ?>
                       </option>
                     <?php endforeach; ?>

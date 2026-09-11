@@ -68,10 +68,11 @@ $zones = $zones ?? [];
 
               <div class="form-group" style="width: 100%; box-sizing: border-box;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Zone d'Activité</label>
+                <?php $defaultZoneVersement = !empty($item['zone_code']) ? $item['zone_code'] : Context::zone(); ?>
                 <select name="zone_code" class="form-control select2" style="width: 100%;">
                   <option value="">-- Sélectionner la zone --</option>
                   <?php foreach ($zones as $z): ?>
-                    <option value="<?= $z['code_zone'] ?>" <?= ($item['zone_code'] ?? '') === $z['code_zone'] ? 'selected' : '' ?>>
+                    <option value="<?= $z['code_zone'] ?>" <?= ($defaultZoneVersement === $z['code_zone']) ? 'selected' : '' ?>>
                       <?= htmlspecialchars($z['libelle_zone']) ?>
                     </option>
                   <?php endforeach; ?>

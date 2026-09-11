@@ -146,10 +146,11 @@ $title = $isEdit ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur';
                   </select>
                   <input type="hidden" name="zone_code" value="<?= htmlspecialchars($lockedZoneCode) ?>">
                 <?php else: ?>
+                  <?php $activeUserZone = !empty($user['zone_code']) ? $user['zone_code'] : ($user['zone_user'] ?? Context::zone()); ?>
                   <select class="form-control select2" id="sel_zone_code" name="zone_code" style="width: 100%;">
                     <option value="">-- Aucune zone (Global) --</option>
                     <?php if (!empty($zones)): foreach($zones as $z): ?>
-                      <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ((($user['zone_code'] ?? $user['zone_user'] ?? '') == $z['code_zone']) ? 'selected' : '') ?>>
+                      <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ($activeUserZone == $z['code_zone']) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($z['libelle_zone']) ?>
                       </option>
                     <?php endforeach; endif; ?>

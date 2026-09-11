@@ -33,10 +33,11 @@ $title = $isEdit ? 'Éditer l\'Affectation Zone' : 'Nouvelle Affectation Commerc
 
           <div class="mb-3">
             <label class="form-label" style="font-weight:600; color:#334155;">Zone Commerciale *</label>
+            <?php $defaultZoneCommercial = !empty($item['zone_code']) ? $item['zone_code'] : Context::zone(); ?>
             <select name="zone_code" class="form-select" required>
               <option value="">-- Sélectionner une zone --</option>
               <?php foreach ($zones as $z): ?>
-                <option value="<?= $z['code_zone'] ?>" <?= ($item['zone_code'] ?? '') === $z['code_zone'] ? 'selected' : '' ?>>
+                <option value="<?= $z['code_zone'] ?>" <?= ($defaultZoneCommercial === $z['code_zone']) ? 'selected' : '' ?>>
                   <?= htmlspecialchars($z['libelle_zone']) ?>
                 </option>
               <?php endforeach; ?>

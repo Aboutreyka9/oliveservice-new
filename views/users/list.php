@@ -52,7 +52,7 @@
                 <option value="">Toutes les zones (Affichage Global)</option>
                 <?php if (!empty($zones)): ?>
                   <?php foreach ($zones as $z): ?>
-                    <option value="<?= htmlspecialchars($z['code_zone']) ?>">
+                    <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ($userZoneCode ?? Context::zone()) === $z['code_zone'] ? 'selected' : '' ?>>
                       <?= htmlspecialchars($z['libelle_zone']) ?>
                     </option>
                   <?php endforeach; ?>
