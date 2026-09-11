@@ -208,21 +208,37 @@ class ModelHome extends BaseModel
             $totalSessions = $this->safeCount($db, $sqlSess, $pSess);
 
             // ── 10. Montants Attendus (Journée & Année) ──────────────────────────
-            // Montant total attendu pour une journée d'activité (souscriptions valides & reconduites)
-            $sqlAttJour = "SELECT COALESCE(SUM(
-                CASE WHEN montant_cotisation_journaliere > 0 THEN montant_cotisation_journaliere ELSE 0 END
-            ), 0) FROM souscriptions WHERE statut_souscription IN ('valide', 'reconduite')";
+            // Montant total attendu pour une journée d'activité (formule dynamique pure)
+            $sqlAttJour = "
+                SELECT COALESCE(SUM(
+                    (SELECT COALESCE(SUM(p.prix_cotisation_pack), 0)
+                     FROM pack_souscriptions ps
+                     JOIN packs p ON p.code_pack = ps.pack_code
+                     WHERE ps.souscription_code = s.code_souscription)
+                ), 0)
+                FROM souscriptions s
+                WHERE s.statut_souscription IN ('valide', 'reconduite')
+            ";
             $pAttJour = []; $condsAttJour = [];
-            Context::applyTripleFilter('', $condsAttJour, $pAttJour, true);
+            Context::applyTripleFilter('s', $condsAttJour, $pAttJour, true);
             if (!empty($condsAttJour)) $sqlAttJour .= " AND " . implode(' AND ', $condsAttJour);
             $montantAttenduJournee = $this->safeSum($db, $sqlAttJour, $pAttJour);
 
-            // Montant total attendu pour toute l'année d'activité (souscriptions valides, soldées & reconduites)
-            $sqlAttAnn = "SELECT COALESCE(SUM(
-                CASE WHEN montant_total_prevu > 0 THEN montant_total_prevu ELSE 0 END
-            ), 0) FROM souscriptions WHERE statut_souscription IN ('valide', 'solde', 'reconduite')";
+            // Montant total attendu pour toute l'année d'activité (formule dynamique pure : cotisations packs x jours session)
+            $sqlAttAnn = "
+                SELECT COALESCE(SUM(
+                    (SELECT COALESCE(SUM(p.prix_cotisation_pack), 0)
+                     FROM pack_souscriptions ps
+                     JOIN packs p ON p.code_pack = ps.pack_code
+                     WHERE ps.souscription_code = s.code_souscription)
+                    * COALESCE(sess.nombre_jour_session, 0)
+                ), 0)
+                FROM souscriptions s
+                LEFT JOIN sessions sess ON sess.code_session = s.session_code
+                WHERE s.statut_souscription IN ('valide', 'solde', 'reconduite')
+            ";
             $pAttAnn = []; $condsAttAnn = [];
-            Context::applyTripleFilter('', $condsAttAnn, $pAttAnn, true);
+            Context::applyTripleFilter('s', $condsAttAnn, $pAttAnn, true);
             if (!empty($condsAttAnn)) $sqlAttAnn .= " AND " . implode(' AND ', $condsAttAnn);
             $montantAttenduAnnee = $this->safeSum($db, $sqlAttAnn, $pAttAnn);
 

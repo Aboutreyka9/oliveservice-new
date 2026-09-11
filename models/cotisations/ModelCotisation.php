@@ -92,31 +92,20 @@ class ModelCotisation extends BaseModel
             if ($souscriptionCode) {
                 $stmtUpd = $this->getCon()->prepare("
                     UPDATE souscriptions s
-                    SET s.montant_total_cotise = (
-                            SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) 
-                            FROM cautisation_clients mc 
-                            WHERE mc.souscription_code = s.code_souscription 
-                              AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
-                        ),
-                        s.nombre_jour_cotise = (
-                            SELECT COALESCE(SUM(mc.nombre_jour), 0) 
-                            FROM cautisation_clients mc 
-                            WHERE mc.souscription_code = s.code_souscription 
-                              AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
-                        ),
-                        s.statut_souscription = CASE 
+                    LEFT JOIN sessions sess ON sess.code_session = s.session_code
+                    SET s.statut_souscription = CASE 
                             WHEN (
                                 SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) 
                                 FROM cautisation_clients mc 
                                 WHERE mc.souscription_code = s.code_souscription 
                                   AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
-                            ) >= s.montant_total_prevu 
+                            ) >= ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) * COALESCE(sess.nombre_jour_session, 0))
                             OR (
                                 SELECT COALESCE(SUM(mc.nombre_jour), 0) 
                                 FROM cautisation_clients mc 
                                 WHERE mc.souscription_code = s.code_souscription 
                                   AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
-                            ) >= s.nombre_jour_total 
+                            ) >= COALESCE(sess.nombre_jour_session, 0)
                             THEN 'solde' 
                             ELSE 'valide'
                         END,
