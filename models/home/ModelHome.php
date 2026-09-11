@@ -226,6 +226,13 @@ class ModelHome extends BaseModel
             if (!empty($condsAttAnn)) $sqlAttAnn .= " AND " . implode(' AND ', $condsAttAnn);
             $montantAttenduAnnee = $this->safeSum($db, $sqlAttAnn, $pAttAnn);
 
+            // Total encaisse aujourd'hui (pour valider si l'objectif du jour est atteint)
+            $sqlCotisToday = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE DATE(COALESCE(date_cautisation, created_at_cautisation_client)) = CURDATE() AND (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL)";
+            $pCotisToday = []; $condsCotisToday = [];
+            Context::applyTripleFilter('', $condsCotisToday, $pCotisToday, true, false);
+            if (!empty($condsCotisToday)) $sqlCotisToday .= " AND " . implode(' AND ', $condsCotisToday);
+            $totalCotisationsAujourdhui = $this->safeSum($db, $sqlCotisToday, $pCotisToday);
+
             return [
                 'annee_code'                  => $anneeCode,
                 'total_clients'               => $totalClients,
@@ -250,6 +257,7 @@ class ModelHome extends BaseModel
                 'total_sessions'              => $totalSessions,
                 'montant_attendu_journee'     => $montantAttenduJournee,
                 'montant_attendu_annee'       => $montantAttenduAnnee,
+                'total_cotisations_aujourdhui'=> $totalCotisationsAujourdhui,
             ];
 
         } catch (\Exception $e) {
@@ -264,6 +272,7 @@ class ModelHome extends BaseModel
                 'total_users' => 0, 'total_commerciaux' => 0,
                 'total_categories' => 0, 'total_sessions' => 0,
                 'montant_attendu_journee' => 0.0, 'montant_attendu_annee' => 0.0,
+                'total_cotisations_aujourdhui' => 0.0,
             ];
         }
     }

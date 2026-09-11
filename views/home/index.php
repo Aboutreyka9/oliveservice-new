@@ -551,7 +551,17 @@ $isAdmin = Context::isSuperAdmin();
             <div class="kpi-value" style="color: #0284C7;"><?= number_format($stats['montant_attendu_journee'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
             <div class="kpi-footer">
               <span>Cotisations quotidiennes valides</span>
-              <span class="kpi-tag" style="background: #E0F2FE; color: #0284C7;">Objectif / jour</span>
+              <?php if (($stats['montant_attendu_journee'] ?? 0) > 0 && ($stats['total_cotisations_aujourdhui'] ?? 0) >= ($stats['montant_attendu_journee'] ?? 0)): ?>
+                <span class="kpi-tag" style="background: #DCFCE7; color: #15803D; font-weight: 800; border: 1px solid #86EFAC;">
+                  <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i> Atteint !
+                </span>
+              <?php elseif (($stats['total_cotisations_aujourdhui'] ?? 0) > 0): ?>
+                <span class="kpi-tag" style="background: #FEF3C7; color: #B45309; font-weight: 700;">
+                  <i data-lucide="trending-up" style="width: 12px; height: 12px;"></i> <?= number_format($stats['total_cotisations_aujourdhui'] ?? 0, 0, ',', ' ') ?> F aujourd'hui
+                </span>
+              <?php else: ?>
+                <span class="kpi-tag" style="background: #E0F2FE; color: #0284C7;">Objectif / jour</span>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -702,7 +712,17 @@ $isAdmin = Context::isSuperAdmin();
             <div class="kpi-value" style="color: #0284C7;"><?= number_format($stats['montant_attendu_journee'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
             <div class="kpi-footer">
               <span>Cotisations du jour valides</span>
-              <span class="kpi-tag" style="background: #E0F2FE; color: #0284C7;">Objectif / jour</span>
+              <?php if (($stats['montant_attendu_journee'] ?? 0) > 0 && ($stats['total_cotisations_aujourdhui'] ?? 0) >= ($stats['montant_attendu_journee'] ?? 0)): ?>
+                <span class="kpi-tag" style="background: #DCFCE7; color: #15803D; font-weight: 800; border: 1px solid #86EFAC;">
+                  <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i> Atteint !
+                </span>
+              <?php elseif (($stats['total_cotisations_aujourdhui'] ?? 0) > 0): ?>
+                <span class="kpi-tag" style="background: #FEF3C7; color: #B45309; font-weight: 700;">
+                  <i data-lucide="trending-up" style="width: 12px; height: 12px;"></i> <?= number_format($stats['total_cotisations_aujourdhui'] ?? 0, 0, ',', ' ') ?> F aujourd'hui
+                </span>
+              <?php else: ?>
+                <span class="kpi-tag" style="background: #E0F2FE; color: #0284C7;">Objectif / jour</span>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -775,7 +795,17 @@ $isAdmin = Context::isSuperAdmin();
             <div class="kpi-value" style="color: #0284C7;"><?= number_format($stats['montant_attendu_journee'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
             <div class="kpi-footer">
               <span>Cotisations souscriptions valides</span>
-              <span class="kpi-tag" style="background: #E0F2FE; color: #0284C7;">Objectif / jour</span>
+              <?php if (($stats['montant_attendu_journee'] ?? 0) > 0 && ($stats['total_cotisations_aujourdhui'] ?? 0) >= ($stats['montant_attendu_journee'] ?? 0)): ?>
+                <span class="kpi-tag" style="background: #DCFCE7; color: #15803D; font-weight: 800; border: 1px solid #86EFAC;">
+                  <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i> Atteint !
+                </span>
+              <?php elseif (($stats['total_cotisations_aujourdhui'] ?? 0) > 0): ?>
+                <span class="kpi-tag" style="background: #FEF3C7; color: #B45309; font-weight: 700;">
+                  <i data-lucide="trending-up" style="width: 12px; height: 12px;"></i> <?= number_format($stats['total_cotisations_aujourdhui'] ?? 0, 0, ',', ' ') ?> F aujourd'hui
+                </span>
+              <?php else: ?>
+                <span class="kpi-tag" style="background: #E0F2FE; color: #0284C7;">Objectif / jour</span>
+              <?php endif; ?>
             </div>
           </div>
 
