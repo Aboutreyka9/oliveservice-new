@@ -5,7 +5,7 @@
 
 $(function() {
   const racine = window.AppConfig ? window.AppConfig.racine : (window.RACINE || '/');
-  const isFinanceOrAdmin = window.AppConfig ? (window.AppConfig.isFinance || window.AppConfig.isAdmin) : false;
+  const isFinanceOrAdmin = window.AppConfig ? (window.AppConfig.can('FINANCE_VALIDATE_VERSEMENT') || window.AppConfig.isFinance || window.AppConfig.isAdmin) : false;
   const isCommercial = window.AppConfig ? window.AppConfig.isCommercial : false;
 
   const $tableVers = $('#table-versements');

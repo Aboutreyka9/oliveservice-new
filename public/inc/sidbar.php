@@ -345,7 +345,7 @@
                 <a href="<?= RACINE ?>user/formulaire" class="nav-item sub <?= strpos($currentUri, '/user/formulaire') !== false ? 'active' : '' ?>" data-title="Nouveau Commercial">
                     <i data-lucide="user-plus"></i> <span>Recruter un Commercial</span>
                 </a>
-                <a href="<?= RACINE ?>user/list" class="nav-item sub <?= (strpos($currentUri, '/user/list') !== false || strpos($currentUri, '/user/edition') !== false || strpos($currentUri, '/user/details') !== false) ? 'active' : '' ?>" data-title="Liste des Commerciaux">
+                <a href="<?= RACINE ?>user/gestionnaireList" class="nav-item sub <?= (strpos($currentUri, '/user/gestionnaireList') !== false) ? 'active' : '' ?>" data-title="Liste des Commerciaux">
                     <i data-lucide="users"></i> <span>Liste des Commerciaux</span>
                 </a>
             </div>
@@ -400,7 +400,7 @@
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
             <div class="nav-section-items" id="sec-admin">
-                <a href="<?= RACINE ?>user/list" class="nav-item sub <?= strpos($currentUri, '/user/') !== false ? 'active' : '' ?>" data-title="Utilisateurs Système">
+                <a href="<?= RACINE ?>user/list" class="nav-item sub <?= (strpos($currentUri, '/user/list') !== false || strpos($currentUri, '/user/edition') !== false || strpos($currentUri, '/user/details') !== false) ? 'active' : '' ?>" data-title="Utilisateurs Système">
                     <i data-lucide="users"></i> <span>Utilisateurs Système</span>
                 </a>
                 <a href="<?= RACINE ?>fonction/list" class="nav-item sub <?= strpos($currentUri, '/fonction/') !== false ? 'active' : '' ?>" data-title="Fonctions Utilisateurs">

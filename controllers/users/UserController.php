@@ -82,13 +82,6 @@ class UserController extends BaseController
             $params[':curr_user_code'] = $currentUserCode;
         }
 
-        // 2. Inclure strictement uniquement les utilisateurs ayant le rôle commercial (ROLE_COMMERCIAL)
-        $conds[] = "u.code_user IN (
-            SELECT DISTINCT ur.user_code 
-            FROM user_roles ur 
-            WHERE ur.role_code = 'ROLE_COMMERCIAL'
-        )";
-
         // 3. Filtrage selon la zone sélectionnée / assignée
         $requestedZone = trim($_POST['zone_code'] ?? ($_GET['zone_code'] ?? ''));
 
@@ -1225,6 +1218,146 @@ class UserController extends BaseController
                 'total_commission' => $totalComm,
                 'id' => $u['id_user'],
                 'editId' => $idCrypte
+            ];
+        }
+
+        $this->json(['data' => $data]);
+    }
+
+    public function gestionnaireList()
+    {
+        $this->requirePermission(['GESTIONNAIRE_MANAGE_PACKS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'ADMIN_MANAGE_USERS']);
+        $hasJoker = Context::hasJoker();
+        $userZoneCode = Context::zone();
+
+        $etabCode = Context::etablissement();
+        if ($hasJoker) {
+            $stmtZones = $this->model->getCon()->query("
+                SELECT code_zone, libelle_zone 
+                FROM zones 
+                WHERE statut_zone = 'actif' 
+                ORDER BY libelle_zone ASC
+            ");
+            $zones = $stmtZones ? $stmtZones->fetchAll(PDO::FETCH_ASSOC) : [];
+        } else {
+            $stmtZones = $this->model->getCon()->prepare("
+                SELECT code_zone, libelle_zone 
+                FROM zones 
+                WHERE etablissement_code = ? AND statut_zone = 'actif' 
+                ORDER BY libelle_zone ASC
+            ");
+            $stmtZones->execute([$etabCode]);
+            $zones = $stmtZones->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+
+        $userZoneLibelle = 'Zone non définie';
+        if (!empty($userZoneCode)) {
+            foreach ($zones as $z) {
+                if ($z['code_zone'] === $userZoneCode) {
+                    $userZoneLibelle = $z['libelle_zone'];
+                    break;
+                }
+            }
+        }
+
+        $this->loadView('../views/users/gestionnaire_list.php', [
+            'zones'           => $zones,
+            'hasJoker'        => $hasJoker,
+            'userZoneCode'    => $userZoneCode,
+            'userZoneLibelle' => $userZoneLibelle
+        ]);
+    }
+
+    public function apiGestionnaireList()
+    {
+        $this->requirePermission(['GESTIONNAIRE_MANAGE_PACKS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'ADMIN_MANAGE_USERS']);
+
+        $currentUserId = Context::userId() ?? ($_SESSION[USERS_AUTH]['id_user'] ?? null);
+        $currentUserCode = Context::user() ?? ($_SESSION[USERS_AUTH]['code_user'] ?? null);
+        $hasJoker = Context::hasJoker();
+        $userZone = Context::zone();
+
+        $conds = [];
+        $params = [];
+
+        // 1. Exclure l'utilisateur actuellement connecté
+        if (!empty($currentUserId)) {
+            $conds[] = "u.id_user != :curr_user_id";
+            $params[':curr_user_id'] = $currentUserId;
+        }
+        if (!empty($currentUserCode)) {
+            $conds[] = "u.code_user != :curr_user_code";
+            $params[':curr_user_code'] = $currentUserCode;
+        }
+
+        // 2. Inclure strictement les commerciaux & agents terrain (ROLE_COMMERCIAL)
+        $conds[] = "u.code_user IN (
+            SELECT DISTINCT ur.user_code 
+            FROM user_roles ur 
+            WHERE ur.role_code = 'ROLE_COMMERCIAL'
+        )";
+
+        // 3. Filtrage zone
+        $requestedZone = trim($_POST['zone_code'] ?? ($_GET['zone_code'] ?? ''));
+
+        if (!$hasJoker) {
+            $conds[] = "u.zone_code = :forced_zone";
+            $params[':forced_zone'] = $userZone;
+        } else {
+            if (!empty($requestedZone) && $requestedZone !== 'ALL') {
+                $conds[] = "u.zone_code = :selected_zone";
+                $params[':selected_zone'] = $requestedZone;
+            }
+        }
+
+        $whereClause = !empty($conds) ? ("WHERE " . implode(" AND ", $conds)) : "";
+
+        $sql = "SELECT u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code,
+                       z.libelle_zone,
+                       GROUP_CONCAT(DISTINCT r.libelle_role ORDER BY r.id SEPARATOR '||') as roles_libelles,
+                       GROUP_CONCAT(DISTINCT r.code_role ORDER BY r.id SEPARATOR ',') as roles_codes,
+                       f.libelle_fonction,
+                       (SELECT COUNT(*) FROM clients cl WHERE cl.user_code = u.code_user) as total_clients,
+                       (SELECT COUNT(*) FROM souscriptions sub WHERE sub.user_code = u.code_user AND sub.statut_souscription IN ('valide','reconduite')) as total_souscriptions
+                FROM users u
+                LEFT JOIN user_roles ur ON ur.user_code = u.code_user
+                LEFT JOIN roles r ON r.code_role = ur.role_code
+                LEFT JOIN fonctions f ON f.code_fonction = u.fonction_code
+                LEFT JOIN zones z ON z.code_zone = u.zone_code
+                {$whereClause}
+                GROUP BY u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code, z.libelle_zone, f.libelle_fonction
+                ORDER BY u.id_user DESC";
+        $stmt = $this->model->getCon()->prepare($sql);
+        $stmt->execute($params);
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $data = [];
+        foreach ($users as $u) {
+            $idCrypte = $this->validator->crypter($u['id_user']);
+            $roleNames = !empty($u['roles_libelles']) ? explode('||', $u['roles_libelles']) : [];
+            $roleCodes = !empty($u['roles_codes']) ? explode(',', $u['roles_codes']) : [];
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $baseUrl = (strpos(RACINE, 'http://') === 0 || strpos(RACINE, 'https://') === 0) 
+                ? rtrim(RACINE, '/') . '/' 
+                : ($protocol . '://' . $host . '/' . ltrim(RACINE, '/'));
+
+            $data[] = [
+                'code' => $u['code_user'],
+                'nom' => $u['nom_user'],
+                'prenom' => $u['prenom_user'] ?? '',
+                'email' => $u['email_user'] ?? '',
+                'telephone' => $u['telephone_user'] ?? '',
+                'statut' => $u['statut_user'] ?? 'actif',
+                'fonction' => $u['libelle_fonction'] ?? 'Commercial',
+                'zone' => $u['libelle_zone'] ?? 'Non assignée',
+                'roles' => $roleNames,
+                'roles_codes' => $roleCodes,
+                'total_clients' => (int)($u['total_clients'] ?? 0),
+                'total_souscriptions' => (int)($u['total_souscriptions'] ?? 0),
+                'id' => $u['id_user'],
+                'editId' => $idCrypte,
+                'activation_url' => $baseUrl . 'user/activer?token=' . urlencode($u['token_user'] ?? '')
             ];
         }
 
