@@ -733,6 +733,51 @@ class CaisseCommercialController extends BaseController
     public function formulaire()
     {
         $this->requirePermission('COMMERCIAL_MANAGE_OWN_CAISSE');
+        $userCode = Context::user();
+        $dateToday = date('Y-m-d');
+        $db = $this->model->getCon();
+
+        if (Context::isCommercial() && !empty($userCode)) {
+            // Chercher s'il y a déjà une caisse OUVERTE aujourd'hui pour cet utilisateur
+            $sqlCheck = "SELECT * FROM caisses WHERE user_code = ? AND DATE(date_ouverture) = ? AND statut_caisse = 'ouverte'";
+            $pCheck = [$userCode, $dateToday];
+            $cCheck = [];
+            Context::applyTripleFilter('', $cCheck, $pCheck, false);
+            if (!empty($cCheck)) $sqlCheck .= " AND " . implode(' AND ', $cCheck);
+            $sqlCheck .= " ORDER BY id_caisse DESC LIMIT 1";
+            $stmtCheck = $db->prepare($sqlCheck);
+            $stmtCheck->execute($pCheck);
+            $activeSession = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+            if ($activeSession) {
+                $_SESSION['flash_warning'] = "Votre caisse du jour (" . $activeSession['code_caisse'] . ") est déjà ouverte.";
+            } else {
+                // Ouverture automatique de la caisse pour la journée d'aujourd'hui
+                $anneeCode = Context::annee();
+                $etabCode  = Context::etablissement();
+                $zoneCode  = Context::zone();
+
+                if (!empty($anneeCode) && !empty($etabCode) && !empty($zoneCode)) {
+                    $codeCaisse = $this->validator->generateCode('caisses', 'code_caisse', 'CAISSE-', 8);
+                    $data = [
+                        'code_caisse'            => $codeCaisse,
+                        'date_ouverture'          => date('Y-m-d H:i:s'),
+                        'montant_total_attendu'  => 0,
+                        'montant_total_depot'    => 0,
+                        'decission_caisse'       => 'attente',
+                        'statut_caisse'          => 'ouverte',
+                        'user_code'              => $userCode,
+                        'annee_code'             => $anneeCode,
+                        'etablissement_code'     => $etabCode,
+                        'zone_code'              => $zoneCode
+                    ];
+                    if ($this->model->create($data)) {
+                        $_SESSION['flash_success'] = "Votre caisse du jour (" . $codeCaisse . ") a été ouverte avec succès ! Vous pouvez démarrer vos encaissements.";
+                    }
+                }
+            }
+        }
+
         $this->loadView('../views/caisse_commercial/edit.php', ['item' => []]);
     }
 }
