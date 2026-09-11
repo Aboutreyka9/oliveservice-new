@@ -876,7 +876,7 @@ class UserController extends BaseController
                     if (empty($activeAnnee)) {
                         // Créer une notification d'alerte système pour les administrateurs si aucune notification non lue n'existe
                         try {
-                            $checkEtab = $etabCode ?: 'DEFAULT_ETAB';
+                            $checkEtab = $etabCode ?: ($this->model->getCon()->query("SELECT code_etablissement FROM etablissements WHERE statut_etablissement = 'actif' LIMIT 1")->fetchColumn() ?: '');
                             $stmtCheckNotif = $this->model->getCon()->prepare("
                                 SELECT id_notification 
                                 FROM notifications 
@@ -910,23 +910,42 @@ class UserController extends BaseController
                     $_SESSION['roles']       = $roleCodes;
 
                     // Établissement
-                    $_SESSION['etablissement_active_code'] = $etabCode ?: 'DEFAULT_ETAB';
-                    if (!empty($etabCode)) {
+                    if (empty($etabCode)) {
+                        $stmtFirstEtab = $this->model->getCon()->query("SELECT code_etablissement, libelle_etablissement FROM etablissements WHERE statut_etablissement = 'actif' ORDER BY id_etablissement ASC LIMIT 1");
+                        $firstEtab = $stmtFirstEtab ? $stmtFirstEtab->fetch(PDO::FETCH_ASSOC) : null;
+                        if ($firstEtab) {
+                            $etabCode = $firstEtab['code_etablissement'];
+                            $_SESSION['etablissement_active_code'] = $etabCode;
+                            $_SESSION['etablissement_active_libelle'] = $firstEtab['libelle_etablissement'];
+                        } else {
+                            $_SESSION['etablissement_active_code'] = '';
+                            $_SESSION['etablissement_active_libelle'] = 'Établissement Principal';
+                        }
+                    } else {
+                        $_SESSION['etablissement_active_code'] = $etabCode;
                         $stmtEtab = $this->model->getCon()->prepare("SELECT libelle_etablissement FROM etablissements WHERE code_etablissement = ? LIMIT 1");
                         $stmtEtab->execute([$etabCode]);
                         $_SESSION['etablissement_active_libelle'] = $stmtEtab->fetchColumn() ?: $etabCode;
-                    } else {
-                        $_SESSION['etablissement_active_libelle'] = 'Établissement Principal';
                     }
 
                     // Zone
-                    $_SESSION['zone_active_code'] = $zoneCode ?: 'DEFAULT_ZONE';
-                    if (!empty($zoneCode)) {
+                    if (empty($zoneCode)) {
+                        $stmtFirstZone = $this->model->getCon()->prepare("SELECT code_zone, libelle_zone FROM zones WHERE statut_zone = 'actif' AND (etablissement_code = ? OR ? = '') ORDER BY id_zone ASC LIMIT 1");
+                        $stmtFirstZone->execute([$etabCode, $etabCode]);
+                        $firstZone = $stmtFirstZone ? $stmtFirstZone->fetch(PDO::FETCH_ASSOC) : null;
+                        if ($firstZone) {
+                            $zoneCode = $firstZone['code_zone'];
+                            $_SESSION['zone_active_code'] = $zoneCode;
+                            $_SESSION['zone_active_libelle'] = $firstZone['libelle_zone'];
+                        } else {
+                            $_SESSION['zone_active_code'] = '';
+                            $_SESSION['zone_active_libelle'] = 'Zone Générale';
+                        }
+                    } else {
+                        $_SESSION['zone_active_code'] = $zoneCode;
                         $stmtZone = $this->model->getCon()->prepare("SELECT libelle_zone FROM zones WHERE code_zone = ? LIMIT 1");
                         $stmtZone->execute([$zoneCode]);
                         $_SESSION['zone_active_libelle'] = $stmtZone->fetchColumn() ?: $zoneCode;
-                    } else {
-                        $_SESSION['zone_active_libelle'] = 'Zone Générale';
                     }
 
                     // Année active

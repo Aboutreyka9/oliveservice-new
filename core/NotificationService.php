@@ -158,7 +158,7 @@ class NotificationService
      */
     public static function notifyAnneeNonActive(array $params = []): ?string
     {
-        $etabCode = $params['etablissement_code'] ?? 'DEFAULT_ETAB';
+        $etabCode = !empty($params['etablissement_code']) ? $params['etablissement_code'] : (self::getModel()->getCon()->query("SELECT code_etablissement FROM etablissements WHERE statut_etablissement = 'actif' LIMIT 1")->fetchColumn() ?: null);
         $zoneCode = $params['zone_code'] ?? null;
         $userCode = $params['user_code'] ?? null;
         $blockedUserNom = !empty($params['blocked_user_nom']) ? $params['blocked_user_nom'] : null;
@@ -196,7 +196,7 @@ class NotificationService
             $sql = "UPDATE notifications SET lu_notification = 1 WHERE reference_code = 'ANNEE_INACTIVE' AND lu_notification = 0";
             $params = [];
             if (!empty($etabCode)) {
-                $sql .= " AND (etablissement_code = ? OR etablissement_code IS NULL OR etablissement_code = 'DEFAULT_ETAB')";
+                $sql .= " AND (etablissement_code = ? OR etablissement_code IS NULL)";
                 $params[] = $etabCode;
             }
             $stmt = $pdo->prepare($sql);
