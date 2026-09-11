@@ -35,9 +35,13 @@ class ModelPack extends BaseModel
         try {
             $this->getCon()->beginTransaction();
             
-            $annee = $anneeCode ?: Context::annee();
-            $etab = $etabCode ?: Context::etablissement();
-            $zone = $zoneCode ?: Context::zone();
+            $annee = !empty($anneeCode) ? $anneeCode : Context::annee();
+            $etab = !empty($etabCode) ? $etabCode : Context::etablissement();
+            $zone = !empty($zoneCode) ? $zoneCode : Context::zone();
+
+            if (empty($annee) || empty($etab) || empty($zone)) {
+                throw new Exception("Erreur de synchronisation des articles du pack : l'année d'activité, l'établissement et la zone commerciale sont obligatoires.");
+            }
 
             // Purger les anciens articles du pack
             $stmtDel = $this->getCon()->prepare("DELETE FROM pack_articles WHERE pack_code = ?");

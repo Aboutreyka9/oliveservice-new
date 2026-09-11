@@ -438,10 +438,16 @@ class CaisseCommercialController extends BaseController
 
         if ($this->model->update($updateData, (int)$activeCaisse['id_caisse'])) {
             // SYNCHRONISATION AUTOMATIQUE AVEC VERSEMENTS_COMMERCIAUX
-            $etabCode = $activeCaisse['etablissement_code'] ?? Context::etablissement();
-            $zoneCode = $activeCaisse['zone_code'] ?? Context::zone();
-            $anneeCode = $activeCaisse['annee_code'] ?? Context::annee();
+            $etabCode = !empty($activeCaisse['etablissement_code']) ? $activeCaisse['etablissement_code'] : Context::etablissement();
+            $zoneCode = !empty($activeCaisse['zone_code']) ? $activeCaisse['zone_code'] : Context::zone();
+            $anneeCode = !empty($activeCaisse['annee_code']) ? $activeCaisse['annee_code'] : Context::annee();
+            $userCode = Context::user();
             $dateToday = date('Y-m-d');
+
+            if (empty($etabCode) || empty($zoneCode) || empty($anneeCode) || empty($userCode)) {
+                $this->error("Erreur de transmission du versement : L'établissement, la zone commerciale, l'année d'exercice et l'utilisateur sont obligatoires.");
+                return;
+            }
 
             $stmtVCheck = $db->prepare("SELECT id_versement, code_versement_commercial FROM versements_commerciaux WHERE caisse_code = ? LIMIT 1");
             $stmtVCheck->execute([$codeCaisse]);

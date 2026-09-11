@@ -74,10 +74,19 @@ class ModelDistribution extends BaseModel
         try {
             $this->getCon()->beginTransaction();
 
-            $distributionData['etablissement_code'] = $distributionData['etablissement_code'] ?? Context::etablissement();
-            $distributionData['zone_code'] = $distributionData['zone_code'] ?? Context::zone();
-            $distributionData['annee_code'] = $distributionData['annee_code'] ?? Context::annee();
-            $distributionData['user_code'] = $distributionData['user_code'] ?? Context::user();
+            $etabCode = !empty($distributionData['etablissement_code']) ? $distributionData['etablissement_code'] : Context::etablissement();
+            $zoneCode = !empty($distributionData['zone_code']) ? $distributionData['zone_code'] : Context::zone();
+            $anneeCode = !empty($distributionData['annee_code']) ? $distributionData['annee_code'] : Context::annee();
+            $userCode = !empty($distributionData['user_code']) ? $distributionData['user_code'] : Context::user();
+
+            if (empty($etabCode) || empty($zoneCode) || empty($anneeCode) || empty($userCode)) {
+                throw new Exception("Champs obligatoires manquants pour l'enregistrement de la distribution (établissement, zone, année ou utilisateur nul).");
+            }
+
+            $distributionData['etablissement_code'] = $etabCode;
+            $distributionData['zone_code'] = $zoneCode;
+            $distributionData['annee_code'] = $anneeCode;
+            $distributionData['user_code'] = $userCode;
 
             $cols = $this->getCon()->query("DESCRIBE distributions")->fetchAll(PDO::FETCH_COLUMN);
             $filteredData = array_intersect_key($distributionData, array_flip($cols));
