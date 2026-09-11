@@ -419,8 +419,8 @@ $isAdmin = Context::isSuperAdmin();
         <!-- ACTIONS RAPIDES SELON PERMISSIONS RBAC -->
         <div class="header-actions-group">
           <?php if (Context::can('COMMERCIAL_ADD_CLIENT')): ?>
-            <a href="<?= RACINE ?>client/formulaire" class="action-btn-pill btn-pill-primary">
-              <i data-lucide="user-plus" style="width: 17px; height: 17px;"></i> Nouveau Client
+            <a href="<?= RACINE ?>souscription/wizard" class="action-btn-pill btn-pill-primary">
+              <i data-lucide="user-plus" style="width: 17px; height: 17px;"></i> Nouvelle Souscription
             </a>
           <?php endif; ?>
           <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION')): ?>
