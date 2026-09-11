@@ -291,17 +291,18 @@ $(function() {
           }
           $('#hist_tbody_caisse_cotis').html(htmlCaisseCotis);
 
-          // Écart & Conformité Globale
-          const ecart = d.ecart_comparaison;
-          if (ecart === 0) {
-            $('#hist_ecart_verif').text('0 FCFA').css('color', '#059669');
+          // Gestion de l'écart et du badge de conformité
+          const caisseEcart = d.caisse_ecart;
+          const ecartFmt = d.caisse_ecart_fmt || '0 FCFA';
+          if (caisseEcart === 0) {
+            $('#hist_caisse_ecart').text('0 FCFA').css('color', '#059669');
             $('#hist_ecart_badge').text('Conforme').css({'color': '#059669', 'background': '#ECFDF5'});
-          } else if (ecart > 0) {
-            $('#hist_ecart_verif').text('+' + d.ecart_comparaison_fmt).css('color', '#2563EB');
-            $('#hist_ecart_badge').text('Surplus (+' + d.ecart_comparaison_fmt + ')').css({'color': '#2563EB', 'background': '#EFF6FF'});
+          } else if (caisseEcart > 0) {
+            $('#hist_caisse_ecart').text('+' + ecartFmt).css('color', '#2563EB');
+            $('#hist_ecart_badge').text('Surplus (+' + ecartFmt + ')').css({'color': '#2563EB', 'background': '#EFF6FF'});
           } else {
-            $('#hist_ecart_verif').text('-' + d.ecart_comparaison_fmt).css('color', '#DC2626');
-            $('#hist_ecart_badge').text('Sous-versement (-' + d.ecart_comparaison_fmt + ')').css({'color': '#DC2626', 'background': '#FEE2E2'});
+            $('#hist_caisse_ecart').text('-' + ecartFmt).css('color', '#DC2626');
+            $('#hist_ecart_badge').text('Sous-versement (-' + ecartFmt + ')').css({'color': '#DC2626', 'background': '#FEE2E2'});
           }
 
           // Cotisations récentes

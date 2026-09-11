@@ -9,8 +9,8 @@ class CaisseCommercialController extends BaseController
 
     public function list()
     {
-        $this->requirePermission(['COMMERCIAL_MANAGE_OWN_CAISSE', 'FINANCE_VIEW_CLOTURES_CAISSE']);
-        $this->loadView('../views/caisse_commercial/list.php');
+        header('Location: ' . RACINE . 'versement/list');
+        exit();
     }
 
     public function apiList()

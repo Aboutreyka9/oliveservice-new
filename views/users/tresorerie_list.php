@@ -226,7 +226,7 @@ $(document).ready(function() {
         var editId = d.editId || d.id;
         var html = '<div style="display:flex; justify-content:flex-end; gap:6px;">';
         html += '<a href="' + window.RACINE + 'user/details/' + editId + '" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:5px 10px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir profil"><i data-lucide="eye" style="width:13px;height:13px;"></i> Profil</a>';
-        html += '<a href="' + window.RACINE + 'caisse_commercial/list?user_code=' + d.code + '" class="btn" style="background:#ECFDF5; color:#047857; font-weight:700; border-radius:8px; padding:5px 10px; text-decoration:none; border:1px solid #A7F3D0; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Journal des Caisses"><i data-lucide="archive" style="width:13px;height:13px;"></i> Caisses</a>';
+        html += '<a href="' + window.RACINE + 'versement/list?user_code=' + d.code + '" class="btn" style="background:#ECFDF5; color:#047857; font-weight:700; border-radius:8px; padding:5px 10px; text-decoration:none; border:1px solid #A7F3D0; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Versements du Commercial"><i data-lucide="arrow-down-left" style="width:13px;height:13px;"></i> Versements</a>';
         html += '</div>';
         return html;
       }}

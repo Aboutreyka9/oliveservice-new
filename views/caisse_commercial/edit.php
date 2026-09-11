@@ -22,8 +22,8 @@
         </div>
 
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <a href="<?= RACINE ?>caisse_commercial/list" class="btn" style="background: #FFFFFF; border: 1px solid #E2E8F0; color: #334155; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease;">
-            <i data-lucide="history" style="width: 16px; height: 16px; color: #64748B;"></i> Historique des Caisses
+          <a href="<?= RACINE ?>versement/list" class="btn" style="background: #FFFFFF; border: 1px solid #E2E8F0; color: #334155; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+            <i data-lucide="history" style="width: 16px; height: 16px; color: #64748B;"></i> Mes Versements
           </a>
         </div>
       </div>

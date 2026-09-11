@@ -90,91 +90,77 @@ class VersementController extends BaseController
             return;
         }
 
-        $commCode = $versement['commercial_code'];
-        $etabCode = Context::etablissement();
-        $anneeCode = Context::annee();
+        $commCode = $versement['commercial_code'] ?? '';
+        $etabCode = $versement['etablissement_code'] ?? Context::etablissement();
+        $anneeCode = $versement['annee_code'] ?? Context::annee();
+        $zoneCode = $versement['zone_code'] ?? Context::zone();
+        $caisseCode = $versement['caisse_code'] ?? null;
+        $periodeDebut = !empty($versement['periode_versement_debut']) ? $versement['periode_versement_debut'] : (!empty($versement['periode_versement']) ? $versement['periode_versement'] : (isset($versement['created_at_versement']) ? substr($versement['created_at_versement'], 0, 10) : ''));
+
         $db = $this->model->getCon();
 
-        // 1. Stats des cotisations du commercial
-        $stmtC = $db->prepare("
-            SELECT 
-                SUM(montant_cautisation_client) as total_collecte,
-                SUM(CASE WHEN LOWER(mode_paiement) IN ('espece', 'especes', 'cash') THEN montant_cautisation_client ELSE 0 END) as total_especes,
-                SUM(CASE WHEN LOWER(mode_paiement) IN ('mobile_money', 'wave', 'orange', 'mtn', 'moov') THEN montant_cautisation_client ELSE 0 END) as total_momo,
-                SUM(CASE WHEN LOWER(mode_paiement) NOT IN ('espece', 'especes', 'cash', 'mobile_money', 'wave', 'orange', 'mtn', 'moov') THEN montant_cautisation_client ELSE 0 END) as total_autre,
-                COUNT(DISTINCT id_cautisation_client) as nb_cotisations
-            FROM cautisation_clients 
-            WHERE commercial_code = ? AND etablissement_code = ? AND annee_code = ?
-        ");
-        $stmtC->execute([$commCode, $etabCode, $anneeCode]);
-        $statsC = $stmtC->fetch(PDO::FETCH_ASSOC) ?: [];
-
-        $totalCollecte = (float)($statsC['total_collecte'] ?? 0);
-        $totalEspeces  = (float)($statsC['total_especes'] ?? 0);
-        $totalMomo     = (float)($statsC['total_momo'] ?? 0);
-        $totalAutre    = (float)($statsC['total_autre'] ?? 0);
-        $nbCotis       = (int)($statsC['nb_cotisations'] ?? 0);
-
-        // 2. Stats des versements validés
-        $stmtV = $db->prepare("
-            SELECT SUM(montant_versement) as total_valide, COUNT(*) as nb_valides
-            FROM versements_commerciaux
-            FROM cautisation_clients c
-            LEFT JOIN clients cli ON cli.code_client = c.client_code
-            WHERE (c.commercial_code = ? OR c.user_code = ?)
-              AND c.etablissement_code = ? AND c.zone_code = ? AND c.annee_code = ?
-            ORDER BY c.date_cautisation DESC, c.id_cautisation_client DESC
-            LIMIT 10
-        ");
-        $stmtRecentCotis->execute([$commCode, $commCode, $etabCode, $zoneCode, $anneeCode]);
-        $recentCotis = $stmtRecentCotis->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-        $totalCollecte = (float)($cotisStats['total_collecte'] ?? 0);
-        $totalVersementsValides = (float)($versStats['total_versements_valides'] ?? 0);
-        $soldeResteAVerser = max(0, $totalCollecte - $totalVersementsValides);
-        $montantVersement = (float)$versement['montant_versement'];
-        $ecartComparaison = $montantVersement - $soldeResteAVerser;
-
-        // Informations spécifiques sur la caisse liée à ce versement
-        $caisseCode = $versement['caisse_code'] ?? null;
+        // 1. Details de la caisse liée
         $caisseDetails = null;
-        $caisseCotisations = [];
-        $totalCaisseAttendu = 0;
-
         if (!empty($caisseCode)) {
             $stmtCaisse = $db->prepare("
                 SELECT * FROM caisses 
-                WHERE code_caisse = ? AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+                WHERE code_caisse = ? AND etablissement_code = ? AND annee_code = ?
                 LIMIT 1
             ");
-            $stmtCaisse->execute([$caisseCode, $etabCode, $zoneCode, $anneeCode]);
-            $caisseDetails = $stmtCaisse->fetch(PDO::FETCH_ASSOC);
+            $stmtCaisse->execute([$caisseCode, $etabCode, $anneeCode]);
+            $caisseDetails = $stmtCaisse->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
 
+        // 2. Cotisations associées à cette caisse ou au commercial pour la période
+        $caisseCotisations = [];
+        if (!empty($caisseCode)) {
             $stmtCCotis = $db->prepare("
                 SELECT c.code_cautisation_client, c.montant_cautisation_client, c.mode_paiement, c.statut_cautisation_client, c.date_cautisation, c.souscription_code, cli.nom_client, cli.telephone_client
                 FROM cautisation_clients c
                 LEFT JOIN clients cli ON cli.code_client = c.client_code
-                WHERE (c.caisse_code = ? OR (c.commercial_code = ? AND DATE(c.date_cautisation) = ?))
-                  AND c.statut_cautisation_client != 'annule'
-                  AND c.etablissement_code = ? AND c.zone_code = ? AND c.annee_code = ?
+                WHERE c.caisse_code = ? AND c.statut_cautisation_client != 'annule'
+                  AND c.etablissement_code = ? AND c.annee_code = ?
                 ORDER BY c.date_cautisation DESC
             ");
-            $stmtCCotis->execute([
-                $caisseCode, 
-                $commCode, 
-                $versement['periode_versement'],
-                $etabCode, 
-                $zoneCode, 
-                $anneeCode
-            ]);
+            $stmtCCotis->execute([$caisseCode, $etabCode, $anneeCode]);
             $caisseCotisations = $stmtCCotis->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
 
-            foreach ($caisseCotisations as $cc) {
-                $totalCaisseAttendu += (float)($cc['montant_cautisation_client'] ?? 0);
+        if (empty($caisseCotisations) && !empty($commCode)) {
+            $stmtCCotis = $db->prepare("
+                SELECT c.code_cautisation_client, c.montant_cautisation_client, c.mode_paiement, c.statut_cautisation_client, c.date_cautisation, c.souscription_code, cli.nom_client, cli.telephone_client
+                FROM cautisation_clients c
+                LEFT JOIN clients cli ON cli.code_client = c.client_code
+                WHERE (c.commercial_code = ? OR c.user_code = ?)
+                  AND DATE(c.date_cautisation) = ?
+                  AND c.statut_cautisation_client != 'annule'
+                  AND c.etablissement_code = ? AND c.annee_code = ?
+                ORDER BY c.date_cautisation DESC
+            ");
+            $stmtCCotis->execute([$commCode, $commCode, $periodeDebut, $etabCode, $anneeCode]);
+            $caisseCotisations = $stmtCCotis->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+
+        $totalEspeces = 0;
+        $totalMomo = 0;
+        $totalAutre = 0;
+        $totalGeneral = 0;
+
+        foreach ($caisseCotisations as $cc) {
+            $m = (float)($cc['montant_cautisation_client'] ?? 0);
+            $mode = strtolower(trim($cc['mode_paiement'] ?? 'espece'));
+            $totalGeneral += $m;
+            if (in_array($mode, ['espece', 'especes', 'cash'], true)) {
+                $totalEspeces += $m;
+            } elseif (in_array($mode, ['mobile_money', 'wave', 'orange', 'mtn', 'moov', 'momo'], true)) {
+                $totalMomo += $m;
+            } else {
+                $totalAutre += $m;
             }
         }
 
-        $caisseAttenduDef = $totalCaisseAttendu ?: (float)($caisseDetails['montant_total_attendu'] ?? 0);
+        $montantVersement = (float)($versement['montant_versement'] ?? 0);
+        $caisseAttenduDef = $totalEspeces ?: ($totalGeneral ?: (float)($caisseDetails['montant_total_attendu'] ?? (float)($caisseDetails['montant_total_depot'] ?? 0)));
         $caisseEcart = $montantVersement - $caisseAttenduDef;
 
         $this->json([
@@ -183,24 +169,13 @@ class VersementController extends BaseController
                 'commercial_code' => $commCode,
                 'versement_actuel' => $montantVersement,
                 'versement_actuel_fmt' => number_format($montantVersement, 0, ',', ' ') . ' FCFA',
-                'total_collecte' => $totalCollecte,
-                'total_collecte_fmt' => number_format($totalCollecte, 0, ',', ' ') . ' FCFA',
-                'total_especes' => (float)($cotisStats['total_especes'] ?? 0),
-                'total_especes_fmt' => number_format((float)($cotisStats['total_especes'] ?? 0), 0, ',', ' ') . ' FCFA',
-                'total_momo' => (float)($cotisStats['total_momo'] ?? 0),
-                'total_momo_fmt' => number_format((float)($cotisStats['total_momo'] ?? 0), 0, ',', ' ') . ' FCFA',
-                'total_autre' => (float)($cotisStats['total_autre'] ?? 0),
-                'total_valide' => (float)($cotisStats['total_valide'] ?? 0),
-                'total_attente' => (float)($cotisStats['total_attente'] ?? 0),
-                'total_attente_fmt' => number_format((float)($cotisStats['total_attente'] ?? 0), 0, ',', ' ') . ' FCFA',
-                'total_nb_cotis' => (int)($cotisStats['total_nb_cotis'] ?? 0),
-                'total_versements_valides' => $totalVersementsValides,
-                'total_versements_valides_fmt' => number_format($totalVersementsValides, 0, ',', ' ') . ' FCFA',
-                'total_versements_attente' => (float)($versStats['total_versements_attente'] ?? 0),
-                'solde_reste_a_verser' => $soldeResteAVerser,
-                'solde_reste_a_verser_fmt' => number_format($soldeResteAVerser, 0, ',', ' ') . ' FCFA',
-                'ecart_comparaison' => $ecartComparaison,
-                'ecart_comparaison_fmt' => number_format(abs($ecartComparaison), 0, ',', ' ') . ' FCFA',
+                'total_collecte' => $totalGeneral,
+                'total_collecte_fmt' => number_format($totalGeneral, 0, ',', ' ') . ' FCFA',
+                'total_especes' => $totalEspeces,
+                'total_especes_fmt' => number_format($totalEspeces, 0, ',', ' ') . ' FCFA',
+                'total_momo' => $totalMomo,
+                'total_momo_fmt' => number_format($totalMomo, 0, ',', ' ') . ' FCFA',
+                'total_autre' => $totalAutre,
                 // Données de la caisse spécifique
                 'has_linked_caisse' => !empty($caisseDetails),
                 'linked_caisse_code' => $caisseCode ?: '-',
@@ -220,28 +195,7 @@ class VersementController extends BaseController
                         'client' => $c['nom_client'] ?? 'Client',
                         'telephone' => $c['telephone_client'] ?? '-'
                     ];
-                }, $caisseCotisations),
-                'sessions' => array_map(function($s) {
-                    return [
-                        'code_caisse' => $s['code_caisse'],
-                        'date_ouverture' => $s['date_ouverture'] ? date('d/m/Y H:i', strtotime($s['date_ouverture'])) : '-',
-                        'date_cloture' => $s['date_cloture'] ? date('d/m/Y H:i', strtotime($s['date_cloture'])) : 'Non clôturée',
-                        'statut_caisse' => $s['statut_caisse'],
-                        'montant_depot' => (float)($s['montant_total_depot'] ?? 0),
-                        'montant_depot_fmt' => number_format((float)($s['montant_total_depot'] ?? 0), 0, ',', ' ') . ' FCFA'
-                    ];
-                }, $sessionsList),
-                'recent_cotisations' => array_map(function($c) {
-                    return [
-                        'code' => $c['code_cautisation_client'],
-                        'montant' => (float)$c['montant_cautisation_client'],
-                        'montant_fmt' => number_format((float)$c['montant_cautisation_client'], 0, ',', ' ') . ' FCFA',
-                        'mode' => strtoupper($c['mode_paiement'] ?? 'ESPECES'),
-                        'statut' => $c['statut_cautisation_client'],
-                        'date' => $c['date_cautisation'] ? date('d/m/Y H:i', strtotime($c['date_cautisation'])) : '-',
-                        'client' => $c['nom_client'] ?? 'Client'
-                    ];
-                }, $recentCotis)
+                }, $caisseCotisations)
             ]
         ]);
     }
