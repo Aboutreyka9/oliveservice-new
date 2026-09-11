@@ -275,7 +275,7 @@
               <button type="button" id="btn-step-3-prev" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 10px; padding: 12px 24px; text-decoration: none; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 8px;">
                 <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> Précédent
               </button>
-              <button type="submit" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 15px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3); cursor: pointer;">
+              <button type="submit" id="btn-submit-wizard" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 15px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3); cursor: pointer;">
                 <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> Valider la Souscription
               </button>
             </div>
@@ -532,6 +532,12 @@ $(document).ready(function() {
       return;
     }
 
+    var $btnSubmit = $('#btn-submit-wizard');
+    $btnSubmit.prop('disabled', true)
+              .css({ 'opacity': '0.65', 'cursor': 'not-allowed', 'pointer-events': 'none' })
+              .html('<i data-lucide="loader" style="width: 18px; height: 18px; animation: spin 1s linear infinite;"></i> Traitement en cours...');
+    if (window.lucide) lucide.createIcons();
+
     $('#hidden-nom_client').val($('#nom_client').val().trim());
     $('#hidden-telephone_client').val($('#telephone_client').val().trim());
     $('#hidden-email_client').val($('#email_client').val().trim());
@@ -555,13 +561,22 @@ $(document).ready(function() {
         } else {
           showMessage('danger', res.message || 'Erreur lors de l\'enregistrement');
           if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
+          resetSubmitBtn();
         }
       },
       error: function() {
         showMessage('danger', 'Erreur réseau ou serveur indisponible');
         if (window.toastr) toastr.error('Erreur réseau');
+        resetSubmitBtn();
       }
     });
+
+    function resetSubmitBtn() {
+      $btnSubmit.prop('disabled', false)
+                .css({ 'opacity': '1', 'cursor': 'pointer', 'pointer-events': 'auto' })
+                .html('<i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> Valider la Souscription');
+      if (window.lucide) lucide.createIcons();
+    }
   });
 });
 </script>
