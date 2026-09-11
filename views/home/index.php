@@ -542,6 +542,32 @@ $isAdmin = Context::isSuperAdmin();
             </div>
           </div>
 
+          <!-- KPI Commercial 7 : Attendu / Journée Active -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #0EA5E9, #0284C7); --kpi-bg-icon: #E0F2FE; --kpi-color-icon: #0284C7;">
+            <div class="kpi-header">
+              <span class="kpi-title">Attendu / Journée Active</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="calendar-check" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #0284C7;"><?= number_format($stats['montant_attendu_journee'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Cotisations quotidiennes valides</span>
+              <span class="kpi-tag" style="background: #E0F2FE; color: #0284C7;">Objectif / jour</span>
+            </div>
+          </div>
+
+          <!-- KPI Commercial 8 : Attendu / Année d'Activité -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #6366F1, #4338CA); --kpi-bg-icon: #EEF2FF; --kpi-color-icon: #4F46E5;">
+            <div class="kpi-header">
+              <span class="kpi-title">Attendu / Année d'Activité</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="target" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #4F46E5;"><?= number_format($stats['montant_attendu_annee'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Portefeuille annuel prévisionnel</span>
+              <span class="kpi-tag" style="background: #EEF2FF; color: #4F46E5;">Prévisionnel</span>
+            </div>
+          </div>
+
         <?php elseif ($isGestionnaire): ?>
 
           <!-- KPI Gestionnaire 1 : Packs Actifs -->
@@ -667,6 +693,32 @@ $isAdmin = Context::isSuperAdmin();
             </div>
           </div>
 
+          <!-- KPI Finance 6 : Attendu / Journée Active -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #0EA5E9, #0284C7); --kpi-bg-icon: #E0F2FE; --kpi-color-icon: #0284C7;">
+            <div class="kpi-header">
+              <span class="kpi-title">Attendu / Journée Active</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="calendar-check" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #0284C7;"><?= number_format($stats['montant_attendu_journee'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Cotisations du jour valides</span>
+              <span class="kpi-tag" style="background: #E0F2FE; color: #0284C7;">Objectif / jour</span>
+            </div>
+          </div>
+
+          <!-- KPI Finance 7 : Attendu / Année d'Activité -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #6366F1, #4338CA); --kpi-bg-icon: #EEF2FF; --kpi-color-icon: #4F46E5;">
+            <div class="kpi-header">
+              <span class="kpi-title">Attendu / Année d'Activité</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="target" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #4F46E5;"><?= number_format($stats['montant_attendu_annee'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Chiffre d'affaires annuel prévu</span>
+              <span class="kpi-tag" style="background: #EEF2FF; color: #4F46E5;">Prévisionnel</span>
+            </div>
+          </div>
+
         <?php else: ?>
 
           <!-- FULL 8 KPIS POUR ADMIN / DIR GENERAL -->
@@ -711,6 +763,32 @@ $isAdmin = Context::isSuperAdmin();
                 <span>Encaissement clients</span>
                 <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">100% validé</span>
               <?php endif; ?>
+            </div>
+          </div>
+
+          <!-- KPI : Montant Attendu Journée Active -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #0EA5E9, #0284C7); --kpi-bg-icon: #E0F2FE; --kpi-color-icon: #0284C7;">
+            <div class="kpi-header">
+              <span class="kpi-title">Attendu / Journée Active</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="calendar-check" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #0284C7;"><?= number_format($stats['montant_attendu_journee'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Cotisations souscriptions valides</span>
+              <span class="kpi-tag" style="background: #E0F2FE; color: #0284C7;">Objectif / jour</span>
+            </div>
+          </div>
+
+          <!-- KPI : Montant Attendu Année d'Activité -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #6366F1, #4338CA); --kpi-bg-icon: #EEF2FF; --kpi-color-icon: #4F46E5;">
+            <div class="kpi-header">
+              <span class="kpi-title">Attendu / Année d'Activité</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="target" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #4F46E5;"><?= number_format($stats['montant_attendu_annee'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-footer">
+              <span>Total prévu souscriptions</span>
+              <span class="kpi-tag" style="background: #EEF2FF; color: #4F46E5;">Prévisionnel</span>
             </div>
           </div>
 

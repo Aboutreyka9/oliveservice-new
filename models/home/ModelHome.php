@@ -207,6 +207,25 @@ class ModelHome extends BaseModel
             if (!empty($condsSess)) $sqlSess .= " AND " . implode(' AND ', $condsSess);
             $totalSessions = $this->safeCount($db, $sqlSess, $pSess);
 
+            // ── 10. Montants Attendus (Journée & Année) ──────────────────────────
+            // Montant total attendu pour une journée d'activité (souscriptions valides & reconduites)
+            $sqlAttJour = "SELECT COALESCE(SUM(
+                CASE WHEN montant_cotisation_journaliere > 0 THEN montant_cotisation_journaliere ELSE 0 END
+            ), 0) FROM souscriptions WHERE statut_souscription IN ('valide', 'reconduite')";
+            $pAttJour = []; $condsAttJour = [];
+            Context::applyTripleFilter('', $condsAttJour, $pAttJour, true);
+            if (!empty($condsAttJour)) $sqlAttJour .= " AND " . implode(' AND ', $condsAttJour);
+            $montantAttenduJournee = $this->safeSum($db, $sqlAttJour, $pAttJour);
+
+            // Montant total attendu pour toute l'année d'activité (souscriptions valides, soldées & reconduites)
+            $sqlAttAnn = "SELECT COALESCE(SUM(
+                CASE WHEN montant_total_prevu > 0 THEN montant_total_prevu ELSE 0 END
+            ), 0) FROM souscriptions WHERE statut_souscription IN ('valide', 'solde', 'reconduite')";
+            $pAttAnn = []; $condsAttAnn = [];
+            Context::applyTripleFilter('', $condsAttAnn, $pAttAnn, true);
+            if (!empty($condsAttAnn)) $sqlAttAnn .= " AND " . implode(' AND ', $condsAttAnn);
+            $montantAttenduAnnee = $this->safeSum($db, $sqlAttAnn, $pAttAnn);
+
             return [
                 'annee_code'                  => $anneeCode,
                 'total_clients'               => $totalClients,
@@ -229,6 +248,8 @@ class ModelHome extends BaseModel
                 'total_commerciaux'           => $totalCommerciaux,
                 'total_categories'            => $totalCategories,
                 'total_sessions'              => $totalSessions,
+                'montant_attendu_journee'     => $montantAttenduJournee,
+                'montant_attendu_annee'       => $montantAttenduAnnee,
             ];
 
         } catch (\Exception $e) {
@@ -242,6 +263,7 @@ class ModelHome extends BaseModel
                 'total_distributions_validees' => 0, 'solde_net' => 0,
                 'total_users' => 0, 'total_commerciaux' => 0,
                 'total_categories' => 0, 'total_sessions' => 0,
+                'montant_attendu_journee' => 0.0, 'montant_attendu_annee' => 0.0,
             ];
         }
     }
