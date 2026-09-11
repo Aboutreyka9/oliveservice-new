@@ -122,9 +122,50 @@ class CategoriePackController extends BaseController
             $this->renderNotFound("La catégorie demandée est introuvable.");
             return;
         }
+
+        $codeCat = $item['code_categorie_pack'] ?? '';
+
+        // Récupérer les packs rattachés à cette catégorie
+        $stmtPacks = $this->model->getCon()->prepare("
+            SELECT p.*,
+                   a.libelle_annee,
+                   s.libelle_session,
+                   z.libelle_zone,
+                   (SELECT COUNT(*) FROM pack_souscriptions ps WHERE ps.pack_code = p.code_pack) as total_souscriptions
+            FROM packs p
+            LEFT JOIN annees a ON a.code_annee = p.annee_code
+            LEFT JOIN sessions s ON s.code_session = p.session_code
+            LEFT JOIN zones z ON z.code_zone = p.zone_code
+            WHERE p.categorie_pack_code = ?
+            ORDER BY p.id_pack DESC
+        ");
+        $stmtPacks->execute([$codeCat]);
+        $packs = $stmtPacks->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        foreach ($packs as &$pk) {
+            $pk['encrypted_id'] = $this->validator->crypter($pk['id_pack']);
+        }
+        unset($pk);
+
+        // Statistiques globales de la catégorie
+        $stmtStats = $this->model->getCon()->prepare("
+            SELECT 
+                COUNT(DISTINCT p.id_pack) as total_packs,
+                COUNT(DISTINCT ps.souscription_code) as total_souscriptions,
+                COALESCE(SUM(cc.montant_cautisation_client), 0) as total_cotisations
+            FROM packs p
+            LEFT JOIN pack_souscriptions ps ON ps.pack_code = p.code_pack
+            LEFT JOIN cautisation_clients cc ON cc.souscription_code = ps.souscription_code AND cc.statut_cautisation_client = 'valide'
+            WHERE p.categorie_pack_code = ?
+        ");
+        $stmtStats->execute([$codeCat]);
+        $stats = $stmtStats->fetch(PDO::FETCH_ASSOC) ?: ['total_packs' => 0, 'total_souscriptions' => 0, 'total_cotisations' => 0];
+
         $this->loadView('../views/categorie_packs/details.php', [
             'item' => $item,
-            'encryptedId' => $encryptedId
+            'encryptedId' => $encryptedId,
+            'packs' => $packs,
+            'stats' => $stats
         ]);
     }
 

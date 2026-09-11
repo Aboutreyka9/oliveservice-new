@@ -7,11 +7,48 @@ class ModelPack extends BaseModel
     protected ?string $statusField = 'statut_pack';
     protected ?string $createdAtField = 'created_at_pack';
 
+    public function getPackDetails(int $id): array
+    {
+        try {
+            $sql = "
+                SELECT p.*, 
+                       c.libelle_categorie_pack,
+                       s.libelle_session,
+                       s.nombre_jour_session,
+                       s.date_debut_session,
+                       s.date_fin_session,
+                       z.libelle_zone,
+                       a.libelle_annee,
+                       e.libelle_etablissement,
+                       u.nom_user, u.prenom_user
+                FROM packs p
+                LEFT JOIN categorie_packs c ON c.code_categorie_pack = p.categorie_pack_code
+                LEFT JOIN sessions s ON s.code_session = p.session_code AND s.etablissement_code = p.etablissement_code AND s.zone_code = p.zone_code AND s.annee_code = p.annee_code
+                LEFT JOIN zones z ON z.code_zone = p.zone_code
+                LEFT JOIN annees a ON a.code_annee = p.annee_code
+                LEFT JOIN etablissements e ON e.code_etablissement = p.etablissement_code
+                LEFT JOIN users u ON u.code_user = p.user_code
+                WHERE p.id_pack = ?
+            ";
+            $params = [$id];
+            $conds = [];
+            Context::applyTripleFilter('p', $conds, $params, false);
+            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            error_log("ModelPack::getPackDetails error: " . $e->getMessage());
+            return [];
+        }
+    }
+
     public function getArticles(string $packCode): array
     {
         try {
             $sql = "
-                SELECT pa.*, a.libelle_article
+                SELECT pa.*, a.libelle_article, a.description_article, a.code_article
                 FROM pack_articles pa
                 LEFT JOIN articles a ON a.code_article = pa.article_code
                 WHERE pa.pack_code = ?

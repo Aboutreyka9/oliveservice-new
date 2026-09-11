@@ -291,7 +291,7 @@ class PackController extends BaseController
         $this->requirePermission('GESTIONNAIRE_MANAGE_PACKS');
         try {
             $id = $this->validator->decrypter($details);
-            $item = $this->model->getById($id);
+            $item = $this->model->getPackDetails($id);
             if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
                 $this->renderNotFound("Le pack demandé est introuvable.");
                 return;

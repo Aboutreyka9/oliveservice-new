@@ -193,9 +193,8 @@ $packArticles = $packArticles ?? [];
 
               <div style="display: flex; gap: 12px; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 250px;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Sélectionner un article du catalogue</label>
-                  <select id="article-select" class="form-control select2" style="width: 100%; box-sizing: border-box;">
-                    <option value="">-- Choisir un article --</option>
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Sélectionner un ou plusieurs articles du catalogue</label>
+                  <select id="article-select" class="form-control select2" multiple="multiple" style="width: 100%; box-sizing: border-box;" data-placeholder="-- Choisir un ou plusieurs articles --">
                     <?php foreach ($articles as $art): ?>
                       <option value="<?= $art['code_article'] ?>" data-libelle="<?= htmlspecialchars($art['libelle_article'], ENT_QUOTES) ?>">
                         <?= htmlspecialchars($art['libelle_article']) ?>
@@ -422,37 +421,53 @@ $(document).ready(function() {
   $('#btn-add-article').on('click', function(e) {
     if (e) e.preventDefault();
     hideMessage();
-    var codeArticle = $('#article-select').val();
-    var $opt = $('#article-select').find('option:selected');
-    var libelleArticle = $opt.data('libelle') || $opt.text().trim() || codeArticle;
+    var selectedCodes = $('#article-select').val();
 
-    if (!codeArticle) {
-      showMessage('danger', 'Veuillez sélectionner un article à ajouter');
-      return;
-    }
-    if ($('#articles-pack-body tr[data-article-code="' + codeArticle + '"]').length > 0) {
-      showMessage('warning', 'Cet article est déjà présent dans le pack');
+    if (!selectedCodes || (Array.isArray(selectedCodes) && selectedCodes.length === 0)) {
+      showMessage('danger', 'Veuillez sélectionner au moins un article à ajouter');
       return;
     }
 
-    var rowHtml = '<tr data-article-code="' + codeArticle + '" style="border-bottom: 1px solid #F1F5F9;">' +
-      '<td style="padding: 12px 14px; font-weight: 700; color: #0F172A;">' + libelleArticle + '</td>' +
-      '<td style="padding: 12px 14px; text-align: center;">' +
-        '<input type="number" name="articles[' + codeArticle + '][quantite_article]" value="1" min="1" style="width: 90px; padding: 8px 12px; border-radius: 8px; border: 1px solid #CBD5E1; text-align: center; font-weight: 800; color: #1E3A5F;">' +
-        '<input type="hidden" name="articles[' + codeArticle + '][article_code]" value="' + codeArticle + '">' +
-      '</td>' +
-      '<td style="padding: 12px 14px; text-align: center;">' +
-        '<button type="button" class="btn btn-sm remove-article-row" style="border-radius: 8px; font-weight: 600; background: #DC2626; border: none; color: #FFF; padding: 6px 10px; cursor: pointer;">' +
-          '<i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>' +
-        '</button>' +
-      '</td>' +
-    '</tr>';
+    var codesArray = Array.isArray(selectedCodes) ? selectedCodes : [selectedCodes];
+    var addedCount = 0;
+    var alreadyExistsCount = 0;
 
-    $('#articles-pack-body').append(rowHtml);
+    codesArray.forEach(function(codeArticle) {
+      if (!codeArticle) return;
+      if ($('#articles-pack-body tr[data-article-code="' + codeArticle + '"]').length > 0) {
+        alreadyExistsCount++;
+        return;
+      }
+      var $opt = $('#article-select').find('option[value="' + codeArticle + '"]');
+      var libelleArticle = $opt.data('libelle') || $opt.text().trim() || codeArticle;
+
+      var rowHtml = '<tr data-article-code="' + codeArticle + '" style="border-bottom: 1px solid #F1F5F9;">' +
+        '<td style="padding: 12px 14px; font-weight: 700; color: #0F172A;">' + libelleArticle + '</td>' +
+        '<td style="padding: 12px 14px; text-align: center;">' +
+          '<input type="number" name="articles[' + codeArticle + '][quantite_article]" value="1" min="1" style="width: 90px; padding: 8px 12px; border-radius: 8px; border: 1px solid #CBD5E1; text-align: center; font-weight: 800; color: #1E3A5F;">' +
+          '<input type="hidden" name="articles[' + codeArticle + '][article_code]" value="' + codeArticle + '">' +
+        '</td>' +
+        '<td style="padding: 12px 14px; text-align: center;">' +
+          '<button type="button" class="btn btn-sm remove-article-row" style="border-radius: 8px; font-weight: 600; background: #DC2626; border: none; color: #FFF; padding: 6px 10px; cursor: pointer;">' +
+            '<i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>' +
+          '</button>' +
+        '</td>' +
+      '</tr>';
+
+      $('#articles-pack-body').append(rowHtml);
+      addedCount++;
+    });
+
     if ($.fn.select2 && $('#article-select').hasClass('select2-hidden-accessible')) {
-      $('#article-select').val('').trigger('change');
+      $('#article-select').val(null).trigger('change');
     } else {
-      $('#article-select').val('');
+      $('#article-select').val([]);
+    }
+
+    if (alreadyExistsCount > 0 && addedCount === 0) {
+      showMessage('warning', 'Les articles sélectionnés sont déjà présents dans le pack');
+    } else if (alreadyExistsCount > 0 && addedCount > 0) {
+      showMessage('info', addedCount + ' article(s) ajouté(s). Certains articles étaient déjà présents dans la liste.');
     }
 
     if (window.lucide) lucide.createIcons();
