@@ -348,8 +348,13 @@ class VersementController extends BaseController
         $id = (int)$this->post('id_versement');
         if (!$id) { $this->error('Identifiant invalide'); return; }
         $existing = $this->model->getById($id);
-        if (!$existing || $existing['etablissement_code'] !== Context::etablissement() || $existing['zone_code'] !== Context::zone() || $existing['annee_code'] !== Context::annee()) {
+        if (!$existing || $existing['etablissement_code'] !== Context::etablissement() || $existing['annee_code'] !== Context::annee()) {
             $this->error('Versement introuvable ou non autorisé');
+            return;
+        }
+
+        if (($existing['statut_versement'] ?? '') === 'valide') {
+            $this->error('Action impossible : Ce versement a déjà été validé par la comptabilité et ne peut plus être modifié.');
             return;
         }
 
@@ -572,10 +577,14 @@ class VersementController extends BaseController
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) { 
+            if (!$item || $item['etablissement_code'] !== Context::etablissement() || $item['annee_code'] !== Context::annee()) { 
                 header('Location: ' . RACINE . 'versement/list'); exit(); 
             }
             $encryptedId = $this->validator->crypter($id);
+            if (($item['statut_versement'] ?? '') === 'valide') {
+                header('Location: ' . RACINE . 'versement/details/' . $encryptedId);
+                exit();
+            }
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'versement/list'); exit();
         }

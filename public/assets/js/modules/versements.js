@@ -91,29 +91,62 @@ $(function() {
             const periodeTxt = d.periode_versement_debut && d.periode_versement_fin && d.periode_versement_fin !== d.periode_versement_debut 
               ? `${d.periode_versement_debut} → ${d.periode_versement_fin}`
               : (d.periode_versement_debut || d.periode_versement || (d.created_at_versement ? d.created_at_versement.split(' ')[0] : '-'));
+            const isValide = (d.statut_versement === 'valide' || d.statut_versement === 'validé');
             let validerBtn = '';
             if (isFinanceOrAdmin) {
-              validerBtn = `
-                <button type="button" class="btn btn-valider-versement" 
-                  data-id="${d.id_versement}"
-                  data-code="${d.code_versement_commercial || ''}"
-                  data-commercial="${d.nom_commercial_complet || ''}"
-                  data-zone="${d.libelle_zone || ''}"
-                  data-montant="${d.montant_versement || 0}"
-                  data-periode="${periodeTxt}"
-                  data-ref="${d.caisse_code || (d.reference_versement || '-')}"
-                  data-statut="${d.statut_versement || ''}"
-                  style="background:#059669; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; border:none; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer;" 
-                  title="Contrôler et Valider le versement">
-                  <i data-lucide="check-circle" style="width:14px;height:14px;"></i> Valider
-                </button>
-              `;
+              if (isValide) {
+                validerBtn = `
+                  <button type="button" class="btn" disabled
+                    style="background:#E2E8F0; color:#94A3B8; font-weight:700; border-radius:8px; padding:6px 12px; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:not-allowed; opacity:0.7;" 
+                    title="Versement déjà validé">
+                    <i data-lucide="check-circle" style="width:14px;height:14px;"></i> Validé
+                  </button>
+                `;
+              } else {
+                validerBtn = `
+                  <button type="button" class="btn btn-valider-versement" 
+                    data-id="${d.id_versement}"
+                    data-code="${d.code_versement_commercial || ''}"
+                    data-commercial="${d.nom_commercial_complet || ''}"
+                    data-zone="${d.libelle_zone || ''}"
+                    data-montant="${d.montant_versement || 0}"
+                    data-periode="${periodeTxt}"
+                    data-ref="${d.caisse_code || (d.reference_versement || '-')}"
+                    data-statut="${d.statut_versement || ''}"
+                    style="background:#059669; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; border:none; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer;" 
+                    title="Contrôler et Valider le versement">
+                    <i data-lucide="check-circle" style="width:14px;height:14px;"></i> Valider
+                  </button>
+                `;
+              }
             }
+
+            let editBtn = '';
+            if (!isCommercial) {
+              if (isValide) {
+                editBtn = `
+                  <button type="button" class="btn" disabled 
+                    style="background:#F1F5F9; color:#94A3B8; font-weight:700; border-radius:8px; padding:6px 12px; border:1px solid #E2E8F0; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:not-allowed; opacity:0.7;" 
+                    title="Impossible de modifier un versement validé">
+                    <i data-lucide="lock" style="width:14px;height:14px;"></i> Éditer
+                  </button>
+                `;
+              } else {
+                editBtn = `
+                  <a href="${racine}versement/edition/${editId}" class="btn" 
+                    style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" 
+                    title="Modifier">
+                    <i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer
+                  </a>
+                `;
+              }
+            }
+
             const caisseTarget = d.caisseIdCrypte || (d.editId || d.id_versement);
             return `
               <div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">
                 ${validerBtn}
-                ${!isCommercial ? `<a href="${racine}versement/edition/${editId}" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>` : ''}
+                ${editBtn}
                 <a href="${racine}caisse_commercial/details/${caisseTarget}" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir procès-verbal de caisse"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>
               </div>
             `;

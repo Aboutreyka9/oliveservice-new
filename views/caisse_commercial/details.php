@@ -81,19 +81,26 @@ $ecart = (float)($item['ecart_caisse'] ?? ($soldePhysique - $soldeAttendu));
           </button>
 
           <?php if ((Context::isFinance() || Context::isAdmin()) && !empty($versementLinked)): ?>
-            <button type="button" class="btn btn-valider-versement" 
-              data-id="<?= $versementLinked['id_versement'] ?>"
-              data-code="<?= htmlspecialchars($versementLinked['code_versement_commercial'] ?? '') ?>"
-              data-commercial="<?= htmlspecialchars(trim(($item['nom_user'] ?? '') . ' ' . ($item['prenom_user'] ?? ''))) ?>"
-              data-zone="<?= htmlspecialchars($item['zone_code'] ?? '') ?>"
-              data-montant="<?= (float)($versementLinked['montant_versement'] ?? 0) ?>"
-              data-periode="<?= htmlspecialchars($versementLinked['periode_versement'] ?? date('Y-m-d')) ?>"
-              data-ref="<?= htmlspecialchars($item['code_caisse'] ?? '') ?>"
-              data-statut="<?= htmlspecialchars($versementLinked['statut_versement'] ?? '') ?>"
-              style="background: #059669; color: white; font-weight: 800; border-radius: 10px; padding: 10px 20px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); cursor: pointer;" 
-              title="Contrôler et Valider le versement">
-              <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Valider le Versement
-            </button>
+            <?php $isVersValide = (($versementLinked['statut_versement'] ?? '') === 'valide' || ($versementLinked['statut_versement'] ?? '') === 'validé'); ?>
+            <?php if ($isVersValide): ?>
+              <button type="button" class="btn" disabled style="background: #E2E8F0; color: #64748B; font-weight: 800; border-radius: 10px; padding: 10px 20px; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 8px; cursor: not-allowed; opacity: 0.7;" title="Versement déjà validé">
+                <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Validé
+              </button>
+            <?php else: ?>
+              <button type="button" class="btn btn-valider-versement" 
+                data-id="<?= $versementLinked['id_versement'] ?>"
+                data-code="<?= htmlspecialchars($versementLinked['code_versement_commercial'] ?? '') ?>"
+                data-commercial="<?= htmlspecialchars(trim(($item['nom_user'] ?? '') . ' ' . ($item['prenom_user'] ?? ''))) ?>"
+                data-zone="<?= htmlspecialchars($item['zone_code'] ?? '') ?>"
+                data-montant="<?= (float)($versementLinked['montant_versement'] ?? 0) ?>"
+                data-periode="<?= htmlspecialchars($versementLinked['periode_versement'] ?? date('Y-m-d')) ?>"
+                data-ref="<?= htmlspecialchars($item['code_caisse'] ?? '') ?>"
+                data-statut="<?= htmlspecialchars($versementLinked['statut_versement'] ?? '') ?>"
+                style="background: #059669; color: white; font-weight: 800; border-radius: 10px; padding: 10px 20px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); cursor: pointer;" 
+                title="Contrôler et Valider le versement">
+                <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Valider le Versement
+              </button>
+            <?php endif; ?>
           <?php endif; ?>
         </div>
       </div>
@@ -211,9 +218,9 @@ $ecart = (float)($item['ecart_caisse'] ?? ($soldePhysique - $soldeAttendu));
 <input type="hidden" id="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
 
 <!-- MODALE DE VALIDATION COMPTABLE DU VERSEMENT -->
-<div class="modal-overlay" id="modalValiderVersement" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(5px); padding: 16px;">
-  <div class="modal" style="max-width: 750px; width: 100%; background: #FFFFFF; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.3); overflow: hidden; border: 1px solid #E2E8F0; margin: auto;">
-    <div class="modal-header" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
+<div class="modal-overlay" id="modalValiderVersement" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(5px); padding: 16px; box-sizing: border-box;">
+  <div class="modal" style="max-width: 750px; width: 100%; max-height: calc(100vh - 32px); display: flex; flex-direction: column; background: #FFFFFF; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.3); overflow: hidden; border: 1px solid #E2E8F0; margin: auto;">
+    <div class="modal-header" style="flex-shrink: 0; background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
       <h3 class="modal-title" style="font-weight: 800; font-size: 16px; margin: 0; color: #FFFFFF; display: flex; align-items: center; gap: 10px;">
         <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #10B981;"></i> Contrôle & Validation Comptable
       </h3>
@@ -222,9 +229,9 @@ $ecart = (float)($item['ecart_caisse'] ?? ($soldePhysique - $soldeAttendu));
       </button>
     </div>
 
-    <form id="form-valider-versement" style="margin: 0;">
+    <form id="form-valider-versement" style="margin: 0; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden;">
       <input type="hidden" name="id_versement" id="val_id_versement" value="">
-      <div class="modal-body" style="padding: 24px; max-height: 78vh; overflow-y: auto;">
+      <div class="modal-body" style="padding: 24px; flex: 1; min-height: 0; overflow-y: auto;">
         
         <!-- CARTE RÉCAPITULATIVE DU VERSEMENT -->
         <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
@@ -429,7 +436,7 @@ $ecart = (float)($item['ecart_caisse'] ?? ($soldePhysique - $soldeAttendu));
 
       </div>
 
-      <div class="modal-footer" style="background: #F8FAFC; padding: 16px 24px; border-top: 1px solid #E2E8F0; display: flex; justify-content: flex-end; gap: 12px;">
+      <div class="modal-footer" style="flex-shrink: 0; background: #F8FAFC; padding: 16px 24px; border-top: 1px solid #E2E8F0; display: flex; justify-content: flex-end; gap: 12px;">
         <button type="button" class="btn modal-close-btn" style="background: #FFFFFF; color: #475569; font-weight: 700; border-radius: 8px; padding: 10px 18px; border: 1px solid #CBD5E1; font-size: 13px; cursor: pointer;">
           Annuler
         </button>

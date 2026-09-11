@@ -38,16 +38,30 @@ $statut = $item['statut_versement'] ?? 'En attente';
             <i data-lucide="arrow-left" style="width: 16px; height: 16px; color: #64748B;"></i> Retour aux versements
           </a>
 
+          <?php $isValide = ($statut === 'valide' || $statut === 'validé'); ?>
+
           <?php if (!Context::isCommercial()): ?>
-            <a href="<?= RACINE ?>versement/edition/<?= $encryptedId ?>" class="btn" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #1E3A5F; font-weight: 700; border-radius: 10px; padding: 10px 18px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-              <i data-lucide="edit" style="width: 16px; height: 16px;"></i> Modifier
-            </a>
+            <?php if ($isValide): ?>
+              <button type="button" class="btn" disabled style="background: #F1F5F9; border: 1px solid #E2E8F0; color: #94A3B8; font-weight: 700; border-radius: 10px; padding: 10px 18px; display: inline-flex; align-items: center; gap: 8px; cursor: not-allowed; opacity: 0.7;" title="Impossible de modifier un versement validé">
+                <i data-lucide="lock" style="width: 16px; height: 16px;"></i> Modifier
+              </button>
+            <?php else: ?>
+              <a href="<?= RACINE ?>versement/edition/<?= $encryptedId ?>" class="btn" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #1E3A5F; font-weight: 700; border-radius: 10px; padding: 10px 18px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="edit" style="width: 16px; height: 16px;"></i> Modifier
+              </a>
+            <?php endif; ?>
           <?php endif; ?>
 
           <?php if ($canValidate): ?>
-            <button type="button" id="btn-open-valider-modal" class="btn" style="background: #059669; color: white; font-weight: 800; border-radius: 10px; padding: 10px 20px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); cursor: pointer;">
-              <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Contrôler / Valider
-            </button>
+            <?php if ($isValide): ?>
+              <button type="button" class="btn" disabled style="background: #E2E8F0; color: #64748B; font-weight: 800; border-radius: 10px; padding: 10px 20px; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 8px; cursor: not-allowed; opacity: 0.7;" title="Versement déjà validé">
+                <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Validé
+              </button>
+            <?php else: ?>
+              <button type="button" id="btn-open-valider-modal" class="btn" style="background: #059669; color: white; font-weight: 800; border-radius: 10px; padding: 10px 20px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); cursor: pointer;">
+                <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Contrôler / Valider
+              </button>
+            <?php endif; ?>
           <?php endif; ?>
         </div>
       </div>
