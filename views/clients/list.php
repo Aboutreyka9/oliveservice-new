@@ -477,7 +477,7 @@ $stats = $stats ?? [
             <span>Actualiser</span>
           </button>
           
-          <?php if (Context::can('COMMERCIAL_ADD_SOUSCRIPTION', ['ROLE_COMMERCIAL', 'ROLE_ADMIN'])): ?>
+          <?php if (Context::can('COMMERCIAL_ADD_SOUSCRIPTION')): ?>
           <a href="<?= RACINE ?>souscription/wizard" class="btn-add-sous" title="Lancer une nouvelle souscription pack">
             <i data-lucide="plus-circle" style="width: 17px; height: 17px;"></i>
             <span>Nouvelle Souscription</span>
@@ -611,8 +611,7 @@ $stats = $stats ?? [
                 <th style="padding: 12px;">Contact Téléphonique</th>
                 <th style="padding: 12px;">N° CNI</th>
                 <th style="padding: 12px;">Zone & Résidence</th>
-                <th style="padding: 12px; text-align: center;">Souscriptions</th>
-                <th style="padding: 12px; text-align: right;">Cumul Cotisé</th>
+                <th style="padding: 12px; text-align: center;">Souscription</th>
                 <th style="padding: 12px; text-align: center;">Statut</th>
                 <th style="padding: 12px; text-align: right;">Actions</th>
               </tr>
@@ -625,5 +624,5 @@ $stats = $stats ?? [
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/clients.js?v=2.0"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/clients.js?v=2.2"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

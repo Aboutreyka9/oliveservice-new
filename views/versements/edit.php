@@ -68,10 +68,11 @@ $zones = $zones ?? [];
 
               <div class="form-group" style="width: 100%; box-sizing: border-box;">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Zone d'Activité</label>
+                <?php $defaultZoneVersement = !empty($item['zone_code']) ? $item['zone_code'] : Context::zone(); ?>
                 <select name="zone_code" class="form-control select2" style="width: 100%;">
                   <option value="">-- Sélectionner la zone --</option>
                   <?php foreach ($zones as $z): ?>
-                    <option value="<?= $z['code_zone'] ?>" <?= ($item['zone_code'] ?? '') === $z['code_zone'] ? 'selected' : '' ?>>
+                    <option value="<?= $z['code_zone'] ?>" <?= ($defaultZoneVersement === $z['code_zone']) ? 'selected' : '' ?>>
                       <?= htmlspecialchars($z['libelle_zone']) ?>
                     </option>
                   <?php endforeach; ?>
@@ -98,15 +99,15 @@ $zones = $zones ?? [];
               </div>
 
               <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Référence Versement / Bordereau</label>
-                <input type="text" name="reference_versement" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #1E3A5F; font-family: monospace; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" value="<?= htmlspecialchars($item['reference_versement'] ?? '') ?>" placeholder="Ex: VRS-2026-001">
+                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Code Caisse / Référence Versement</label>
+                <input type="text" name="caisse_code" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #1E3A5F; font-family: monospace; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" value="<?= htmlspecialchars($item['caisse_code'] ?? ($item['reference_versement'] ?? '')) ?>" placeholder="Ex: CAISSE-2026-001">
               </div>
             </div>
           </div>
 
           <!-- BOUTONS D'ACTION -->
           <div style="display: flex; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #E2E8F0; width: 100%; flex-wrap: wrap;">
-            <button type="submit" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
+            <button type="submit" id="btn-submit-versement" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
               <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> <?= $isEdit ? 'Enregistrer les modifications' : 'Valider le Versement' ?>
             </button>
             <a href="<?= RACINE ?>versement/list" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 10px; padding: 12px 24px; text-decoration: none; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 6px;">
@@ -143,6 +144,12 @@ $(document).ready(function() {
 
   $('#form-versement').on('submit', function(e) {
     e.preventDefault();
+    var $btnSubmit = $('#btn-submit-versement');
+    var origHtml = $btnSubmit.html();
+    $btnSubmit.prop('disabled', true).css({ 'opacity': '0.65', 'pointer-events': 'none' })
+              .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Enregistrement en cours...');
+    if (window.lucide) lucide.createIcons();
+
     var formData = new FormData(this);
     $.ajax({
       url: $(this).attr('action'),
@@ -157,12 +164,19 @@ $(document).ready(function() {
           setTimeout(function() { window.location.href = '<?= RACINE ?>versement/list'; }, 1000);
         } else {
           if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
+          resetBtn();
         }
       },
       error: function() {
         if (window.toastr) toastr.error('Erreur réseau');
+        resetBtn();
       }
     });
+
+    function resetBtn() {
+      $btnSubmit.prop('disabled', false).css({ 'opacity': '1', 'pointer-events': 'auto' }).html(origHtml);
+      if (window.lucide) lucide.createIcons();
+    }
   });
 });
 </script>

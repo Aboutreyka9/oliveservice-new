@@ -88,15 +88,24 @@ $(function() {
           className: 'text-end',
           render: function(d) {
             const editId = d.editId || d.id_souscription;
-            return `
+            const canCollect = window.AppConfig && window.AppConfig.can ? window.AppConfig.can('COMMERCIAL_COLLECT_COTISATION') : false;
+            const canEdit = window.AppConfig && window.AppConfig.can ? window.AppConfig.can('GESTIONNAIRE_EDIT_SOUSCRIPTION') : false;
+
+            const situationBtn = canCollect ? `
               <a href="${racine}cautisation-payment/situation/${d.code_souscription}" class="btn btn-sm" style="background:#10B981; border-color:#10B981; color:#FFF; font-weight:700; border-radius:6px; padding:5px 10px; margin-right:4px;" title="Situation des versements">
                 <i data-lucide="credit-card" style="width:13px;height:13px; display:inline-block; vertical-align:middle;"></i> Situation
-              </a>
+              </a>` : '';
+
+            const editBtn = canEdit ? `
               <a href="${racine}souscription/edition/${editId}" class="btn btn-sm" style="background:#F1F5F9; border-color:#CBD5E1; color:#334155; font-weight:700; border-radius:6px; padding:5px 8px; margin-right:4px;" title="Éditer">
                 <i data-lucide="edit-3" style="width:13px;height:13px; display:inline-block; vertical-align:middle;"></i>
-              </a>
+              </a>` : '';
+
+            return `
+              ${situationBtn}
+              ${editBtn}
               <a href="${racine}souscription/details/${editId}" class="btn btn-sm" style="background:#1E3A5F; border-color:#1E3A5F; color:#FFF; font-weight:700; border-radius:6px; padding:5px 8px;" title="Détails complets">
-                <i data-lucide="eye" style="width:13px;height:13px; display:inline-block; vertical-align:middle;"></i>
+                <i data-lucide="eye" style="width:13px;height:13px; display:inline-block; vertical-align:middle;"></i> Détails
               </a>
             `;
           } 

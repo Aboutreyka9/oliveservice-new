@@ -21,9 +21,16 @@
           </div>
         </div>
 
-        <a href="<?= RACINE ?>caisse_commercial/formulaire" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); text-decoration: none; cursor: pointer;">
-          <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Ma Caisse Journalière
-        </a>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <?php if (Context::hasPermission('COMMERCIAL_MAKE_VERSEMENT') || Context::isAdmin()): ?>
+            <a href="<?= RACINE ?>versement/formulaire" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); text-decoration: none; cursor: pointer;">
+              <i data-lucide="arrow-down-left" style="width: 18px; height: 18px;"></i> Faire un Versement
+            </a>
+          <?php endif; ?>
+          <a href="<?= RACINE ?>caisse_commercial/formulaire" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); text-decoration: none; cursor: pointer;">
+            <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Ma Caisse Journalière
+          </a>
+        </div>
       </div>
 
       <!-- CARTE TABLEAU PRINCIPALE (NAVY PREMIUM) -->

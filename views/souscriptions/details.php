@@ -35,12 +35,16 @@ $joursRestants = max(0, $dureeTotal - $joursCotises);
           <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Détails contractuels, packs souscrits et suivi des encaissements terrain</p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION')): ?>
           <a href="<?= RACINE ?>cautisation-payment/situation/<?= $codeSouscription ?>" class="btn" style="background: #10B981; border-color: #10B981; color: #FFF; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; text-decoration: none; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
             <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i> Situation & Encaissement
           </a>
+          <?php endif; ?>
+          <?php if (Context::can('GESTIONNAIRE_EDIT_SOUSCRIPTION')): ?>
           <a href="<?= RACINE ?>souscription/edition/<?= $encryptedId ?>" class="btn" style="background: #1E3A5F; border-color: #1E3A5F; color: #FFF; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; text-decoration: none;">
             <i data-lucide="edit-3" style="width: 18px; height: 18px;"></i> Modifier Contrat
           </a>
+          <?php endif; ?>
           <a href="<?= RACINE ?>souscription/list" class="btn" style="background: #F1F5F9; border-color: #CBD5E1; color: #475569; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 16px; text-decoration: none;">
             <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> Retour
           </a>
@@ -214,9 +218,11 @@ $joursRestants = max(0, $dureeTotal - $joursCotises);
           <h3 style="font-size: 15px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 8px;">
             <i data-lucide="history" style="width: 18px; height: 18px; color: #10B981;"></i> Historique des cotisations collectées sur le terrain
           </h3>
+          <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION')): ?>
           <a href="<?= RACINE ?>cautisation-payment/situation/<?= $codeSouscription ?>" class="btn btn-sm" style="background: #10B981; border-color: #10B981; color: #FFF; font-weight: 700; border-radius: 6px; font-size: 12px; text-decoration: none; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i> Encaisser une Cotisation
           </a>
+          <?php endif; ?>
         </div>
 
         <?php if (empty($cotisations)): ?>

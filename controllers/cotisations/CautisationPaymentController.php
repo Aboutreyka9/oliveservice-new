@@ -275,12 +275,27 @@ class CautisationPaymentController extends BaseController
         }
 
         $userCode = Context::user();
-        $anneeCode = Context::annee();
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone() ?: ($souscription['zone_code'] ?? '');
 
-        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+        // Priorité : annee_code soumis > souscription['annee_code'] > Context::annee()
+        $anneeCode = !empty($data['annee_code']) ? trim($data['annee_code']) : (!empty($souscription['annee_code']) ? $souscription['annee_code'] : Context::annee());
+
+        if (empty($anneeCode)) {
+            $this->error("L'année d'exercice est obligatoire pour enregistrer un versement/cotisation. Veuillez configurer une année active.");
+            return;
+        }
+
+        // Vérification dans annees
+        $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+        $stmtAnneeCheck->execute([$anneeCode]);
+        if (!$stmtAnneeCheck->fetch()) {
+            $this->error("L'année d'activité associée à la cotisation est invalide ou introuvable.");
+            return;
+        }
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
             return;
         }
 
@@ -485,13 +500,6 @@ class CautisationPaymentController extends BaseController
         $totaux = $this->getCautisationsTotaux($codeSouscription);
         $totalCotise = (float) ($totaux['total_cotise'] ?? 0);
         $nombreJoursPayes = (int) ($totaux['nombre_jours_payes'] ?? 0);
-
-        if ($totalCotise <= 0 && !empty($souscription['montant_total_cotise'])) {
-            $totalCotise = (float) $souscription['montant_total_cotise'];
-        }
-        if ($nombreJoursPayes <= 0 && !empty($souscription['nombre_jour_cotise'])) {
-            $nombreJoursPayes = (int) $souscription['nombre_jour_cotise'];
-        }
 
         $soldeRestant = max(0, $montantTotalPrevu - $totalCotise);
         $joursRestants = max(0, $nombreJourSession - $nombreJoursPayes);

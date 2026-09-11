@@ -21,17 +21,17 @@
           </div>
           <div>
             <h1 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0; line-height: 1.2;">
-              Utilisateurs Système & Sécurité
+              Liste des Commerciaux & Agents Terrain
             </h1>
             <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0; font-weight: 500;">
-              Gestion des comptes du personnel, rôles attribués et accès sécurisés
+              Registre central et gestion exclusive de l'équipe commerciale
             </p>
           </div>
         </div>
 
-        <?php if (Context::can('ADMIN_MANAGE_USERS', ['ROLE_ADMIN', 'ROLE_SUPERADMIN'])): ?>
+        <?php if (Context::can('ADMIN_MANAGE_USERS') || Context::can('GESTIONNAIRE_MANAGE_PACKS')): ?>
         <a href="<?= RACINE ?>user/formulaire" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); text-decoration: none; cursor: pointer;">
-          <i data-lucide="user-plus" style="width: 18px; height: 18px;"></i> Nouvel Utilisateur
+          <i data-lucide="user-plus" style="width: 18px; height: 18px;"></i> Recruter un Commercial
         </a>
         <?php endif; ?>
       </div>
@@ -52,7 +52,7 @@
                 <option value="">Toutes les zones (Affichage Global)</option>
                 <?php if (!empty($zones)): ?>
                   <?php foreach ($zones as $z): ?>
-                    <option value="<?= htmlspecialchars($z['code_zone']) ?>">
+                    <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ($userZoneCode ?? Context::zone()) === $z['code_zone'] ? 'selected' : '' ?>>
                       <?= htmlspecialchars($z['libelle_zone']) ?>
                     </option>
                   <?php endforeach; ?>

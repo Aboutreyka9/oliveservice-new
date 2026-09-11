@@ -10,17 +10,73 @@ class CotisationController extends BaseController
     public function list()
     {
         $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
-        $this->loadView('../views/cotisations/list.php');
+
+        $dateDebut = $_GET['date_debut'] ?? '';
+        $dateFin = $_GET['date_fin'] ?? '';
+
+        $sqlStats = "
+            SELECT 
+                COUNT(*) as total_cotisations,
+                COALESCE(SUM(c.montant_cautisation_client), 0) as total_montant,
+                COALESCE(SUM(c.nombre_jour), 0) as total_jours,
+                COUNT(CASE WHEN c.statut_cautisation_client = 'valide' THEN 1 END) as count_valide,
+                COUNT(CASE WHEN c.statut_cautisation_client = 'en_attente' THEN 1 END) as count_attente
+            FROM cautisation_clients c
+            WHERE 1=1
+        ";
+        $params = [];
+        $conds = [];
+        Context::applyTripleFilter('c', $conds, $params, true, false);
+
+        if (!empty($dateDebut)) {
+            $conds[] = "DATE(c.date_cautisation) >= ?";
+            $params[] = $dateDebut;
+        }
+        if (!empty($dateFin)) {
+            $conds[] = "DATE(c.date_cautisation) <= ?";
+            $params[] = $dateFin;
+        }
+
+        if (!empty($conds)) {
+            $sqlStats .= " AND " . implode(' AND ', $conds);
+        }
+
+        $stmtStats = $this->model->getCon()->prepare($sqlStats);
+        $stmtStats->execute($params);
+        $stats = $stmtStats->fetch(PDO::FETCH_ASSOC) ?: [
+            'total_cotisations' => 0,
+            'total_montant' => 0,
+            'total_jours' => 0,
+            'count_valide' => 0,
+            'count_attente' => 0
+        ];
+
+        $this->loadView('../views/cotisations/list.php', [
+            'stats' => $stats
+        ]);
     }
 
     public function apiList()
     {
         $this->requirePermission(['COMMERCIAL_VIEW_OWN_COTISATIONS', 'FINANCE_VIEW_ALL_COTISATIONS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         
+        $dateDebut = $_REQUEST['date_debut'] ?? '';
+        $dateFin = $_REQUEST['date_fin'] ?? '';
+
         $sql = "
             SELECT c.*, 
                    cl.nom_client, cl.telephone_client,
-                   u.nom_user as nom_commercial, u.prenom_user as prenom_commercial
+                   u.nom_user as nom_commercial, u.prenom_user as prenom_commercial,
+                   (
+                       SELECT cs.statut_caisse 
+                       FROM caisses cs 
+                       WHERE (
+                           (c.caisse_code IS NOT NULL AND c.caisse_code != '' AND cs.code_caisse = c.caisse_code)
+                           OR (cs.user_code = c.commercial_code AND DATE(cs.date_ouverture) = DATE(c.date_cautisation))
+                       )
+                       ORDER BY cs.id_caisse DESC 
+                       LIMIT 1
+                   ) as statut_caisse_commercial
             FROM cautisation_clients c
             LEFT JOIN clients cl ON cl.code_client = c.client_code
             LEFT JOIN users u ON u.code_user = c.commercial_code
@@ -29,6 +85,16 @@ class CotisationController extends BaseController
         $params = [];
         $conds = [];
         Context::applyTripleFilter('c', $conds, $params, true, false);
+
+        if (!empty($dateDebut)) {
+            $conds[] = "DATE(c.date_cautisation) >= ?";
+            $params[] = $dateDebut;
+        }
+        if (!empty($dateFin)) {
+            $conds[] = "DATE(c.date_cautisation) <= ?";
+            $params[] = $dateFin;
+        }
+
         if (!empty($conds)) {
             $sql .= " AND " . implode(' AND ', $conds);
         }
@@ -43,14 +109,54 @@ class CotisationController extends BaseController
         foreach ($items as $c) {
             $id = $c['id_cautisation_client'];
             $idCrypte = $this->validator->crypter($id);
+            $sousCode = $c['souscription_code'] ?? ($c['code_souscription'] ?? '');
+            $caisseCloturee = (($c['statut_caisse_commercial'] ?? '') === 'cloture');
+            
+            $rawDate = $c['date_cautisation'] ?? '';
+            $dateFormatted = !empty($rawDate) ? date('d/m/Y', strtotime($rawDate)) : '-';
+            $timeFormatted = (!empty($rawDate) && strpos($rawDate, ' ') !== false) ? date('H:i', strtotime($rawDate)) : '';
+
             $data[] = array_merge($c, [
                 'id' => $id,
                 'editId' => $idCrypte,
+                'souscription_code' => $sousCode,
+                'code_souscription' => $sousCode,
+                'date_formatted' => $dateFormatted,
+                'time_formatted' => $timeFormatted,
                 'nom_client_complet' => trim(($c['nom_client'] ?? '')),
-                'nom_commercial_complet' => trim(($c['nom_commercial'] ?? '') . ' ' . ($c['prenom_commercial'] ?? ''))
+                'nom_commercial_complet' => trim(($c['nom_commercial'] ?? '') . ' ' . ($c['prenom_commercial'] ?? '')),
+                'caisse_cloturee' => $caisseCloturee
             ]);
         }
-        $this->json(['data' => $data]);
+
+        // Calcul des statistiques sur la sélection filtrée
+        $sqlStats = "
+            SELECT 
+                COUNT(*) as total_cotisations,
+                COALESCE(SUM(c.montant_cautisation_client), 0) as total_montant,
+                COALESCE(SUM(c.nombre_jour), 0) as total_jours,
+                COUNT(CASE WHEN c.statut_cautisation_client = 'valide' THEN 1 END) as count_valide,
+                COUNT(CASE WHEN c.statut_cautisation_client = 'en_attente' THEN 1 END) as count_attente
+            FROM cautisation_clients c
+            WHERE 1=1
+        ";
+        if (!empty($conds)) {
+            $sqlStats .= " AND " . implode(' AND ', $conds);
+        }
+        $stmtStats = $this->model->getCon()->prepare($sqlStats);
+        $stmtStats->execute($params);
+        $stats = $stmtStats->fetch(PDO::FETCH_ASSOC) ?: [
+            'total_cotisations' => 0,
+            'total_montant' => 0,
+            'total_jours' => 0,
+            'count_valide' => 0,
+            'count_attente' => 0
+        ];
+
+        $this->json([
+            'data' => $data,
+            'stats' => $stats
+        ]);
     }
 
     public function add()
@@ -188,6 +294,27 @@ class CotisationController extends BaseController
         }
     }
 
+    private function isCaisseClotureeForItem(array $item): bool
+    {
+        $caisseCode = $item['caisse_code'] ?? '';
+        $commCode = $item['commercial_code'] ?? '';
+        $dateCotis = !empty($item['date_cautisation']) ? date('Y-m-d', strtotime($item['date_cautisation'])) : date('Y-m-d');
+
+        $stmt = $this->model->getCon()->prepare("
+            SELECT cs.statut_caisse 
+            FROM caisses cs 
+            WHERE (
+                (? != '' AND cs.code_caisse = ?)
+                OR (cs.user_code = ? AND DATE(cs.date_ouverture) = ?)
+            )
+            ORDER BY cs.id_caisse DESC 
+            LIMIT 1
+        ");
+        $stmt->execute([$caisseCode, $caisseCode, $commCode, $dateCotis]);
+        $statut = $stmt->fetchColumn();
+        return ($statut === 'cloture');
+    }
+
     public function edit()
     {
         $this->requirePost(false);
@@ -201,6 +328,11 @@ class CotisationController extends BaseController
 
         $id = (int)$this->post('id_cautisation_client');
         if (!$id) { $this->error('Identifiant invalide'); return; }
+        $item = $this->model->getById($id);
+        if ($item && $this->isCaisseClotureeForItem($item)) {
+            $this->error('Modification impossible : la caisse du commercial pour cette cotisation est déjà clôturée.');
+            return;
+        }
         $data = $_POST;
         unset($data['csrf_token']);
 
@@ -225,7 +357,12 @@ class CotisationController extends BaseController
         }
 
         $id = $this->post('id');
-        if ($id && $this->model->getById($id)) {
+        $item = $id ? $this->model->getById($id) : null;
+        if ($item) {
+            if ($this->isCaisseClotureeForItem($item)) {
+                $this->error('Action impossible : la caisse du commercial pour cette cotisation est déjà clôturée.');
+                return;
+            }
             if ($this->model->toggleStatus($id)) {
                 $this->success('Statut mis à jour avec succès!', ['reload' => true]);
             } else {
@@ -297,6 +434,10 @@ class CotisationController extends BaseController
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
             if (!$item) { header('Location: ' . RACINE . 'cotisation/list'); exit(); }
+            if ($this->isCaisseClotureeForItem($item)) {
+                header('Location: ' . RACINE . 'cotisation/list');
+                exit();
+            }
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'cotisation/list'); exit();

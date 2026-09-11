@@ -8,8 +8,14 @@ $(function() {
 
   const $tableCotis = $('#table-cotisations');
   if ($tableCotis.length) {
-    $tableCotis.DataTable({
-      ajax: racine + 'cotisation/apiList',
+    const table = $tableCotis.DataTable({
+      ajax: {
+        url: racine + 'cotisation/apiList',
+        data: function(d) {
+          d.date_debut = $('#filter-date-debut').val() || '';
+          d.date_fin = $('#filter-date-fin').val() || '';
+        }
+      },
       processing: true,
       autoWidth: false,
       columns: [
@@ -24,10 +30,13 @@ $(function() {
         { 
           data: 'date_cautisation', 
           defaultContent: '-', 
-          width: '100px',
-          render: function(d) {
+          width: '140px',
+          render: function(d, type, row) {
             if (!d) return '-';
-            return '<span style="font-size:12px; color:#475569; font-weight:600;">' + d + '</span>';
+            var formatted = (row && row.date_formatted) ? row.date_formatted : d;
+            var time = (row && row.time_formatted) ? row.time_formatted : '';
+            var timeBadge = time ? '<span style="color:#64748B; font-size:11px; font-weight:600; background:#F1F5F9; padding:2px 6px; border-radius:4px; margin-left:4px;">' + time + '</span>' : '';
+            return '<div style="display:inline-flex; align-items:center; gap:4px; font-weight:700; color:#1E3A5F; font-size:13px;"><i data-lucide="calendar" style="width:14px;height:14px;color:#059669;"></i> <span>' + formatted + '</span>' + timeBadge + '</div>';
           }
         },
         { 
@@ -37,9 +46,12 @@ $(function() {
           }
         },
         { 
-          data: 'libelle_pack', 
-          render: function(d) {
-            return '<span style="font-weight:600; color:#334155;">' + (d || '-') + '</span>';
+          data: 'souscription_code', 
+          defaultContent: '-',
+          render: function(d, type, row) {
+            var val = d || (row ? (row.souscription_code || row.code_souscription) : '');
+            if (!val) return '-';
+            return '<code style="font-weight:700; color:#059669; background:#ECFDF5; padding:4px 8px; border-radius:6px; font-size:12px; border:1px solid #A7F3D0;">' + val + '</code>';
           }
         },
         { 
@@ -91,8 +103,17 @@ $(function() {
           className: 'text-end',
           render: function(d) {
             const editId = d.editId || d.id_cautisation_client;
+            const isCloturee = d.caisse_cloturee || (d.statut_caisse_commercial === 'cloture');
+            
+            let editBtn = '';
+            if (isCloturee) {
+              editBtn = '<button type="button" class="btn" style="background:#F1F5F9; color:#94A3B8; font-weight:700; border-radius:8px; padding:6px 12px; border:1px solid #E2E8F0; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:not-allowed; opacity:0.65;" disabled title="Caisse clôturée - Édition impossible"><i data-lucide="lock" style="width:14px;height:14px;"></i> Éditer</button>';
+            } else {
+              editBtn = '<a href="' + racine + 'cotisation/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>';
+            }
+
             return '<div style="display:flex; justify-content:flex-end; gap:6px;">' +
-                   '<a href="' + racine + 'cotisation/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>' +
+                   editBtn +
                    '<a href="' + racine + 'cotisation/details/' + editId + '" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir reçu"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>' +
                    '</div>';
           } 
@@ -102,6 +123,57 @@ $(function() {
       drawCallback: function() {
         if (window.lucide) lucide.createIcons();
       }
+    });
+
+    // Mise à jour dynamique des cartes KPI à chaque rechargement DataTables
+    $tableCotis.on('xhr.dt', function(e, settings, json) {
+      if (json && json.stats) {
+        var s = json.stats;
+        $('#kpi-total-montant').html(Number(s.total_montant || 0).toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">FCFA</small>');
+        $('#kpi-total-cotisations').html(Number(s.total_cotisations || 0).toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">opér.</small>');
+        $('#kpi-total-jours').html('+' + Number(s.total_jours || 0).toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">j</small>');
+        $('#kpi-count-valide').text((s.count_valide || 0) + ' Val.');
+        $('#kpi-count-attente').text((s.count_attente || 0) + ' Att.');
+      }
+    });
+
+    // --- EVENEMENTS FILTRE DE PERIODE ---
+    $('#btn-appliquer-filtre').on('click', function() {
+      table.ajax.reload();
+    });
+
+    $('#btn-reset-filtre').on('click', function() {
+      $('#filter-date-debut').val('');
+      $('#filter-date-fin').val('');
+      $('.btn-shortcut-date').css({ 'background': '#F8FAFC', 'color': '#334155', 'border-color': '#CBD5E1' });
+      table.ajax.reload();
+    });
+
+    $('.btn-shortcut-date').on('click', function() {
+      var range = $(this).data('range');
+      var now = new Date();
+      var yyyy = now.getFullYear();
+      var mm = String(now.getMonth() + 1).padStart(2, '0');
+      var dd = String(now.getDate()).padStart(2, '0');
+
+      $('.btn-shortcut-date').css({ 'background': '#F8FAFC', 'color': '#334155', 'border-color': '#CBD5E1' });
+      $(this).css({ 'background': '#1E3A5F', 'color': '#FFFFFF', 'border-color': '#1E3A5F' });
+
+      if (range === 'today') {
+        var todayStr = yyyy + '-' + mm + '-' + dd;
+        $('#filter-date-debut').val(todayStr);
+        $('#filter-date-fin').val(todayStr);
+      } else if (range === 'month') {
+        var firstDay = yyyy + '-' + mm + '-01';
+        var lastDayObj = new Date(yyyy, now.getMonth() + 1, 0);
+        var lastDay = yyyy + '-' + mm + '-' + String(lastDayObj.getDate()).padStart(2, '0');
+        $('#filter-date-debut').val(firstDay);
+        $('#filter-date-fin').val(lastDay);
+      } else if (range === 'year') {
+        $('#filter-date-debut').val(yyyy + '-01-01');
+        $('#filter-date-fin').val(yyyy + '-12-31');
+      }
+      table.ajax.reload();
     });
   }
 });

@@ -113,12 +113,27 @@ class DepenseController extends BaseController
         }
 
         $userCode = Context::user();
-        $anneeCode = Context::annee();
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
 
-        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+        // Priorité : annee_code soumis > Context::annee()
+        $anneeCode = !empty($data['annee_code']) ? trim($data['annee_code']) : Context::annee();
+
+        if (empty($anneeCode)) {
+            $this->error("L'année d'exercice est obligatoire pour enregistrer une dépense. Veuillez sélectionner une année valide ou configurer une année active.");
+            return;
+        }
+
+        // Vérification de l'existence dans la table annees
+        $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+        $stmtAnneeCheck->execute([$anneeCode]);
+        if (!$stmtAnneeCheck->fetch()) {
+            $this->error("L'année d'exercice sélectionnée pour la dépense est invalide ou introuvable.");
+            return;
+        }
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
             return;
         }
 
@@ -250,6 +265,10 @@ class DepenseController extends BaseController
         if ($id && ($item = $this->model->getById($id))) {
             if ($item['etablissement_code'] !== Context::etablissement() || $item['zone_code'] !== Context::zone() || $item['annee_code'] !== Context::annee()) {
                 $this->error('Dépense introuvable');
+                return;
+            }
+            if (($item['statut_depense'] ?? '') === 'actif') {
+                $this->error('Cette dépense est déjà active. La modification de son statut est verrouillée.');
                 return;
             }
             if ($this->model->toggleStatus($id)) {

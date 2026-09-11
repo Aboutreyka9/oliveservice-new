@@ -132,12 +132,27 @@ class SouscriptionController extends BaseController
         }
 
         $etabCode = Context::etablissement();
-        $anneeCode = Context::annee();
-        $zoneCode = $data['zone_code'] ?? Context::zone();
         $userCode = Context::user();
+        $zoneCode = $data['zone_code'] ?? Context::zone();
 
-        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+        // Priorité : annee_code soumis > Context::annee()
+        $anneeCode = !empty($data['annee_code']) ? trim($data['annee_code']) : Context::annee();
+
+        if (empty($anneeCode)) {
+            $this->error("L'année d'activité est obligatoire pour enregistrer une souscription. Veuillez sélectionner une année valide ou configurer une année active.");
+            return;
+        }
+
+        // Vérification de l'existence dans annees
+        $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+        $stmtAnneeCheck->execute([$anneeCode]);
+        if (!$stmtAnneeCheck->fetch()) {
+            $this->error("L'année d'activité sélectionnée pour la souscription est invalide ou introuvable.");
+            return;
+        }
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone et l'établissement sont obligatoires et ne peuvent pas être null.");
             return;
         }
 
@@ -363,7 +378,7 @@ class SouscriptionController extends BaseController
 
     public function wizardData()
     {
-        $this->requirePermission('COMMERCIAL_ADD_SOUSCRIPTION');
+        $this->requirePermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_ADD_SOUSCRIPTION']);
         $sessionCode = $_GET['session_code'] ?? '';
         $categorieCode = $_GET['categorie_code'] ?? '';
 
@@ -424,8 +439,23 @@ class SouscriptionController extends BaseController
 
         $userCode = Context::user() ?? '';
         $etabCode = Context::etablissement();
-        $anneeCode = Context::annee();
         $zoneCode = $data['zone_code'] ?? Context::zone();
+        
+        // Priorité : annee_code soumis > Context::annee()
+        $anneeCode = !empty($data['annee_code']) ? trim($data['annee_code']) : Context::annee();
+
+        if (empty($anneeCode)) {
+            $this->error("L'année d'activité est obligatoire pour finaliser la souscription. Veuillez configurer une année active.");
+            return;
+        }
+
+        $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+        $stmtAnneeCheck->execute([$anneeCode]);
+        if (!$stmtAnneeCheck->fetch()) {
+            $this->error("L'année d'activité associée est invalide ou introuvable.");
+            return;
+        }
+
         $sessionCode = $data['session_code'] ?? '';
         $codeSouscription = $this->validator->generateCode('souscriptions', 'code_souscription', 'SUB-', 8);
 
@@ -665,7 +695,40 @@ class SouscriptionController extends BaseController
     public function ressouscription()
     {
         $this->requirePermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_ADD_SOUSCRIPTION']);
-        $this->loadView('../views/souscriptions/ressouscription.php');
+
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
+        $stmtS = $this->model->getCon()->prepare("SELECT * FROM sessions WHERE statut_session='actif' AND etablissement_code = ? AND zone_code = ? AND annee_code = ?");
+        $stmtS->execute([$etabCode, $zoneCode, $anneeCode]);
+        $sessions = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+
+        $modelCat = new ModelCategoriePack();
+        $categories = $modelCat->getAll();
+
+        $clientCode = trim($_GET['client_code'] ?? ($_GET['client'] ?? ''));
+        $preselectedClient = null;
+
+        if (!empty($clientCode)) {
+            $stmt = $this->model->getCon()->prepare("
+                SELECT c.id_client, c.code_client, c.nom_client, c.telephone_client, c.sexe_client, 
+                       c.lieu_residence_client, c.email_client, c.profession_client, c.numero_cni, c.statut_client,
+                       (SELECT COUNT(*) FROM souscriptions sub WHERE sub.client_code = c.code_client) as total_souscriptions
+                FROM clients c
+                WHERE (c.code_client = ? OR c.id_client = ?)
+                  AND c.etablissement_code = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$clientCode, $clientCode, $etabCode]);
+            $preselectedClient = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+
+        $this->loadView('../views/souscriptions/ressouscription.php', [
+            'sessions' => $sessions,
+            'categories' => $categories,
+            'preselectedClient' => $preselectedClient
+        ]);
     }
 
     /**

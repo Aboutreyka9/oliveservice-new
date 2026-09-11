@@ -33,7 +33,7 @@ $commerciaux = $commerciaux ?? [];
       </div>
 
       <!-- CARTE FORMULAIRE PRINCIPALE -->
-      <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 32px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; max-width: 760px; box-sizing: border-box;">
+      <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 32px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; max-width: 100%; box-sizing: border-box;">
         <form id="form-cotisation" action="<?= RACINE ?>cotisation/<?= $isEdit ? 'edit' : 'add' ?>" method="POST" enctype="multipart/form-data" style="width: 100%;">
           <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
           <?php if ($isEdit): ?>
@@ -81,7 +81,7 @@ $commerciaux = $commerciaux ?? [];
 
               <div class="form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Nombre de Jours Payés</label>
-                <input type="number" name="nombre_jour_paye" id="input-nb-jours" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 800; color: #1E3A5F; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" value="<?= htmlspecialchars($item['nombre_jour_paye'] ?? '1') ?>" min="1" placeholder="Calculé auto">
+                <input type="number" name="nombre_jour_paye" id="input-nb-jours" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 800; color: #1E3A5F; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F1F5F9; cursor: not-allowed;" value="<?= htmlspecialchars($item['nombre_jour_paye'] ?? '1') ?>" min="1" placeholder="Calculé auto" readonly>
               </div>
 
               <div class="form-group">
@@ -93,14 +93,24 @@ $commerciaux = $commerciaux ?? [];
 
               <div class="form-group">
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Commercial Encaisseur</label>
-                <select name="commercial_code" class="form-control select2" style="width: 100%; box-sizing: border-box;">
-                  <option value="">-- Sélectionner l'agent / commercial --</option>
-                  <?php foreach ($commerciaux as $c): ?>
-                    <option value="<?= $c['code_user'] ?>" <?= ($item['commercial_code'] ?? '') === $c['code_user'] ? 'selected' : '' ?>>
-                      <?= htmlspecialchars(trim(($c['nom_user'] ?? '') . ' ' . ($c['prenom_user'] ?? ''))) ?>
-                    </option>
-                  <?php endforeach; ?>
-                </select>
+                <?php
+                  $commCodeVal = $item['commercial_code'] ?? Context::user();
+                  $commLabelVal = '';
+                  foreach ($commerciaux as $c) {
+                    if (($c['code_user'] ?? '') === $commCodeVal) {
+                      $commLabelVal = trim(($c['nom_user'] ?? '') . ' ' . ($c['prenom_user'] ?? ''));
+                      break;
+                    }
+                  }
+                  if (empty($commLabelVal)) {
+                    $commLabelVal = trim(($_SESSION['nom'] ?? $_SESSION['user_nom'] ?? '') . ' ' . ($_SESSION['prenom'] ?? $_SESSION['user_prenom'] ?? ''));
+                    if (empty($commLabelVal)) {
+                      $commLabelVal = $commCodeVal;
+                    }
+                  }
+                ?>
+                <input type="text" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; color: #334155; border-radius: 10px; border: 1px solid #CBD5E1; background: #F1F5F9; cursor: not-allowed;" value="<?= htmlspecialchars($commLabelVal) ?>" readonly>
+                <input type="hidden" name="commercial_code" value="<?= htmlspecialchars($commCodeVal) ?>">
               </div>
             </div>
           </div>
@@ -137,7 +147,7 @@ $commerciaux = $commerciaux ?? [];
 
           <!-- BOUTONS D'ACTION -->
           <div style="display: flex; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #E2E8F0; width: 100%; flex-wrap: wrap;">
-            <button type="submit" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
+            <button type="submit" id="btn-submit-cotisation" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
               <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> <?= $isEdit ? 'Enregistrer les modifications' : 'Valider la Cotisation' ?>
             </button>
             <a href="<?= RACINE ?>cotisation/list" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 10px; padding: 12px 24px; text-decoration: none; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 6px;">
@@ -196,6 +206,12 @@ $(document).ready(function() {
 
   $('#form-cotisation').on('submit', function(e) {
     e.preventDefault();
+    var $btnSubmit = $('#btn-submit-cotisation');
+    var origHtml = $btnSubmit.html();
+    $btnSubmit.prop('disabled', true).css({ 'opacity': '0.65', 'pointer-events': 'none' })
+              .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Enregistrement en cours...');
+    if (window.lucide) lucide.createIcons();
+
     var formData = new FormData(this);
     $.ajax({
       url: $(this).attr('action'),
@@ -210,12 +226,19 @@ $(document).ready(function() {
           setTimeout(function() { window.location.href = '<?= RACINE ?>cotisation/list'; }, 1000);
         } else {
           if (window.toastr) toastr.error(res.message || 'Erreur lors de l\'enregistrement');
+          resetBtn();
         }
       },
       error: function() {
         if (window.toastr) toastr.error('Erreur réseau');
+        resetBtn();
       }
     });
+
+    function resetBtn() {
+      $btnSubmit.prop('disabled', false).css({ 'opacity': '1', 'pointer-events': 'auto' }).html(origHtml);
+      if (window.lucide) lucide.createIcons();
+    }
   });
 });
 </script>

@@ -151,10 +151,11 @@ $packArticles = $packArticles ?? [];
                   <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                     Zone <span style="color: #EF4444;">*</span>
                   </label>
+                  <?php $defaultZonePack = !empty($item['zone_code']) ? $item['zone_code'] : Context::zone(); ?>
                   <select name="zone_code" id="zone_code" class="form-control select2" style="width: 100%; box-sizing: border-box;" required>
                     <option value="">-- Sélectionner une zone --</option>
                     <?php foreach ($zones as $z): ?>
-                      <option value="<?= $z['code_zone'] ?>" <?= ($item['zone_code'] ?? '') === $z['code_zone'] ? 'selected' : '' ?>>
+                      <option value="<?= $z['code_zone'] ?>" <?= ($defaultZonePack === $z['code_zone']) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($z['libelle_zone']) ?>
                       </option>
                     <?php endforeach; ?>
@@ -193,9 +194,8 @@ $packArticles = $packArticles ?? [];
 
               <div style="display: flex; gap: 12px; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 250px;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Sélectionner un article du catalogue</label>
-                  <select id="article-select" class="form-control select2" style="width: 100%; box-sizing: border-box;">
-                    <option value="">-- Choisir un article --</option>
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Sélectionner un ou plusieurs articles du catalogue</label>
+                  <select id="article-select" class="form-control select2" multiple="multiple" style="width: 100%; box-sizing: border-box;" data-placeholder="-- Choisir un ou plusieurs articles --">
                     <?php foreach ($articles as $art): ?>
                       <option value="<?= $art['code_article'] ?>" data-libelle="<?= htmlspecialchars($art['libelle_article'], ENT_QUOTES) ?>">
                         <?= htmlspecialchars($art['libelle_article']) ?>
@@ -244,7 +244,7 @@ $packArticles = $packArticles ?? [];
               <button type="button" id="btn-step-3-prev" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 10px; padding: 12px 24px; text-decoration: none; border: 1px solid #CBD5E1; display: inline-flex; align-items: center; gap: 8px;">
                 <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> Précédent
               </button>
-              <button type="submit" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
+              <button type="submit" id="btn-submit-pack" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 28px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
                 <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> <?= $isEdit ? 'Enregistrer les modifications' : 'Créer le Pack' ?>
               </button>
             </div>
@@ -422,37 +422,53 @@ $(document).ready(function() {
   $('#btn-add-article').on('click', function(e) {
     if (e) e.preventDefault();
     hideMessage();
-    var codeArticle = $('#article-select').val();
-    var $opt = $('#article-select').find('option:selected');
-    var libelleArticle = $opt.data('libelle') || $opt.text().trim() || codeArticle;
+    var selectedCodes = $('#article-select').val();
 
-    if (!codeArticle) {
-      showMessage('danger', 'Veuillez sélectionner un article à ajouter');
-      return;
-    }
-    if ($('#articles-pack-body tr[data-article-code="' + codeArticle + '"]').length > 0) {
-      showMessage('warning', 'Cet article est déjà présent dans le pack');
+    if (!selectedCodes || (Array.isArray(selectedCodes) && selectedCodes.length === 0)) {
+      showMessage('danger', 'Veuillez sélectionner au moins un article à ajouter');
       return;
     }
 
-    var rowHtml = '<tr data-article-code="' + codeArticle + '" style="border-bottom: 1px solid #F1F5F9;">' +
-      '<td style="padding: 12px 14px; font-weight: 700; color: #0F172A;">' + libelleArticle + '</td>' +
-      '<td style="padding: 12px 14px; text-align: center;">' +
-        '<input type="number" name="articles[' + codeArticle + '][quantite_article]" value="1" min="1" style="width: 90px; padding: 8px 12px; border-radius: 8px; border: 1px solid #CBD5E1; text-align: center; font-weight: 800; color: #1E3A5F;">' +
-        '<input type="hidden" name="articles[' + codeArticle + '][article_code]" value="' + codeArticle + '">' +
-      '</td>' +
-      '<td style="padding: 12px 14px; text-align: center;">' +
-        '<button type="button" class="btn btn-sm remove-article-row" style="border-radius: 8px; font-weight: 600; background: #DC2626; border: none; color: #FFF; padding: 6px 10px; cursor: pointer;">' +
-          '<i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>' +
-        '</button>' +
-      '</td>' +
-    '</tr>';
+    var codesArray = Array.isArray(selectedCodes) ? selectedCodes : [selectedCodes];
+    var addedCount = 0;
+    var alreadyExistsCount = 0;
 
-    $('#articles-pack-body').append(rowHtml);
+    codesArray.forEach(function(codeArticle) {
+      if (!codeArticle) return;
+      if ($('#articles-pack-body tr[data-article-code="' + codeArticle + '"]').length > 0) {
+        alreadyExistsCount++;
+        return;
+      }
+      var $opt = $('#article-select').find('option[value="' + codeArticle + '"]');
+      var libelleArticle = $opt.data('libelle') || $opt.text().trim() || codeArticle;
+
+      var rowHtml = '<tr data-article-code="' + codeArticle + '" style="border-bottom: 1px solid #F1F5F9;">' +
+        '<td style="padding: 12px 14px; font-weight: 700; color: #0F172A;">' + libelleArticle + '</td>' +
+        '<td style="padding: 12px 14px; text-align: center;">' +
+          '<input type="number" name="articles[' + codeArticle + '][quantite_article]" value="1" min="1" style="width: 90px; padding: 8px 12px; border-radius: 8px; border: 1px solid #CBD5E1; text-align: center; font-weight: 800; color: #1E3A5F;">' +
+          '<input type="hidden" name="articles[' + codeArticle + '][article_code]" value="' + codeArticle + '">' +
+        '</td>' +
+        '<td style="padding: 12px 14px; text-align: center;">' +
+          '<button type="button" class="btn btn-sm remove-article-row" style="border-radius: 8px; font-weight: 600; background: #DC2626; border: none; color: #FFF; padding: 6px 10px; cursor: pointer;">' +
+            '<i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>' +
+          '</button>' +
+        '</td>' +
+      '</tr>';
+
+      $('#articles-pack-body').append(rowHtml);
+      addedCount++;
+    });
+
     if ($.fn.select2 && $('#article-select').hasClass('select2-hidden-accessible')) {
-      $('#article-select').val('').trigger('change');
+      $('#article-select').val(null).trigger('change');
     } else {
-      $('#article-select').val('');
+      $('#article-select').val([]);
+    }
+
+    if (alreadyExistsCount > 0 && addedCount === 0) {
+      showMessage('warning', 'Les articles sélectionnés sont déjà présents dans le pack');
+    } else if (alreadyExistsCount > 0 && addedCount > 0) {
+      showMessage('info', addedCount + ' article(s) ajouté(s). Certains articles étaient déjà présents dans la liste.');
     }
 
     if (window.lucide) lucide.createIcons();
@@ -467,6 +483,12 @@ $(document).ready(function() {
 
   $('#form-pack').on('submit', function(e) {
     e.preventDefault();
+    var $btnSubmit = $('#btn-submit-pack');
+    var origHtml = $btnSubmit.html();
+    $btnSubmit.prop('disabled', true).css({ 'opacity': '0.65', 'pointer-events': 'none' })
+              .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Enregistrement en cours...');
+    if (window.lucide) lucide.createIcons();
+
     var formData = new FormData(this);
     $.ajax({
       url: $(this).attr('action'),
@@ -481,12 +503,19 @@ $(document).ready(function() {
           setTimeout(function() { window.location.href = '<?= RACINE ?>pack/list'; }, 1500);
         } else {
           showMessage('danger', res.message || 'Erreur lors de l\'enregistrement');
+          resetBtn();
         }
       },
       error: function() {
         showMessage('danger', 'Erreur réseau ou serveur indisponible');
+        resetBtn();
       }
     });
+
+    function resetBtn() {
+      $btnSubmit.prop('disabled', false).css({ 'opacity': '1', 'pointer-events': 'auto' }).html(origHtml);
+      if (window.lucide) lucide.createIcons();
+    }
   });
 
   <?php if ($isEdit): ?>

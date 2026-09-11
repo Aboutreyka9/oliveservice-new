@@ -24,6 +24,8 @@ $route->addRoute('/user/changer', ['UserController', 'changer']);
 $route->addRoute('/user/edition/{param}', ['UserController', 'edition']);
 $route->addRoute('/user/details/{param}', ['UserController', 'details']);
 $route->addRoute('/user/formulaire', ['UserController', 'formulaire']);
+$route->addRoute('/user/tresorerieList', ['UserController', 'tresorerieList']);
+$route->addRoute('/user/apiTresorerieList', ['UserController', 'apiTresorerieList']);
 
 // -------------------------------------------------------------
 // Module: Etablissements & Fonctions
@@ -226,6 +228,8 @@ $route->addRoute('/versement/changer', ['VersementController', 'changer']);
 $route->addRoute('/versement/details/{param}', ['VersementController', 'details']);
 $route->addRoute('/versement/edition/{param}', ['VersementController', 'edition']);
 $route->addRoute('/versement/formulaire', ['VersementController', 'formulaire']);
+$route->addRoute('/versement/commissions', ['VersementController', 'commissions']);
+$route->addRoute('/versement/apiCommissions', ['VersementController', 'apiCommissions']);
 
 // -------------------------------------------------------------
 // Module: Rôles, Permissions & Notifications

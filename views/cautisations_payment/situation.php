@@ -273,9 +273,11 @@ $pourcentagePaye = $montantTotal > 0 ? min(100, round(($montantPaye / $montantTo
               </div>
 
               <?php if ($statutSouscription !== 'solde' && ($montantRestant > 0 || $joursRestants > 0)): ?>
+                <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION')): ?>
                 <button class="btn" id="paymentBtn" onclick="openPaymentModal()" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); transition: all 0.2s ease;">
                   <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Nouveau Paiement
                 </button>
+                <?php endif; ?>
               <?php else: ?>
                 <span style="background: #ECFDF5; color: #047857; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 12px; border: 1px solid #A7F3D0; display: inline-flex; align-items: center; gap: 6px;">
                   <i data-lucide="check-circle-2" style="width: 16px; height: 16px;"></i> Souscription Soldée

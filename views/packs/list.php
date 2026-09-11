@@ -220,7 +220,7 @@ $stats = $stats ?? [
             <i data-lucide="rotate-cw" style="width: 15px; height: 15px;"></i>
             <span>Actualiser</span>
           </button>
-          <?php if (Context::can('GESTIONNAIRE_MANAGE_PACKS', ['ROLE_GESTIONNAIRE', 'ROLE_ADMIN'])): ?>
+          <?php if (Context::can('GESTIONNAIRE_MANAGE_PACKS')): ?>
           <a href="<?= RACINE ?>pack/formulaire" class="btn-add-pck">
             <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i>
             <span>Nouveau Pack</span>

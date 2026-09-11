@@ -108,14 +108,38 @@ class ModelHome extends BaseModel
             $totalSouscriptionsSoldees = $this->safeCount($db, $sqlSoldees, $pSoldees);
 
             // ── 4. Cotisations ────────────────────────────────────────────────
-            $sqlCotis = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE statut_cautisation_client != 'ennule'";
-            $pCotis = []; $condsCotis = [];
-            Context::applyTripleFilter('', $condsCotis, $pCotis, true, false);
-            if (!empty($condsCotis)) $sqlCotis .= " AND " . implode(' AND ', $condsCotis);
-            $totalCotisations = $this->safeSum($db, $sqlCotis, $pCotis);
+            // Cotisations Validées (Prises en compte dans le CA et le Solde Net)
+            $sqlCotisVal = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE statut_cautisation_client = 'valide'";
+            $pCotisVal = []; $condsCotisVal = [];
+            Context::applyTripleFilter('', $condsCotisVal, $pCotisVal, true, false);
+            if (!empty($condsCotisVal)) $sqlCotisVal .= " AND " . implode(' AND ', $condsCotisVal);
+            $totalCotisationsValidees = $this->safeSum($db, $sqlCotisVal, $pCotisVal);
+
+            // Cotisations En Attente de Validation
+            $sqlCotisAtt = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE (statut_cautisation_client = 'en_attente' OR statut_cautisation_client IS NULL OR statut_cautisation_client = '')";
+            $pCotisAtt = []; $condsCotisAtt = [];
+            Context::applyTripleFilter('', $condsCotisAtt, $pCotisAtt, true, false);
+            if (!empty($condsCotisAtt)) $sqlCotisAtt .= " AND " . implode(' AND ', $condsCotisAtt);
+            $totalCotisationsEnAttente = $this->safeSum($db, $sqlCotisAtt, $pCotisAtt);
+
+            // Total Général des Encaissements (Toutes cotisations non annulées)
+            $sqlCotisAll = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL)";
+            $pCotisAll = []; $condsCotisAll = [];
+            Context::applyTripleFilter('', $condsCotisAll, $pCotisAll, true, false);
+            if (!empty($condsCotisAll)) $sqlCotisAll .= " AND " . implode(' AND ', $condsCotisAll);
+            $totalCotisationsGlobales = $this->safeSum($db, $sqlCotisAll, $pCotisAll);
+
+            // Pour le Commercial : Il voit l'ensemble de ce qu'il a encaissé sur le terrain
+            // Pour la Finance / Admin : Le CA Encaissé et le Solde Net se basent STRICTEMENT sur les fonds VALIDÉS
+            if (Context::isCommercial()) {
+                $totalCotisations = $totalCotisationsGlobales;
+                $caEncaisse = $totalCotisationsGlobales;
+            } else {
+                $totalCotisations = $totalCotisationsValidees;
+                $caEncaisse = $totalCotisationsValidees;
+            }
 
             $totalPaiements = 0.0;
-            $caEncaisse = $totalCotisations;
 
             // ── 5. Versements ─────────────────────────────────────────────────
             $sqlVersVal = "SELECT COALESCE(SUM(montant_versement), 0) FROM versements_commerciaux WHERE statut_versement = 'valide'";
@@ -136,6 +160,8 @@ class ModelHome extends BaseModel
             Context::applyTripleFilter('', $condsDepenses, $pDepenses, false);
             if (!empty($condsDepenses)) $sqlDepenses .= " AND " . implode(' AND ', $condsDepenses);
             $totalDepenses = $this->safeSum($db, $sqlDepenses, $pDepenses);
+
+            // Solde Net = CA Encaisse Valide - Dépenses
             $soldeNet = $caEncaisse - $totalDepenses;
 
             // ── 7. Distributions ──────────────────────────────────────────────
@@ -189,6 +215,8 @@ class ModelHome extends BaseModel
                 'total_souscriptions_soldees' => $totalSouscriptionsSoldees,
                 'total_articles'              => $totalArticles,
                 'total_cotisations'           => $totalCotisations,
+                'total_cotisations_validees'  => $totalCotisationsValidees,
+                'total_cotisations_en_attente'=> $totalCotisationsEnAttente,
                 'total_paiements'             => $totalPaiements,
                 'ca_encaisse'                 => $caEncaisse,
                 'total_versements'            => $totalVersements,

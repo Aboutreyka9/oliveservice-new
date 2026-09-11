@@ -59,12 +59,27 @@ class SessionController extends BaseController
         unset($data['csrf_token']);
 
         $userCode = Context::user();
-        $anneeCode = Context::annee();
         $etabCode = Context::etablissement();
         $zoneCode = !empty($data['zone_code']) ? $data['zone_code'] : Context::zone();
+        
+        // Priorité stricte au champ annee_code soumis dans le formulaire
+        $anneeCode = !empty($data['annee_code']) ? trim($data['annee_code']) : Context::annee();
 
-        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+        if (empty($anneeCode)) {
+            $this->error("L'année d'activité est obligatoire. Veuillez sélectionner une année d'exercice valide ou configurer une année active.");
+            return;
+        }
+
+        // Vérification de l'existence de l'année sélectionnée dans la table annees
+        $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+        $stmtAnneeCheck->execute([$anneeCode]);
+        if (!$stmtAnneeCheck->fetch()) {
+            $this->error("L'année d'activité sélectionnée est invalide ou introuvable en base de données. Veuillez sélectionner une année valide.");
+            return;
+        }
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
             return;
         }
 
@@ -102,6 +117,16 @@ class SessionController extends BaseController
 
         $data = $_POST;
         unset($data['csrf_token']);
+
+        if (!empty($data['annee_code'])) {
+            $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+            $stmtAnneeCheck->execute([$data['annee_code']]);
+            if (!$stmtAnneeCheck->fetch()) {
+                $this->error("L'année d'activité sélectionnée est invalide ou introuvable.");
+                return;
+            }
+        }
+
         $data['updated_at_session'] = date('Y-m-d H:i:s');
 
         $cols = $this->model->getCon()->query("DESCRIBE sessions")->fetchAll(PDO::FETCH_COLUMN);

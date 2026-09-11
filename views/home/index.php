@@ -416,39 +416,39 @@ $isAdmin = Context::isSuperAdmin();
           </div>
         </div>
 
-        <!-- ACTIONS RAPIDES SELON LE RÔLE -->
+        <!-- ACTIONS RAPIDES SELON PERMISSIONS RBAC -->
         <div class="header-actions-group">
-          <?php if ($isCommercial): ?>
-            <a href="<?= RACINE ?>client/formulaire" class="action-btn-pill btn-pill-primary">
-              <i data-lucide="user-plus" style="width: 17px; height: 17px;"></i> Nouveau Client
+          <?php if (Context::can('COMMERCIAL_ADD_CLIENT')): ?>
+            <a href="<?= RACINE ?>souscription/wizard" class="action-btn-pill btn-pill-primary">
+              <i data-lucide="user-plus" style="width: 17px; height: 17px;"></i> Nouvelle Souscription
             </a>
-            <a href="<?= RACINE ?>cotisation/formulaire" class="action-btn-pill btn-pill-success">
-              <i data-lucide="coins" style="width: 17px; height: 17px;"></i> Encasser Cotisation
+          <?php endif; ?>
+          <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION')): ?>
+            <a href="<?= RACINE ?>cautisation-payment/search-form" class="action-btn-pill btn-pill-success">
+              <i data-lucide="coins" style="width: 17px; height: 17px;"></i> Encaisser Cotisation
             </a>
+          <?php endif; ?>
+          <?php if (Context::can('COMMERCIAL_MAKE_VERSEMENT')): ?>
             <a href="<?= RACINE ?>versement/formulaire" class="action-btn-pill btn-pill-primary" style="background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);">
               <i data-lucide="arrow-down-left" style="width: 17px; height: 17px;"></i> Déclarer Versement
             </a>
-          <?php elseif ($isGestionnaire): ?>
+          <?php endif; ?>
+          <?php if (Context::can('GESTIONNAIRE_MANAGE_PACKS')): ?>
             <a href="<?= RACINE ?>pack/formulaire" class="action-btn-pill btn-pill-primary">
               <i data-lucide="package-plus" style="width: 17px; height: 17px;"></i> Nouveau Pack
             </a>
+          <?php endif; ?>
+          <?php if (Context::can('GESTIONNAIRE_MANAGE_DISTRIBUTIONS')): ?>
             <a href="<?= RACINE ?>distribution/list" class="action-btn-pill btn-pill-success">
               <i data-lucide="truck" style="width: 17px; height: 17px;"></i> Remettre Livraisons
             </a>
-          <?php elseif ($isFinance): ?>
+          <?php endif; ?>
+          <?php if (Context::can('FINANCE_VALIDATE_VERSEMENT')): ?>
             <a href="<?= RACINE ?>versement/list" class="action-btn-pill btn-pill-success">
               <i data-lucide="check-circle-2" style="width: 17px; height: 17px;"></i> Valider Versements
             </a>
-            <a href="<?= RACINE ?>depense/formulaire" class="action-btn-pill btn-pill-danger">
-              <i data-lucide="arrow-up-right" style="width: 17px; height: 17px;"></i> Saisir Dépense
-            </a>
-          <?php else: ?>
-            <a href="<?= RACINE ?>souscription/formulaire" class="action-btn-pill btn-pill-primary">
-              <i data-lucide="plus-circle" style="width: 17px; height: 17px;"></i> Nouvelle Souscription
-            </a>
-            <a href="<?= RACINE ?>versement/formulaire" class="action-btn-pill btn-pill-success">
-              <i data-lucide="arrow-down-left" style="width: 17px; height: 17px;"></i> Versement Commercial
-            </a>
+          <?php endif; ?>
+          <?php if (Context::can('FINANCE_MANAGE_DEPENSES')): ?>
             <a href="<?= RACINE ?>depense/formulaire" class="action-btn-pill btn-pill-danger">
               <i data-lucide="arrow-up-right" style="width: 17px; height: 17px;"></i> Saisir Dépense
             </a>
@@ -598,16 +598,20 @@ $isAdmin = Context::isSuperAdmin();
 
         <?php elseif ($isFinance): ?>
 
-          <!-- KPI Finance 1 : CA Encaisse -->
+          <!-- KPI Finance 1 : CA Encaisse Validé -->
           <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #10B981, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #047857;">
             <div class="kpi-header">
-              <span class="kpi-title">Chiffre d'Affaires Encaissé</span>
+              <span class="kpi-title">Chiffre d'Affaires Encaissé Validé</span>
               <div class="kpi-icon-wrapper"><i data-lucide="coins" style="width: 22px; height: 22px;"></i></div>
             </div>
             <div class="kpi-value" style="color: #047857;"><?= number_format($stats['ca_encaisse'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
             <div class="kpi-footer">
-              <span>Recettes globales terrain</span>
-              <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">Recettes</span>
+              <?php if (!empty($stats['total_cotisations_en_attente'])): ?>
+                <span style="color: #D97706; font-weight: 700;"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <?= number_format($stats['total_cotisations_en_attente'], 0, ',', ' ') ?> FCFA en attente</span>
+              <?php else: ?>
+                <span>Fonds confirmés</span>
+                <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">Validés</span>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -693,16 +697,20 @@ $isAdmin = Context::isSuperAdmin();
             </div>
           </div>
 
-          <!-- KPI 3 : Cotisations Encaissées -->
+          <!-- KPI 3 : Cotisations Validées -->
           <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #10B981, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #047857;">
             <div class="kpi-header">
-              <span class="kpi-title">Cotisations Terrain</span>
+              <span class="kpi-title">Cotisations Validées</span>
               <div class="kpi-icon-wrapper"><i data-lucide="coins" style="width: 22px; height: 22px;"></i></div>
             </div>
-            <div class="kpi-value" style="color: #047857;"><?= number_format($stats['total_cotisations'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
+            <div class="kpi-value" style="color: #047857;"><?= number_format($stats['ca_encaisse'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 13px; font-weight: 600;">FCFA</span></div>
             <div class="kpi-footer">
-              <span>Encaissement clients</span>
-              <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">En direct</span>
+              <?php if (!empty($stats['total_cotisations_en_attente'])): ?>
+                <span style="color: #D97706; font-weight: 700;"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <?= number_format($stats['total_cotisations_en_attente'], 0, ',', ' ') ?> FCFA à valider</span>
+              <?php else: ?>
+                <span>Encaissement clients</span>
+                <span class="kpi-tag" style="background: #ECFDF5; color: #047857;">100% validé</span>
+              <?php endif; ?>
             </div>
           </div>
 

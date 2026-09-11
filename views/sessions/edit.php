@@ -73,10 +73,11 @@ $zones = $zones ?? [];
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Zone Commerciale <span style="color: #64748B; font-weight: 500; font-size: 12px;">(Optionnel)</span>
                 </label>
+                <?php $defaultZoneSession = !empty($item['zone_code']) ? $item['zone_code'] : Context::zone(); ?>
                 <select name="zone_code" class="form-control select2" style="width: 100%; box-sizing: border-box;">
                   <option value="">-- Session Globale --</option>
                   <?php foreach ($zones as $z): ?>
-                    <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ($item['zone_code'] ?? '') === $z['code_zone'] ? 'selected' : '' ?>>
+                    <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ($defaultZoneSession === $z['code_zone']) ? 'selected' : '' ?>>
                       <?= htmlspecialchars($z['libelle_zone']) ?> (Code: <?= htmlspecialchars($z['code_zone']) ?>)
                     </option>
                   <?php endforeach; ?>

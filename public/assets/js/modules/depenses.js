@@ -55,15 +55,31 @@ $(function () {
           render: function (d, type, row) {
             const isActif = (d === 'actif');
             const checkedAttr = isActif ? 'checked' : '';
+
+            if (isActif) {
+              return `
+                <div style="display:flex; justify-content:center; align-items:center; gap:8px;">
+                  <span style="display:inline-block; cursor:not-allowed;" title="Dépense validée (active) - Statut verrouillé">
+                    <label style="position:relative; display:inline-block; width:38px; height:20px; margin:0; cursor:not-allowed; opacity:0.85; pointer-events:none;">
+                      <input type="checkbox" class="toggle-statut-depense" data-id="${row.id_depense}" checked disabled style="opacity:0; width:0; height:0; pointer-events:none;">
+                      <span style="position:absolute; top:0; left:0; right:0; bottom:0; background-color:#15803D; border-radius:20px;">
+                        <span style="position:absolute; content:''; height:14px; width:14px; left:20px; bottom:3px; background-color:white; border-radius:50%;"></span>
+                      </span>
+                    </label>
+                  </span>
+                  <span class="badge bg-success" style="font-size:11px; padding:3px 7px;">Actif</span>
+                </div>`;
+            }
+
             return `
               <div style="display:flex; justify-content:center; align-items:center; gap:8px;">
-                <label style="position:relative; display:inline-block; width:38px; height:20px; margin:0; cursor:pointer;" title="${isActif ? 'Actif - Cliquez pour désactiver' : 'Inactif - Cliquez pour activer'}">
+                <label style="position:relative; display:inline-block; width:38px; height:20px; margin:0; cursor:pointer;" title="Inactif - Cliquez pour activer la dépense">
                   <input type="checkbox" class="toggle-statut-depense" data-id="${row.id_depense}" ${checkedAttr} style="opacity:0; width:0; height:0;">
-                  <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:${isActif ? '#15803D' : '#CBD5E1'}; transition:.3s; border-radius:20px;">
-                    <span style="position:absolute; content:''; height:14px; width:14px; left:${isActif ? '20px' : '3px'}; bottom:3px; background-color:white; transition:.3s; border-radius:50%;"></span>
+                  <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#CBD5E1; transition:.3s; border-radius:20px;">
+                    <span style="position:absolute; content:''; height:14px; width:14px; left:3px; bottom:3px; background-color:white; transition:.3s; border-radius:50%;"></span>
                   </span>
                 </label>
-                <span class="badge ${isActif ? 'bg-success' : 'bg-warning text-dark'}"></span>
+                <span class="badge bg-warning text-dark" style="font-size:11px; padding:3px 7px;">Inactif</span>
               </div>`;
           }
         },
@@ -141,6 +157,9 @@ $(function () {
 
     // Toggle statut dépense via Ajax
     $(document).on('change', '.toggle-statut-depense', function () {
+      if ($(this).is(':disabled')) {
+        return false;
+      }
       const id = $(this).data('id');
       const isChecked = $(this).is(':checked');
       const $input = $(this);

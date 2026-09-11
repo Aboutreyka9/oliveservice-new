@@ -112,6 +112,11 @@ $title = $isEdit ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur';
               </div>
 
               <div class="form-group" style="width: 100%; box-sizing: border-box;">
+                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Taux de Commission (%) <small style="color: #64748B; font-weight: 500;">(Optionnel, NULL par défaut)</small></label>
+                <input type="number" step="0.01" min="0" max="100" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" name="commission" value="<?= htmlspecialchars($user['commission'] ?? '') ?>" placeholder="Ex: 5 ou laisser vide (NULL)">
+              </div>
+
+              <div class="form-group" style="width: 100%; box-sizing: border-box;">
                 <label style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   <span>Zone d'Affectation <?= empty($hasJoker) ? '<span style="color: #EF4444;">*</span>' : '<span style="color: #64748B; font-weight: 500; font-size: 12px;">(Optionnel)</span>' ?></span>
                   <?php if (empty($hasJoker)): ?>
@@ -141,10 +146,11 @@ $title = $isEdit ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur';
                   </select>
                   <input type="hidden" name="zone_code" value="<?= htmlspecialchars($lockedZoneCode) ?>">
                 <?php else: ?>
+                  <?php $activeUserZone = !empty($user['zone_code']) ? $user['zone_code'] : ($user['zone_user'] ?? Context::zone()); ?>
                   <select class="form-control select2" id="sel_zone_code" name="zone_code" style="width: 100%;">
                     <option value="">-- Aucune zone (Global) --</option>
                     <?php if (!empty($zones)): foreach($zones as $z): ?>
-                      <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ((($user['zone_code'] ?? $user['zone_user'] ?? '') == $z['code_zone']) ? 'selected' : '') ?>>
+                      <option value="<?= htmlspecialchars($z['code_zone']) ?>" <?= ($activeUserZone == $z['code_zone']) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($z['libelle_zone']) ?>
                       </option>
                     <?php endforeach; endif; ?>
@@ -171,23 +177,21 @@ $title = $isEdit ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur';
               <i data-lucide="shield" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Attribution des Rôles & Permissions
             </h3>
 
-            <?php 
-              $selectedRoleCodes = isset($userRoleCodes) ? $userRoleCodes : (isset($role['role_code']) ? [$role['role_code']] : []);
-            ?>
-
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; width: 100%; margin-bottom: 24px;">
               <div class="form-group" style="width: 100%; box-sizing: border-box; grid-column: 1 / -1;">
                 <label style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   <span>Rôle(s) attribué(s) à l'utilisateur <span style="color: #EF4444;">*</span></span>
-                  <small style="color: #64748B; font-weight: 500; font-size: 12px;">Sélection multiple autorisée</small>
+                  <span style="font-size: 11px; color: #059669; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 2px 8px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                    <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Rôle Commercial (Lecture seule)
+                  </span>
                 </label>
-                <select class="form-control select2" id="sel_roles_user" name="roles[]" multiple="multiple" style="width: 100%;" required>
-                  <?php foreach($roles as $r): ?>
-                    <option value="<?= htmlspecialchars($r['code_role']) ?>" <?= in_array($r['code_role'], $selectedRoleCodes, true) ? 'selected' : '' ?>>
-                      <?= htmlspecialchars($r['libelle_role'] . ' (' . ($r['groupe'] ?? $r['module']) . ')') ?>
-                    </option>
-                  <?php endforeach; ?>
+                <select class="form-control" disabled readonly aria-readonly="true" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #1E3A5F; background: #F8FAFC; border-radius: 10px; border: 1px solid #CBD5E1; cursor: not-allowed; pointer-events: none;">
+                  <option value="ROLE_COMMERCIAL" selected>Commercial Terrain (Force de Vente)</option>
                 </select>
+                <select id="sel_roles_user" style="display:none;" multiple="multiple">
+                  <option value="ROLE_COMMERCIAL" selected>ROLE_COMMERCIAL</option>
+                </select>
+                <input type="hidden" name="roles[]" value="ROLE_COMMERCIAL">
               </div>
 
               <?php if ($isEdit): ?>

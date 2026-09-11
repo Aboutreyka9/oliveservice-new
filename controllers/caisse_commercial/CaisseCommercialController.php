@@ -152,7 +152,7 @@ class CaisseCommercialController extends BaseController
                 FROM cautisation_clients c
                 LEFT JOIN clients cli ON cli.code_client = c.client_code
                 WHERE (c.commercial_code = ? OR c.user_code = ?) 
-                  AND (c.caisse_code = ? OR DATE(c.date_cautisation) = ?)
+                  AND (c.caisse_code = ? OR ((c.caisse_code IS NULL OR c.caisse_code = '') AND DATE(c.date_cautisation) = ?))
                   AND c.statut_cautisation_client != 'annule'
             ";
             $pCot = [$userCode, $userCode, $codeCaisse, $dateToday];
@@ -246,7 +246,7 @@ class CaisseCommercialController extends BaseController
                 FROM cautisation_clients c
                 LEFT JOIN clients cli ON cli.code_client = c.client_code
                 WHERE (c.commercial_code = ? OR c.user_code = ?) 
-                  AND (c.caisse_code = ? OR DATE(c.date_cautisation) = ?)
+                  AND (c.caisse_code = ? OR ((c.caisse_code IS NULL OR c.caisse_code = '') AND DATE(c.date_cautisation) = ?))
                   AND c.statut_cautisation_client != 'annule'
             ";
             $pCotis = [$userCode, $userCode, $lastCloture['code_caisse'] ?? '', $dateLast];
@@ -298,12 +298,27 @@ class CaisseCommercialController extends BaseController
     {
         $this->requirePost(false);
         $userCode = Context::user();
-        $anneeCode = Context::annee();
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
 
-        if (empty($userCode) || empty($anneeCode) || empty($etabCode) || empty($zoneCode)) {
-            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale, l'année d'exercice et l'établissement sont obligatoires et ne peuvent pas être null.");
+        // Priorité : annee_code soumis > Context::annee()
+        $anneeCode = !empty($this->post('annee_code')) ? trim($this->post('annee_code')) : Context::annee();
+
+        if (empty($anneeCode)) {
+            $this->error("L'année d'exercice est obligatoire pour ouvrir une caisse. Veuillez configurer une année active.");
+            return;
+        }
+
+        // Vérification dans annees
+        $stmtAnneeCheck = $this->model->getCon()->prepare("SELECT code_annee FROM annees WHERE code_annee = ? LIMIT 1");
+        $stmtAnneeCheck->execute([$anneeCode]);
+        if (!$stmtAnneeCheck->fetch()) {
+            $this->error("L'année d'activité associée à la caisse est invalide ou introuvable.");
+            return;
+        }
+
+        if (empty($userCode) || empty($etabCode) || empty($zoneCode)) {
+            $this->error("Erreur d'insertion : L'utilisateur connecté, la zone commerciale et l'établissement sont obligatoires et ne peuvent pas être null.");
             return;
         }
 
@@ -377,7 +392,7 @@ class CaisseCommercialController extends BaseController
             SELECT c.* 
             FROM cautisation_clients c
             WHERE (c.commercial_code = ? OR c.user_code = ?) 
-              AND (c.caisse_code = ? OR DATE(c.date_cautisation) = ?)
+              AND (c.caisse_code = ? OR ((c.caisse_code IS NULL OR c.caisse_code = '') AND DATE(c.date_cautisation) = ?))
               AND c.statut_cautisation_client != 'annule'
         ";
         $pCot = [$userCode, $userCode, $codeCaisse, $dateOpening];
@@ -393,15 +408,102 @@ class CaisseCommercialController extends BaseController
             $totalGeneral += (float)($cot['montant_cautisation_client'] ?? 0);
         }
 
+        // Vérification du Montant du Pot saisi par le commercial
+        $valPot = $_POST['montant_pot'] ?? null;
+        if ($valPot === null || $valPot === '') {
+            $this->error("Veuillez renseigner le montant physique de votre pot.");
+            return;
+        }
+
+        $montantPot = (float)$valPot;
+
+        // RÈGLE STRICTE : Blocage absolu en cas d'écart de caisse
+        if (abs($montantPot - $totalGeneral) > 0.01) {
+            $ecart = $montantPot - $totalGeneral;
+            $ecartFmt = number_format(abs($ecart), 0, ',', ' ') . ' FCFA';
+            $typeEcart = ($ecart < 0) ? "un manquant" : "un excédent";
+            $this->error("Clôture strictement bloquée : $typeEcart de $ecartFmt a été constaté. Le montant du pot déclaré (" . number_format($montantPot, 0, ',', ' ') . " FCFA) doit être exactement égal au montant des encaissements enregistrés (" . number_format($totalGeneral, 0, ',', ' ') . " FCFA).");
+            return;
+        }
+
+        $observations = trim($_POST['observations'] ?? '');
+
         $updateData = [
             'date_cloture' => date('Y-m-d H:i:s'),
-            'montant_total_depot' => $totalGeneral,
+            'montant_total_attendu' => $totalGeneral,
+            'montant_total_depot' => $montantPot,
             'statut_caisse' => 'cloture',
             'decission_caisse' => 'attente'
         ];
 
         if ($this->model->update($updateData, (int)$activeCaisse['id_caisse'])) {
-            $this->success('Clôture de caisse effectuée avec succès et transmise à la comptabilité pour validation !', ['reload' => true]);
+            // SYNCHRONISATION AUTOMATIQUE AVEC VERSEMENTS_COMMERCIAUX
+            $etabCode = !empty($activeCaisse['etablissement_code']) ? $activeCaisse['etablissement_code'] : Context::etablissement();
+            $zoneCode = !empty($activeCaisse['zone_code']) ? $activeCaisse['zone_code'] : Context::zone();
+            $anneeCode = !empty($activeCaisse['annee_code']) ? $activeCaisse['annee_code'] : Context::annee();
+            $userCode = Context::user();
+            $dateToday = date('Y-m-d');
+
+            if (empty($etabCode) || empty($zoneCode) || empty($anneeCode) || empty($userCode)) {
+                $this->error("Erreur de transmission du versement : L'établissement, la zone commerciale, l'année d'exercice et l'utilisateur sont obligatoires.");
+                return;
+            }
+
+            $stmtVCheck = $db->prepare("SELECT id_versement, code_versement_commercial FROM versements_commerciaux WHERE caisse_code = ? LIMIT 1");
+            $stmtVCheck->execute([$codeCaisse]);
+            $existingV = $stmtVCheck->fetch(PDO::FETCH_ASSOC);
+
+            if ($existingV) {
+                $codeVersement = $existingV['code_versement_commercial'];
+                $stmtUpV = $db->prepare("
+                    UPDATE versements_commerciaux 
+                    SET montant_versement = ?, statut_versement = 'En attente', periode_versement = ?, commentaire_validation = ?
+                    WHERE id_versement = ?
+                ");
+                $stmtUpV->execute([(int)$montantPot, $dateToday, $observations, $existingV['id_versement']]);
+            } else {
+                $codeVersement = $this->validator->generateCode('versements_commerciaux', 'code_versement_commercial', 'VRS-', 8);
+                $stmtInsV = $db->prepare("
+                    INSERT INTO versements_commerciaux (
+                        code_versement_commercial, caisse_code, montant_versement, commercial_code,
+                        periode_versement, statut_versement, etablissement_code, user_code,
+                        created_at_versement, zone_code, user_validate, date_validation, commentaire_validation, annee_code
+                    ) VALUES (
+                        ?, ?, ?, ?,
+                        ?, 'En attente', ?, ?,
+                        NOW(), ?, '', '1000-01-01 00:00:00', ?, ?
+                    )
+                ");
+                $stmtInsV->execute([
+                    $codeVersement, $codeCaisse, (int)$montantPot, $userCode,
+                    $dateToday, $etabCode, $userCode,
+                    $zoneCode, $observations, $anneeCode
+                ]);
+            }
+
+            // Notification pour le service Finance / Comptabilité
+            try {
+                $stmtComm = $db->prepare("SELECT nom_user, prenom_user FROM users WHERE code_user = ?");
+                $stmtComm->execute([$userCode]);
+                $commercial = $stmtComm->fetch(PDO::FETCH_ASSOC);
+                $commNom = $commercial ? trim(($commercial['nom_user'] ?? '') . ' ' . ($commercial['prenom_user'] ?? '')) : 'Agent Commercial';
+
+                NotificationService::notifyVersementSoumis([
+                    'reference_code'     => $codeVersement,
+                    'montant'            => (float)$montantPot,
+                    'commercial_nom'     => $commNom,
+                    'etablissement_code' => $etabCode,
+                    'zone_code'          => $zoneCode,
+                    'annee_code'         => $anneeCode
+                ]);
+            } catch (\Throwable $ne) {
+                error_log('[CaisseCommercialController] Notification error on submit: ' . $ne->getMessage());
+            }
+
+            $this->success('Clôture de caisse et versement de ' . number_format($montantPot, 0, ',', ' ') . ' FCFA transmis avec succès à la comptabilité pour validation !', [
+                'reload' => true,
+                'code_versement' => $codeVersement
+            ]);
         } else {
             $this->error('Erreur lors de l\'enregistrement de la clôture de caisse.');
         }
@@ -445,7 +547,28 @@ class CaisseCommercialController extends BaseController
                 $success = false;
             }
             if ($success) {
-                $this->success('Statut de la caisse mis à jour avec succès!', ['reload' => true]);
+                $caisseItem = $this->model->getById($id);
+                if ($caisseItem) {
+                    $db = $this->model->getCon();
+                    $versStatut = ($statut === 'valide') ? 'valide' : (($statut === 'rejete') ? 'annule' : 'En attente');
+                    $stmtV = $db->prepare("
+                        UPDATE versements_commerciaux 
+                        SET statut_versement = ?, user_validate = ?, date_validation = NOW()
+                        WHERE caisse_code = ?
+                    ");
+                    $stmtV->execute([$versStatut, $userCode, $caisseItem['code_caisse']]);
+
+                    // Si validée, basculer les cotisations associées de cette caisse
+                    if ($statut === 'valide') {
+                        $stmtCot = $db->prepare("
+                            UPDATE cautisation_clients 
+                            SET statut_cautisation_client = 'valide', updated_at_cautisation_client = NOW()
+                            WHERE caisse_code = ? AND statut_cautisation_client = 'en_attente'
+                        ");
+                        $stmtCot->execute([$caisseItem['code_caisse']]);
+                    }
+                }
+                $this->success('Statut de la caisse et du versement mis à jour avec succès!', ['reload' => true]);
             } else {
                 $this->error('Erreur lors de la mise à jour du statut');
             }
@@ -458,31 +581,82 @@ class CaisseCommercialController extends BaseController
     {
         $this->requirePermission(['COMMERCIAL_MANAGE_OWN_CAISSE', 'FINANCE_VIEW_CLOTURES_CAISSE']);
         try {
-            $sqlCaisse = "
-                SELECT c.*, u.nom_user, u.prenom_user
-                FROM caisses c
-                LEFT JOIN users u ON u.code_user = c.user_code
-                WHERE c.id_caisse = ?
-            ";
-            $pCaisse = [$id];
-            $cCaisse = [];
-            Context::applyTripleFilter('c', $cCaisse, $pCaisse, false);
-            if (!empty($cCaisse)) $sqlCaisse .= " AND " . implode(' AND ', $cCaisse);
-            $stmt = $this->model->getCon()->prepare($sqlCaisse);
-            $stmt->execute($pCaisse);
-            $item = $stmt->fetch(PDO::FETCH_ASSOC);
+            $id = null;
+            try {
+                $id = $this->validator->decrypter($param);
+            } catch (Exception $e) {
+                $id = null;
+            }
+
+            $db = $this->model->getCon();
+            $item = null;
+
+            if ($id) {
+                $sqlCaisse = "
+                    SELECT c.*, u.nom_user, u.prenom_user
+                    FROM caisses c
+                    LEFT JOIN users u ON u.code_user = c.user_code
+                    WHERE c.id_caisse = ?
+                ";
+                $pCaisse = [$id];
+                $cCaisse = [];
+                Context::applyTripleFilter('c', $cCaisse, $pCaisse, false);
+                if (!empty($cCaisse)) $sqlCaisse .= " AND " . implode(' AND ', $cCaisse);
+                $stmt = $db->prepare($sqlCaisse);
+                $stmt->execute($pCaisse);
+                $item = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // Si non trouvé par id_caisse, vérifier si $id est l'id_versement dans versements_commerciaux
+                if (!$item) {
+                    $stmtV = $db->prepare("SELECT caisse_code FROM versements_commerciaux WHERE id_versement = ?");
+                    $stmtV->execute([$id]);
+                    $vItem = $stmtV->fetch(PDO::FETCH_ASSOC);
+                    if ($vItem && !empty($vItem['caisse_code'])) {
+                        $sqlCaisse = "
+                            SELECT c.*, u.nom_user, u.prenom_user
+                            FROM caisses c
+                            LEFT JOIN users u ON u.code_user = c.user_code
+                            WHERE c.code_caisse = ?
+                        ";
+                        $pCaisse = [$vItem['caisse_code']];
+                        $cCaisse = [];
+                        Context::applyTripleFilter('c', $cCaisse, $pCaisse, false);
+                        if (!empty($cCaisse)) $sqlCaisse .= " AND " . implode(' AND ', $cCaisse);
+                        $stmt = $db->prepare($sqlCaisse);
+                        $stmt->execute($pCaisse);
+                        $item = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
+                }
+            }
+
+            if (!$item && $param) {
+                $sqlCaisse = "
+                    SELECT c.*, u.nom_user, u.prenom_user
+                    FROM caisses c
+                    LEFT JOIN users u ON u.code_user = c.user_code
+                    WHERE c.code_caisse = ?
+                ";
+                $pCaisse = [$param];
+                $cCaisse = [];
+                Context::applyTripleFilter('c', $cCaisse, $pCaisse, false);
+                if (!empty($cCaisse)) $sqlCaisse .= " AND " . implode(' AND ', $cCaisse);
+                $stmt = $db->prepare($sqlCaisse);
+                $stmt->execute($pCaisse);
+                $item = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
             if (!$item) {
                 $this->renderNotFound("Le procès-verbal de clôture de caisse demandé est introuvable.");
                 return;
             }
 
-            $encryptedId = $this->validator->crypter($id);
+            $encryptedId = $this->validator->crypter($item['id_caisse']);
             
             $sqlP = "
-                SELECT cc.*, cl.nom_client, cl.prenom_client, cl.telephone_client
+                SELECT cc.*, cl.nom_client, cl.telephone_client
                 FROM cautisation_clients cc
                 LEFT JOIN clients cl ON cl.code_client = cc.client_code
-                WHERE (cc.caisse_code = ? OR DATE(cc.date_cautisation) = DATE(?))
+                WHERE (cc.caisse_code = ? OR ((cc.caisse_code IS NULL OR cc.caisse_code = '') AND DATE(cc.date_cautisation) = DATE(?)))
             ";
             $pP = [$item['code_caisse'] ?? '', $item['date_ouverture'] ?? ''];
             $cP = [];
@@ -492,6 +666,43 @@ class CaisseCommercialController extends BaseController
             $stmtP = $this->model->getCon()->prepare($sqlP);
             $stmtP->execute($pP);
             $paiements = $stmtP->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $totalEspeces = 0;
+            $totalMobileMoney = 0;
+            $totalChequeVirement = 0;
+            foreach ($paiements as $p) {
+                $m = (float)($p['montant_cautisation_client'] ?? 0);
+                $mode = strtolower(trim($p['mode_paiement'] ?? 'espece'));
+                if (in_array($mode, ['espece', 'especes', 'cash'])) {
+                    $totalEspeces += $m;
+                } elseif (in_array($mode, ['mobile_money', 'wave', 'orange', 'mtn', 'moov'])) {
+                    $totalMobileMoney += $m;
+                } else {
+                    $totalChequeVirement += $m;
+                }
+            }
+            $item['total_especes'] = $totalEspeces;
+            $item['total_mobile_money'] = $totalMobileMoney;
+            $item['total_cheque_virement'] = $totalChequeVirement;
+            $item['total_general'] = (float)($item['montant_total_depot'] ?? 0);
+            if ($item['total_general'] <= 0) {
+                $item['total_general'] = $totalEspeces + $totalMobileMoney + $totalChequeVirement;
+            }
+            $item['fond_initial'] = (float)($item['montant_total_attendu'] ?? 0);
+
+            $stmtV = $db->prepare("
+                SELECT id_versement, code_versement_commercial, montant_versement, statut_versement, periode_versement, caisse_code
+                FROM versements_commerciaux
+                WHERE caisse_code = ? OR (commercial_code = ? AND periode_versement = DATE(?))
+                ORDER BY id_versement DESC
+                LIMIT 1
+            ");
+            $stmtV->execute([
+                $item['code_caisse'] ?? '',
+                $item['user_code'] ?? '',
+                $item['date_ouverture'] ?? date('Y-m-d')
+            ]);
+            $versementLinked = $stmtV->fetch(PDO::FETCH_ASSOC) ?: null;
         } catch (Exception $e) {
             error_log("CaisseCommercialController::details error: " . $e->getMessage());
             $this->renderNotFound("Le procès-verbal de clôture de caisse demandé est introuvable.");
@@ -500,7 +711,8 @@ class CaisseCommercialController extends BaseController
         $this->loadView('../views/caisse_commercial/details.php', [
             'item' => $item, 
             'paiements' => $paiements,
-            'encryptedId' => $encryptedId
+            'encryptedId' => $encryptedId,
+            'versementLinked' => $versementLinked
         ]);
     }
 
