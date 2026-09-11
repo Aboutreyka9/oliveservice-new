@@ -40,6 +40,10 @@ class RoleController extends BaseController
 
     public function add()
     {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . RACINE . 'role/formulaire');
+            exit();
+        }
         $this->requirePost(false);
         $this->requirePermission('ADMIN_MANAGE_ROLES');
         $data = $_POST;
@@ -51,6 +55,7 @@ class RoleController extends BaseController
         $groupe = trim($data['groupe'] ?? 'Direction');
         $description = trim($data['description'] ?? '');
         $permissions = $data['permissions'] ?? [];
+        $zoneCode = Context::zone() ?: '';
 
         if (empty($libelle)) {
             $this->error('Le libellé du rôle est obligatoire.');
@@ -61,24 +66,29 @@ class RoleController extends BaseController
             $codeRole = 'ROLE_' . strtoupper(preg_replace('/[^A-Za-z0-9]/', '_', $libelle));
         }
 
-        $stmtCheck = $this->model->getCon()->prepare("SELECT id FROM roles WHERE code_role = ?");
-        $stmtCheck->execute([$codeRole]);
-        if ($stmtCheck->fetch()) {
-            $this->error('Ce code de rôle existe déjà.');
-            return;
-        }
-
-        $stmtIns = $this->model->getCon()->prepare("
-            INSERT INTO roles (code_role, libelle_role, module, groupe, description, statut_role)
-            VALUES (?, ?, ?, ?, ?, 'actif')
-        ");
-        if ($stmtIns->execute([$codeRole, $libelle, $module, $groupe, $description])) {
-            if (!empty($permissions) && is_array($permissions)) {
-                $this->model->syncPermissions($codeRole, $permissions);
+        try {
+            $stmtCheck = $this->model->getCon()->prepare("SELECT id FROM roles WHERE code_role = ?");
+            $stmtCheck->execute([$codeRole]);
+            if ($stmtCheck->fetch()) {
+                $this->error('Ce code de rôle existe déjà.');
+                return;
             }
-            $this->success('Rôle créé avec succès !');
-        } else {
-            $this->error('Erreur lors de la création du rôle.');
+
+            $stmtIns = $this->model->getCon()->prepare("
+                INSERT INTO roles (code_role, libelle_role, module, groupe, description, statut_role, zone_code)
+                VALUES (?, ?, ?, ?, ?, 'actif', ?)
+            ");
+            if ($stmtIns->execute([$codeRole, $libelle, $module, $groupe, $description, $zoneCode])) {
+                if (!empty($permissions) && is_array($permissions)) {
+                    $this->model->syncPermissions($codeRole, $permissions);
+                }
+                $this->success('Rôle créé avec succès !');
+            } else {
+                $this->error('Erreur lors de la création du rôle.');
+            }
+        } catch (Exception $e) {
+            error_log("[RoleController::add] Exception: " . $e->getMessage());
+            $this->error('Erreur système lors de la création du rôle : ' . $e->getMessage());
         }
     }
 

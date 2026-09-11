@@ -30,9 +30,14 @@ class VersementController extends BaseController
             LEFT JOIN users uc ON uc.code_user = v.commercial_code
             LEFT JOIN users uv ON uv.code_user = v.user_validate
             LEFT JOIN zones z ON z.code_zone = v.zone_code
-            WHERE v.etablissement_code = ? AND v.zone_code = ? AND v.annee_code = ?
+            WHERE v.etablissement_code = ? AND v.annee_code = ?
         ";
-        $params = [$etabCode, $zoneCode, $anneeCode];
+        $params = [$etabCode, $anneeCode];
+
+        if (!Context::hasJoker() && !Context::isFinance() && !Context::isAdmin()) {
+            $sql .= " AND v.zone_code = ?";
+            $params[] = $zoneCode;
+        }
 
         // RÈGLE RBAC : Le commercial ne voit que ses propres versements
         if (Context::isCommercial()) {
@@ -87,7 +92,6 @@ class VersementController extends BaseController
 
         $commCode = $versement['commercial_code'];
         $etabCode = Context::etablissement();
-        $zoneCode = Context::zone();
         $anneeCode = Context::annee();
         $db = $this->model->getCon();
 
@@ -98,45 +102,23 @@ class VersementController extends BaseController
                 SUM(CASE WHEN LOWER(mode_paiement) IN ('espece', 'especes', 'cash') THEN montant_cautisation_client ELSE 0 END) as total_especes,
                 SUM(CASE WHEN LOWER(mode_paiement) IN ('mobile_money', 'wave', 'orange', 'mtn', 'moov') THEN montant_cautisation_client ELSE 0 END) as total_momo,
                 SUM(CASE WHEN LOWER(mode_paiement) NOT IN ('espece', 'especes', 'cash', 'mobile_money', 'wave', 'orange', 'mtn', 'moov') THEN montant_cautisation_client ELSE 0 END) as total_autre,
-                SUM(CASE WHEN statut_cautisation_client = 'valide' THEN montant_cautisation_client ELSE 0 END) as total_valide,
-                SUM(CASE WHEN statut_cautisation_client = 'en_attente' THEN montant_cautisation_client ELSE 0 END) as total_attente,
-                COUNT(*) as total_nb_cotis
-            FROM cautisation_clients
-            WHERE (commercial_code = ? OR user_code = ?) 
-              AND statut_cautisation_client != 'annule'
-              AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
+                COUNT(DISTINCT id_cautisation_client) as nb_cotisations
+            FROM cautisation_clients 
+            WHERE commercial_code = ? AND etablissement_code = ? AND annee_code = ?
         ");
-        $stmtC->execute([$commCode, $commCode, $etabCode, $zoneCode, $anneeCode]);
-        $cotisStats = $stmtC->fetch(PDO::FETCH_ASSOC) ?: [];
+        $stmtC->execute([$commCode, $etabCode, $anneeCode]);
+        $statsC = $stmtC->fetch(PDO::FETCH_ASSOC) ?: [];
 
-        // 2. Stats des versements du commercial
-        $stmtVStats = $db->prepare("
-            SELECT 
-                SUM(CASE WHEN statut_versement = 'valide' THEN montant_versement ELSE 0 END) as total_versements_valides,
-                SUM(CASE WHEN statut_versement = 'En attente' OR statut_versement = 'attente' THEN montant_versement ELSE 0 END) as total_versements_attente,
-                COUNT(*) as nb_versements
+        $totalCollecte = (float)($statsC['total_collecte'] ?? 0);
+        $totalEspeces  = (float)($statsC['total_especes'] ?? 0);
+        $totalMomo     = (float)($statsC['total_momo'] ?? 0);
+        $totalAutre    = (float)($statsC['total_autre'] ?? 0);
+        $nbCotis       = (int)($statsC['nb_cotisations'] ?? 0);
+
+        // 2. Stats des versements validés
+        $stmtV = $db->prepare("
+            SELECT SUM(montant_versement) as total_valide, COUNT(*) as nb_valides
             FROM versements_commerciaux
-            WHERE commercial_code = ?
-              AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
-        ");
-        $stmtVStats->execute([$commCode, $etabCode, $zoneCode, $anneeCode]);
-        $versStats = $stmtVStats->fetch(PDO::FETCH_ASSOC) ?: [];
-
-        // 3. Sessions de caisse récentes (5 dernières)
-        $stmtSessions = $db->prepare("
-            SELECT code_caisse, date_ouverture, date_cloture, montant_total_depot, montant_total_attendu, statut_caisse, decission_caisse
-            FROM caisses
-            WHERE user_code = ?
-              AND etablissement_code = ? AND zone_code = ? AND annee_code = ?
-            ORDER BY date_ouverture DESC, id_caisse DESC
-            LIMIT 5
-        ");
-        $stmtSessions->execute([$commCode, $etabCode, $zoneCode, $anneeCode]);
-        $sessionsList = $stmtSessions->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-        // 4. Cotisations récentes (10 plus récentes)
-        $stmtRecentCotis = $db->prepare("
-            SELECT c.code_cautisation_client, c.montant_cautisation_client, c.mode_paiement, c.statut_cautisation_client, c.date_cautisation, cli.nom_client
             FROM cautisation_clients c
             LEFT JOIN clients cli ON cli.code_client = c.client_code
             WHERE (c.commercial_code = ? OR c.user_code = ?)
@@ -409,8 +391,18 @@ class VersementController extends BaseController
         }
 
         $versement = $this->model->getById($id);
-        if (!$versement || $versement['etablissement_code'] !== Context::etablissement() || $versement['zone_code'] !== Context::zone() || $versement['annee_code'] !== Context::annee()) {
+        if (!$versement) {
             $this->error('Versement introuvable.');
+            return;
+        }
+
+        if ($versement['etablissement_code'] !== Context::etablissement() || $versement['annee_code'] !== Context::annee()) {
+            $this->error('Versement introuvable ou hors du contexte actif.');
+            return;
+        }
+
+        if (!Context::hasJoker() && !Context::isFinance() && !Context::isAdmin() && $versement['zone_code'] !== Context::zone()) {
+            $this->error('Accès refusé : ce versement appartient à une autre zone.');
             return;
         }
 
@@ -431,9 +423,9 @@ class VersementController extends BaseController
                     $caisseDecision,
                     $userValidateCode,
                     $caisseCode,
-                    Context::etablissement(),
-                    Context::zone(),
-                    Context::annee()
+                    $versement['etablissement_code'],
+                    $versement['zone_code'],
+                    $versement['annee_code']
                 ]);
             }
 
@@ -451,9 +443,9 @@ class VersementController extends BaseController
                         $caisseCode,
                         $versement['commercial_code'],
                         $versement['periode_versement'],
-                        Context::etablissement(),
-                        Context::zone(),
-                        Context::annee()
+                        $versement['etablissement_code'],
+                        $versement['zone_code'],
+                        $versement['annee_code']
                     ]);
                 } else {
                     $stmtCotis = $db->prepare("
@@ -464,9 +456,9 @@ class VersementController extends BaseController
                     ");
                     $stmtCotis->execute([
                         $versement['commercial_code'],
-                        Context::etablissement(),
-                        Context::zone(),
-                        Context::annee()
+                        $versement['etablissement_code'],
+                        $versement['zone_code'],
+                        $versement['annee_code']
                     ]);
                 }
             }
@@ -478,9 +470,9 @@ class VersementController extends BaseController
                     'commercial_code'    => $versement['commercial_code'],
                     'montant'            => (float)($versement['montant_versement'] ?? 0),
                     'statut'             => $statut,
-                    'etablissement_code' => Context::etablissement(),
-                    'zone_code'          => Context::zone(),
-                    'annee_code'         => Context::annee()
+                    'etablissement_code' => $versement['etablissement_code'],
+                    'zone_code'          => $versement['zone_code'],
+                    'annee_code'         => $versement['annee_code']
                 ]);
             } catch (\Throwable $ne) {
                 error_log('[VersementController] Notification error on validate: ' . $ne->getMessage());
