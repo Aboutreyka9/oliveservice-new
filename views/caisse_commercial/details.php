@@ -73,8 +73,8 @@ $ecart = (float)($item['ecart_caisse'] ?? ($soldePhysique - $soldeAttendu));
         </div>
 
         <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;" class="no-print">
-          <a href="<?= RACINE ?>caisse_commercial/list" class="btn" style="background: #FFFFFF; border: 1px solid #E2E8F0; color: #334155; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <i data-lucide="arrow-left" style="width: 16px; height: 16px; color: #64748B;"></i> Retour à la liste
+          <a href="<?= RACINE ?>versement/list" class="btn" style="background: #FFFFFF; border: 1px solid #E2E8F0; color: #334155; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <i data-lucide="arrow-left" style="width: 16px; height: 16px; color: #64748B;"></i> Retour aux versements
           </a>
           <button onclick="window.print()" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 10px 20px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); cursor: pointer;">
             <i data-lucide="printer" style="width: 16px; height: 16px;"></i> Imprimer le PV
