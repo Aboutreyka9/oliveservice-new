@@ -40,10 +40,14 @@ $(function() {
           data: null, 
           defaultContent: '-', 
           render: function(d, type) {
-            if (type !== 'display') return (d.periode_versement_debut || '') + ' ' + (d.periode_versement_fin || '');
-            const debut = d.periode_versement_debut || '-';
-            const fin = d.periode_versement_fin || '-';
-            return `<span style="color:#64748B; font-size:12px; font-weight:500;">${debut} &rarr; ${fin}</span>`;
+            const debut = d.periode_versement_debut || d.periode_versement || (d.created_at_versement ? d.created_at_versement.split(' ')[0] : '');
+            const fin = d.periode_versement_fin || debut;
+            if (type !== 'display') return (debut + ' ' + fin).trim();
+            if (!debut && !fin) return '-';
+            if (fin && fin !== debut && fin !== '-') {
+              return `<span style="color:#64748B; font-size:12px; font-weight:600;"><i class="fa fa-calendar-alt" style="margin-right:4px; color:#2563EB;"></i>${debut} &rarr; ${fin}</span>`;
+            }
+            return `<span style="color:#64748B; font-size:12px; font-weight:600;"><i class="fa fa-calendar-alt" style="margin-right:4px; color:#2563EB;"></i>${debut || '-'}</span>`;
           }
         },
         { 
@@ -84,6 +88,9 @@ $(function() {
           className: 'text-end',
           render: function(d) {
             const editId = d.editId || d.id_versement;
+            const periodeTxt = d.periode_versement_debut && d.periode_versement_fin && d.periode_versement_fin !== d.periode_versement_debut 
+              ? `${d.periode_versement_debut} → ${d.periode_versement_fin}`
+              : (d.periode_versement_debut || d.periode_versement || (d.created_at_versement ? d.created_at_versement.split(' ')[0] : '-'));
             let validerBtn = '';
             if (isFinanceOrAdmin) {
               validerBtn = `
@@ -93,7 +100,7 @@ $(function() {
                   data-commercial="${d.nom_commercial_complet || ''}"
                   data-zone="${d.libelle_zone || ''}"
                   data-montant="${d.montant_versement || 0}"
-                  data-periode="${(d.periode_versement_debut || '-') + ' → ' + (d.periode_versement_fin || '-')}"
+                  data-periode="${periodeTxt}"
                   data-ref="${d.caisse_code || (d.reference_versement || '-')}"
                   data-statut="${d.statut_versement || ''}"
                   style="background:#059669; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; border:none; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer;" 

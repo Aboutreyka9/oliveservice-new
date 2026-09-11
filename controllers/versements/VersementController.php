@@ -54,10 +54,15 @@ class VersementController extends BaseController
             $caisseId = $v['id_caisse'] ?? null;
             $caisseIdCrypte = $caisseId ? $this->validator->crypter($caisseId) : $idCrypte;
 
+            $pDebut = !empty($v['periode_versement_debut']) ? $v['periode_versement_debut'] : (!empty($v['periode_versement']) ? $v['periode_versement'] : (isset($v['created_at_versement']) ? substr($v['created_at_versement'], 0, 10) : ''));
+            $pFin = !empty($v['periode_versement_fin']) ? $v['periode_versement_fin'] : $pDebut;
+
             $data[] = array_merge($v, [
                 'id' => $id,
                 'editId' => $idCrypte,
                 'caisseIdCrypte' => $caisseIdCrypte,
+                'periode_versement_debut' => $pDebut,
+                'periode_versement_fin' => $pFin,
                 'nom_commercial_complet' => trim(($v['nom_commercial'] ?? '') . ' ' . ($v['prenom_commercial'] ?? '')),
                 'nom_validator_complet' => trim(($v['nom_validator'] ?? '') . ' ' . ($v['prenom_validator'] ?? ''))
             ]);
