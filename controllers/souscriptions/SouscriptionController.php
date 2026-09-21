@@ -294,6 +294,11 @@ class SouscriptionController extends BaseController
             $stmtCotis->execute([$item['code_souscription'], Context::etablissement(), Context::zone(), Context::annee()]);
             $cotisations = $stmtCotis->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+            $userCode     = $_SESSION[USERS_AUTH]['code_user'] ?? '';
+            $modelCaisse  = new ModelCaisse();
+            $caisseActive = $modelCaisse->getActiveOuvertureForToday($userCode);
+            $caisseOuverte = !empty($caisseActive) || !Context::isCommercial();
+
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             $this->renderNotFound("La souscription demandée est introuvable.");
@@ -307,7 +312,8 @@ class SouscriptionController extends BaseController
             'soldeRestant' => $soldeRestant,
             'joursRestants' => $joursRestants,
             'cotisations' => $cotisations,
-            'encryptedId' => $encryptedId
+            'encryptedId' => $encryptedId,
+            'caisseOuverte' => $caisseOuverte
         ]);
     }
 
