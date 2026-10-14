@@ -67,19 +67,15 @@ class ModelSouscription extends BaseModel
     {
         try {
             $sql = "
-                SELECT ps.*, p.libelle_pack, p.prix_cotisation_pack
+                SELECT ps.*, p.libelle_pack, p.prix_cotisation_pack,
+                       (SELECT COUNT(*) FROM pack_articles pa WHERE pa.pack_code = p.code_pack) as nombre_articles
                 FROM pack_souscriptions ps
                 LEFT JOIN packs p ON p.code_pack = ps.pack_code
                 WHERE ps.souscription_code = ?
+                LIMIT 1
             ";
-            $params = [$souscriptionCode];
-            $conds = [];
-            Context::applyTripleFilter('ps', $conds, $params);
-            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
-            $sql .= " LIMIT 1";
-
             $stmt = $this->getCon()->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute([$souscriptionCode]);
             return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         } catch (Exception $e) {
             error_log("ModelSouscription::getPackSouscrit error: " . $e->getMessage());
@@ -126,20 +122,20 @@ class ModelSouscription extends BaseModel
     {
         try {
             $sql = "
-                SELECT p.code_pack, p.libelle_pack, p.prix_cotisation_pack, p.nombre_articles, cp.libelle_categorie_pack, sess.nombre_jour_session
+                SELECT p.code_pack, p.libelle_pack, p.prix_cotisation_pack, 
+                       (SELECT COUNT(*) FROM pack_articles pa WHERE pa.pack_code = p.code_pack) as nombre_articles,
+                       cp.libelle_categorie_pack, 
+                       COALESCE(sess.nombre_jour_session, sess_sub.nombre_jour_session, 0) as nombre_jour_session
                 FROM pack_souscriptions ps
                 JOIN packs p ON p.code_pack = ps.pack_code
+                LEFT JOIN souscriptions s ON s.code_souscription = ps.souscription_code
                 LEFT JOIN categorie_packs cp ON cp.code_categorie_pack = p.categorie_pack_code
                 LEFT JOIN sessions sess ON sess.code_session = p.session_code
+                LEFT JOIN sessions sess_sub ON sess_sub.code_session = s.session_code
                 WHERE ps.souscription_code = ?
             ";
-            $params = [$souscriptionCode];
-            $conds = [];
-            Context::applyTripleFilter('ps', $conds, $params);
-            if (!empty($conds)) $sql .= " AND " . implode(' AND ', $conds);
-
             $stmt = $this->getCon()->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute([$souscriptionCode]);
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             error_log("ModelSouscription::getPacksSouscrits error: " . $e->getMessage());
@@ -264,31 +260,20 @@ class ModelSouscription extends BaseModel
         try {
             $sql = "
                 UPDATE souscriptions s
-                SET s.montant_total_cotise = (
-                        SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) 
-                        FROM cautisation_clients mc 
-                        WHERE mc.souscription_code = s.code_souscription 
-                          AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
-                    ),
-                    s.nombre_jour_cotise = (
-                        SELECT COALESCE(SUM(mc.nombre_jour), 0) 
-                        FROM cautisation_clients mc 
-                        WHERE mc.souscription_code = s.code_souscription 
-                          AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
-                    ),
-                    s.statut_souscription = CASE 
+                LEFT JOIN sessions sess ON sess.code_session = s.session_code
+                SET s.statut_souscription = CASE 
                         WHEN (
                             SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) 
                             FROM cautisation_clients mc 
                             WHERE mc.souscription_code = s.code_souscription 
                               AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
-                        ) >= s.montant_total_prevu 
+                        ) >= ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) * COALESCE(sess.nombre_jour_session, 0))
                         OR (
                             SELECT COALESCE(SUM(mc.nombre_jour), 0) 
                             FROM cautisation_clients mc 
                             WHERE mc.souscription_code = s.code_souscription 
                               AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)
-                        ) >= s.nombre_jour_total 
+                        ) >= COALESCE(sess.nombre_jour_session, 0)
                         THEN 'solde' 
                         ELSE 'valide'
                     END,
@@ -327,7 +312,13 @@ class ModelSouscription extends BaseModel
     public function getJoursRestants(string $souscriptionCode): int
     {
         try {
-            $sql = "SELECT nombre_jour_total, nombre_jour_cotise FROM souscriptions WHERE code_souscription = ? LIMIT 1";
+            $sql = "
+                SELECT COALESCE(sess.nombre_jour_session, 0) as nombre_jour_total,
+                       (SELECT COALESCE(SUM(mc.nombre_jour), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)) as nombre_jour_cotise
+                FROM souscriptions s
+                LEFT JOIN sessions sess ON sess.code_session = s.session_code
+                WHERE s.code_souscription = ? LIMIT 1
+            ";
             $stmt = $this->getCon()->prepare($sql);
             $stmt->execute([$souscriptionCode]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);

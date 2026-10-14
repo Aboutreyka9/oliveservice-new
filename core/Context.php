@@ -102,7 +102,7 @@ class Context
 
     public static function isFinance(): bool
     {
-        return in_array('ROLE_FINANCE', self::roles(), true);
+        return in_array('ROLE_FINANCE', self::roles(), true) || self::can('FINANCE_VALIDATE_VERSEMENT');
     }
 
     public static function isAdmin(): bool

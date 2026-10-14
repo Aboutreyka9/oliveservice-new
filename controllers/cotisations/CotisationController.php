@@ -390,11 +390,19 @@ class CotisationController extends BaseController
             }
 
             $sqlSous = "
-                SELECT s.*, c.nom_client, p.libelle_pack 
+                SELECT s.*, 
+                       c.nom_client, c.telephone_client, c.code_client, c.adresse_client, c.lieu_residence_client,
+                       z.libelle_zone,
+                       sess.libelle_session, sess.nombre_jour_session,
+                       (SELECT GROUP_CONCAT(DISTINCT p2.libelle_pack SEPARATOR ', ') FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as libelle_pack,
+                       (SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) as sum_prix_cotisation_pack,
+                       ((SELECT COALESCE(SUM(p2.prix_cotisation_pack), 0) FROM pack_souscriptions ps2 JOIN packs p2 ON p2.code_pack = ps2.pack_code WHERE ps2.souscription_code = s.code_souscription) * COALESCE(sess.nombre_jour_session, 0)) as totale_souscription,
+                       (SELECT COALESCE(SUM(mc.montant_cautisation_client), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)) as montant_total_cotise,
+                       (SELECT COALESCE(SUM(mc.nombre_jour), 0) FROM cautisation_clients mc WHERE mc.souscription_code = s.code_souscription AND (mc.statut_cautisation_client != 'annule' OR mc.statut_cautisation_client IS NULL)) as nombre_jour_cotise
                 FROM souscriptions s 
                 LEFT JOIN clients c ON c.code_client = s.client_code 
-                LEFT JOIN pack_souscriptions ps ON ps.souscription_code = s.code_souscription 
-                LEFT JOIN packs p ON p.code_pack = ps.pack_code 
+                LEFT JOIN zones z ON z.code_zone = s.zone_code
+                LEFT JOIN sessions sess ON sess.code_session = s.session_code
                 WHERE s.code_souscription = ?
             ";
             $pSous = [$item['souscription_code']];
@@ -409,6 +417,11 @@ class CotisationController extends BaseController
             $stmtCommercial->execute([$item['commercial_code'] ?? '']);
             $commercial = $stmtCommercial->fetch(PDO::FETCH_ASSOC);
 
+            $etabCode = $item['etablissement_code'] ?? Context::etablissement();
+            $stmtEtab = $this->model->getCon()->prepare("SELECT * FROM etablissements WHERE code_etablissement = ? LIMIT 1");
+            $stmtEtab->execute([$etabCode]);
+            $etablissement = $stmtEtab->fetch(PDO::FETCH_ASSOC) ?: [];
+
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             $this->renderNotFound("La cotisation demandée est introuvable.");
@@ -418,6 +431,7 @@ class CotisationController extends BaseController
             'item' => $item,
             'souscription' => $souscription,
             'commercial' => $commercial,
+            'etablissement' => $etablissement,
             'encryptedId' => $encryptedId
         ]);
     }

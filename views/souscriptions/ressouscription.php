@@ -51,10 +51,19 @@
               Rechercher un Client Existant <span style="color: #EF4444;">*</span>
             </label>
             <select id="select-client-search" class="form-control select2-client-ajax" style="width: 100%;">
+              <option value="">-- Rechercher ou sélectionner un client dans la liste --</option>
               <?php if (!empty($preselectedClient)): ?>
-                <option value="<?= htmlspecialchars($preselectedClient['code_client']) ?>" selected>
-                  <?= htmlspecialchars($preselectedClient['code_client'] . ' - ' . $preselectedClient['nom_client'] . ' (' . $preselectedClient['telephone_client'] . ')') ?>
+                <option value="<?= htmlspecialchars($preselectedClient['code_client']) ?>" selected data-json='<?= json_encode($preselectedClient, JSON_HEX_APOS) ?>'>
+                  <?= htmlspecialchars(($preselectedClient['nom_client'] ?? '') . ' - ' . ($preselectedClient['telephone_client'] ?? '') . ' [' . ($preselectedClient['code_client'] ?? '') . ']') ?>
                 </option>
+              <?php endif; ?>
+              <?php if (!empty($clients) && is_array($clients)): ?>
+                <?php foreach ($clients as $cl): ?>
+                  <?php if (!empty($preselectedClient) && $preselectedClient['code_client'] === $cl['code_client']) continue; ?>
+                  <option value="<?= htmlspecialchars($cl['code_client']) ?>" data-json='<?= json_encode($cl, JSON_HEX_APOS) ?>'>
+                    <?= htmlspecialchars(($cl['nom_client'] ?? '') . ' - ' . ($cl['telephone_client'] ?? '') . ' [' . ($cl['code_client'] ?? '') . ']') ?>
+                  </option>
+                <?php endforeach; ?>
               <?php endif; ?>
             </select>
             <small style="color: #64748B; font-size: 12px; margin-top: 4px; display: block;">
@@ -393,28 +402,29 @@ $(document).ready(function() {
 
   // Initialisation de Select2 AJAX pour la recherche de client
   $('#select-client-search').select2({
-    placeholder: 'Saisissez le Nom, Téléphone, Code Client ou CNI...',
+    placeholder: '-- Rechercher ou sélectionner un client dans la liste --',
     allowClear: true,
-    minimumInputLength: 2,
+    minimumInputLength: 0,
     language: {
-      inputTooShort: function() { return 'Veuillez saisir au moins 2 caractères...'; },
+      inputTooShort: function() { return 'Recherche du client...'; },
       searching: function() { return 'Recherche du client en cours...'; },
       noResults: function() { return 'Aucun client trouvé'; }
     },
     ajax: {
       url: '<?= RACINE ?>souscription/apiClientsSearch',
       dataType: 'json',
-      delay: 300,
+      delay: 250,
       data: function(params) {
-        return { q: params.term };
+        return { q: params.term || '' };
       },
       processResults: function(data) {
+        var items = data.results || data || [];
         return {
-          results: $.map(data, function(item) {
+          results: $.map(items, function(item) {
             return {
-              id: item.code_client,
-              text: item.text || (item.code_client + ' - ' + item.nom_client + ' (' + item.telephone_client + ')'),
-              clientData: item
+              id: item.id || item.code_client,
+              text: item.text || ((item.nom_client || '') + ' - ' + (item.telephone_client || '') + ' [' + (item.code_client || '') + ']'),
+              clientData: item.clientData || item.client || item
             };
           })
         };
@@ -422,11 +432,33 @@ $(document).ready(function() {
       cache: true
     }
   }).on('select2:select', function(e) {
-    var data = e.params.data.clientData;
+    var data = e.params.data ? e.params.data.clientData : null;
+    if (!data) {
+      var opt = $(this).find('option:selected');
+      if (opt.data('json')) {
+        data = opt.data('json');
+      }
+    }
     updateClientCard(data);
   }).on('select2:clear', function() {
     updateClientCard(null);
+  }).on('change', function() {
+    var selectedVal = $(this).val();
+    if (selectedVal) {
+      var opt = $(this).find('option:selected');
+      var json = opt.data('json');
+      if (json) {
+        updateClientCard(json);
+      }
+    } else {
+      updateClientCard(null);
+    }
   });
+
+  // Si un client pré-sélectionné existe au chargement
+  <?php if (!empty($preselectedClient)): ?>
+    updateClientCard(<?= json_encode($preselectedClient) ?>);
+  <?php endif; ?>
 
   // Événements sur la sélection de Session et Catégorie
   $('#select-session').on('change', function() {

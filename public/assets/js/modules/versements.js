@@ -5,7 +5,7 @@
 
 $(function() {
   const racine = window.AppConfig ? window.AppConfig.racine : (window.RACINE || '/');
-  const isFinanceOrAdmin = window.AppConfig ? (window.AppConfig.isFinance || window.AppConfig.isAdmin) : false;
+  const isFinanceOrAdmin = window.AppConfig ? (window.AppConfig.can('FINANCE_VALIDATE_VERSEMENT') || window.AppConfig.isFinance || window.AppConfig.isAdmin) : false;
   const isCommercial = window.AppConfig ? window.AppConfig.isCommercial : false;
 
   const $tableVers = $('#table-versements');
@@ -40,10 +40,14 @@ $(function() {
           data: null, 
           defaultContent: '-', 
           render: function(d, type) {
-            if (type !== 'display') return (d.periode_versement_debut || '') + ' ' + (d.periode_versement_fin || '');
-            const debut = d.periode_versement_debut || '-';
-            const fin = d.periode_versement_fin || '-';
-            return `<span style="color:#64748B; font-size:12px; font-weight:500;">${debut} &rarr; ${fin}</span>`;
+            const debut = d.periode_versement_debut || d.periode_versement || (d.created_at_versement ? d.created_at_versement.split(' ')[0] : '');
+            const fin = d.periode_versement_fin || debut;
+            if (type !== 'display') return (debut + ' ' + fin).trim();
+            if (!debut && !fin) return '-';
+            if (fin && fin !== debut && fin !== '-') {
+              return `<span style="color:#64748B; font-size:12px; font-weight:600;"><i class="fa fa-calendar-alt" style="margin-right:4px; color:#2563EB;"></i>${debut} &rarr; ${fin}</span>`;
+            }
+            return `<span style="color:#64748B; font-size:12px; font-weight:600;"><i class="fa fa-calendar-alt" style="margin-right:4px; color:#2563EB;"></i>${debut || '-'}</span>`;
           }
         },
         { 
@@ -84,29 +88,65 @@ $(function() {
           className: 'text-end',
           render: function(d) {
             const editId = d.editId || d.id_versement;
+            const periodeTxt = d.periode_versement_debut && d.periode_versement_fin && d.periode_versement_fin !== d.periode_versement_debut 
+              ? `${d.periode_versement_debut} → ${d.periode_versement_fin}`
+              : (d.periode_versement_debut || d.periode_versement || (d.created_at_versement ? d.created_at_versement.split(' ')[0] : '-'));
+            const isValide = (d.statut_versement === 'valide' || d.statut_versement === 'validé');
             let validerBtn = '';
             if (isFinanceOrAdmin) {
-              validerBtn = `
-                <button type="button" class="btn btn-valider-versement" 
-                  data-id="${d.id_versement}"
-                  data-code="${d.code_versement_commercial || ''}"
-                  data-commercial="${d.nom_commercial_complet || ''}"
-                  data-zone="${d.libelle_zone || ''}"
-                  data-montant="${d.montant_versement || 0}"
-                  data-periode="${(d.periode_versement_debut || '-') + ' → ' + (d.periode_versement_fin || '-')}"
-                  data-ref="${d.caisse_code || (d.reference_versement || '-')}"
-                  data-statut="${d.statut_versement || ''}"
-                  style="background:#059669; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; border:none; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer;" 
-                  title="Contrôler et Valider le versement">
-                  <i data-lucide="check-circle" style="width:14px;height:14px;"></i> Valider
-                </button>
-              `;
+              if (isValide) {
+                validerBtn = `
+                  <button type="button" class="btn" disabled
+                    style="background:#E2E8F0; color:#94A3B8; font-weight:700; border-radius:8px; padding:6px 12px; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:not-allowed; opacity:0.7;" 
+                    title="Versement déjà validé">
+                    <i data-lucide="check-circle" style="width:14px;height:14px;"></i> Validé
+                  </button>
+                `;
+              } else {
+                validerBtn = `
+                  <button type="button" class="btn btn-valider-versement" 
+                    data-id="${d.id_versement}"
+                    data-code="${d.code_versement_commercial || ''}"
+                    data-commercial="${d.nom_commercial_complet || ''}"
+                    data-zone="${d.libelle_zone || ''}"
+                    data-montant="${d.montant_versement || 0}"
+                    data-periode="${periodeTxt}"
+                    data-ref="${d.caisse_code || (d.reference_versement || '-')}"
+                    data-statut="${d.statut_versement || ''}"
+                    style="background:#059669; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; border:none; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer;" 
+                    title="Contrôler et Valider le versement">
+                    <i data-lucide="check-circle" style="width:14px;height:14px;"></i> Valider
+                  </button>
+                `;
+              }
             }
+
+            let editBtn = '';
+            if (!isCommercial) {
+              if (isValide) {
+                editBtn = `
+                  <button type="button" class="btn" disabled 
+                    style="background:#F1F5F9; color:#94A3B8; font-weight:700; border-radius:8px; padding:6px 12px; border:1px solid #E2E8F0; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:not-allowed; opacity:0.7;" 
+                    title="Impossible de modifier un versement validé">
+                    <i data-lucide="lock" style="width:14px;height:14px;"></i> Éditer
+                  </button>
+                `;
+              } else {
+                editBtn = `
+                  <a href="${racine}versement/edition/${editId}" class="btn" 
+                    style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" 
+                    title="Modifier">
+                    <i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer
+                  </a>
+                `;
+              }
+            }
+
             const caisseTarget = d.caisseIdCrypte || (d.editId || d.id_versement);
             return `
               <div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">
                 ${validerBtn}
-                ${!isCommercial ? `<a href="${racine}versement/edition/${editId}" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>` : ''}
+                ${editBtn}
                 <a href="${racine}caisse_commercial/details/${caisseTarget}" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir procès-verbal de caisse"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>
               </div>
             `;
@@ -194,31 +234,32 @@ $(function() {
 
         if (res.status === 1 && res.data) {
           const d = res.data;
-          $('#hist_total_encaisse').text(d.total_collecte_fmt);
-          $('#hist_details_modes').text(`Esp: ${d.total_especes_fmt} | MoMo: ${d.total_momo_fmt}`);
-          $('#hist_versements_valides').text(d.total_versements_valides_fmt);
-          $('#hist_reste_a_verser').text(d.solde_reste_a_verser_fmt);
+          $('#hist_total_momo').text(d.total_momo_fmt || '0 FCFA');
 
-          // Caisse liée
           if (d.has_linked_caisse) {
             $('#hist_linked_caisse_code').text(d.linked_caisse_code);
             $('#hist_caisse_attendu').text(d.caisse_attendu_fmt);
             $('#hist_caisse_pot').text(d.versement_actuel_fmt);
 
             if (d.caisse_ecart === 0) {
-              $('#hist_caisse_ecart').text('0 FCFA (Conforme)').css('color', '#059669');
+              $('#hist_caisse_ecart').text('0 FCFA').css('color', '#059669');
+              $('#hist_ecart_badge').text('Conforme').css({'color': '#059669', 'background': '#ECFDF5'});
             } else if (d.caisse_ecart > 0) {
-              $('#hist_caisse_ecart').text('+' + d.caisse_ecart_fmt + ' (Surplus)').css('color', '#2563EB');
+              $('#hist_caisse_ecart').text('+' + d.caisse_ecart_fmt).css('color', '#2563EB');
+              $('#hist_ecart_badge').text('Surplus').css({'color': '#2563EB', 'background': '#EFF6FF'});
             } else {
-              $('#hist_caisse_ecart').text('-' + d.caisse_ecart_fmt + ' (Manquant)').css('color', '#DC2626');
+              $('#hist_caisse_ecart').text('-' + d.caisse_ecart_fmt).css('color', '#DC2626');
+              $('#hist_ecart_badge').text('Manquant').css({'color': '#DC2626', 'background': '#FEE2E2'});
             }
-            $('#box-linked-caisse').show();
           } else {
-            $('#box-linked-caisse').hide();
+            $('#hist_linked_caisse_code').text(d.linked_caisse_code || '-');
+            $('#hist_caisse_attendu').text(d.total_especes_fmt || d.total_collecte_fmt || '0 FCFA');
+            $('#hist_caisse_pot').text(d.versement_actuel_fmt || '0 FCFA');
+            $('#hist_caisse_ecart').text(d.ecart_comparaison_fmt || '0 FCFA');
           }
 
           // Cotisations spécifiques de la séance de caisse
-          const caisseCotis = d.caisse_cotisations || [];
+          const caisseCotis = (d.caisse_cotisations && d.caisse_cotisations.length > 0) ? d.caisse_cotisations : (d.recent_cotisations || []);
           $('#hist_nb_caisse_cotis').text(caisseCotis.length);
           let htmlCaisseCotis = '';
           if (caisseCotis.length === 0) {
@@ -250,17 +291,18 @@ $(function() {
           }
           $('#hist_tbody_caisse_cotis').html(htmlCaisseCotis);
 
-          // Écart & Conformité Globale
-          const ecart = d.ecart_comparaison;
-          if (ecart === 0) {
-            $('#hist_ecart_verif').text('0 FCFA').css('color', '#059669');
+          // Gestion de l'écart et du badge de conformité
+          const caisseEcart = d.caisse_ecart;
+          const ecartFmt = d.caisse_ecart_fmt || '0 FCFA';
+          if (caisseEcart === 0) {
+            $('#hist_caisse_ecart').text('0 FCFA').css('color', '#059669');
             $('#hist_ecart_badge').text('Conforme').css({'color': '#059669', 'background': '#ECFDF5'});
-          } else if (ecart > 0) {
-            $('#hist_ecart_verif').text('+' + d.ecart_comparaison_fmt).css('color', '#2563EB');
-            $('#hist_ecart_badge').text('Surplus (+' + d.ecart_comparaison_fmt + ')').css({'color': '#2563EB', 'background': '#EFF6FF'});
+          } else if (caisseEcart > 0) {
+            $('#hist_caisse_ecart').text('+' + ecartFmt).css('color', '#2563EB');
+            $('#hist_ecart_badge').text('Surplus (+' + ecartFmt + ')').css({'color': '#2563EB', 'background': '#EFF6FF'});
           } else {
-            $('#hist_ecart_verif').text('-' + d.ecart_comparaison_fmt).css('color', '#DC2626');
-            $('#hist_ecart_badge').text('Sous-versement (-' + d.ecart_comparaison_fmt + ')').css({'color': '#DC2626', 'background': '#FEE2E2'});
+            $('#hist_caisse_ecart').text('-' + ecartFmt).css('color', '#DC2626');
+            $('#hist_ecart_badge').text('Sous-versement (-' + ecartFmt + ')').css({'color': '#DC2626', 'background': '#FEE2E2'});
           }
 
           // Cotisations récentes

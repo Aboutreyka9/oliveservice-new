@@ -663,6 +663,14 @@ document.getElementById('savePaymentBtn').addEventListener('click', function() {
 
 loadHistory();
 updateCalculations();
+
+// Auto-ouverture de la modale de paiement si spécifié dans l'URL
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('openModal') === '1' || urlParams.get('pay') === '1') {
+    setTimeout(function() {
+        openPaymentModal();
+    }, 300);
+}
 </script>
 
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

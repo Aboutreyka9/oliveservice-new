@@ -3,6 +3,18 @@ require_once __DIR__ . '/../../public/inc/header.php';
 $user = isset($user) ? $user : [];
 $role = isset($role) ? $role : [];
 $roles = isset($roles) ? $roles : (new ModelRole())->getAll();
+$userRoles = isset($userRoles) ? $userRoles : [];
+$userRoleCodes = isset($userRoleCodes) && is_array($userRoleCodes) ? $userRoleCodes : [];
+if (empty($userRoleCodes) && !empty($userRoles)) {
+    foreach ($userRoles as $ur) {
+        $c = is_array($ur) ? ($ur['role_code'] ?? ($ur['code_role'] ?? '')) : (is_string($ur) ? $ur : '');
+        if ($c && !in_array($c, $userRoleCodes)) $userRoleCodes[] = $c;
+    }
+}
+if (empty($userRoleCodes) && !empty($role)) {
+    $c = is_array($role) ? ($role['role_code'] ?? ($role['code_role'] ?? '')) : (is_string($role) ? $role : '');
+    if ($c) $userRoleCodes[] = $c;
+}
 $fonctions = isset($fonctions) ? $fonctions : (new ModelFonction())->getAll();
 $hasJoker = isset($hasJoker) ? $hasJoker : Context::hasJoker();
 $userZoneCode = isset($userZoneCode) ? $userZoneCode : Context::zone();
@@ -181,17 +193,21 @@ $title = $isEdit ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur';
               <div class="form-group" style="width: 100%; box-sizing: border-box; grid-column: 1 / -1;">
                 <label style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   <span>Rôle(s) attribué(s) à l'utilisateur <span style="color: #EF4444;">*</span></span>
-                  <span style="font-size: 11px; color: #059669; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 2px 8px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-                    <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Rôle Commercial (Lecture seule)
+                  <span style="font-size: 11px; color: #1E3A5F; background: #F1F5F9; border: 1px solid #CBD5E1; padding: 2px 8px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                    <i data-lucide="shield" style="width: 12px; height: 12px;"></i> Sélection multiple
                   </span>
                 </label>
-                <select class="form-control" disabled readonly aria-readonly="true" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #1E3A5F; background: #F8FAFC; border-radius: 10px; border: 1px solid #CBD5E1; cursor: not-allowed; pointer-events: none;">
-                  <option value="ROLE_COMMERCIAL" selected>Commercial Terrain (Force de Vente)</option>
+                <select id="sel_roles_user" name="roles[]" class="form-control" multiple="multiple" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1;" required>
+                  <?php foreach ($roles as $r): 
+                    $rCode = $r['code_role'] ?? '';
+                    $rLib = $r['libelle_role'] ?? $rCode;
+                    $isSelected = in_array($rCode, $userRoleCodes);
+                  ?>
+                    <option value="<?= htmlspecialchars($rCode) ?>" <?= $isSelected ? 'selected' : '' ?>>
+                      <?= htmlspecialchars($rLib) ?> (<?= htmlspecialchars($rCode) ?>)
+                    </option>
+                  <?php endforeach; ?>
                 </select>
-                <select id="sel_roles_user" style="display:none;" multiple="multiple">
-                  <option value="ROLE_COMMERCIAL" selected>ROLE_COMMERCIAL</option>
-                </select>
-                <input type="hidden" name="roles[]" value="ROLE_COMMERCIAL">
               </div>
 
               <?php if ($isEdit): ?>

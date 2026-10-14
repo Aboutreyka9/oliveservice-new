@@ -294,6 +294,11 @@ class SouscriptionController extends BaseController
             $stmtCotis->execute([$item['code_souscription'], Context::etablissement(), Context::zone(), Context::annee()]);
             $cotisations = $stmtCotis->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+            $userCode     = $_SESSION[USERS_AUTH]['code_user'] ?? '';
+            $modelCaisse  = new ModelCaisse();
+            $caisseActive = $modelCaisse->getActiveOuvertureForToday($userCode);
+            $caisseOuverte = !empty($caisseActive) || !Context::isCommercial();
+
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             $this->renderNotFound("La souscription demandée est introuvable.");
@@ -307,7 +312,8 @@ class SouscriptionController extends BaseController
             'soldeRestant' => $soldeRestant,
             'joursRestants' => $joursRestants,
             'cotisations' => $cotisations,
-            'encryptedId' => $encryptedId
+            'encryptedId' => $encryptedId,
+            'caisseOuverte' => $caisseOuverte
         ]);
     }
 
@@ -707,6 +713,29 @@ class SouscriptionController extends BaseController
         $modelCat = new ModelCategoriePack();
         $categories = $modelCat->getAll();
 
+        // Récupération de la liste initiale des 50 premiers clients
+        $sqlClients = "
+            SELECT c.id_client, c.code_client, c.nom_client, c.telephone_client, c.sexe_client, 
+                   c.lieu_residence_client, c.email_client, c.profession_client, c.numero_cni, c.statut_client,
+                   (SELECT COUNT(*) FROM souscriptions sub WHERE sub.client_code = c.code_client) as total_souscriptions
+            FROM clients c
+            WHERE 1=1
+        ";
+        $paramsC = [];
+        if (!empty($etabCode) && !Context::isSuperAdmin()) {
+            $sqlClients .= " AND c.etablissement_code = ?";
+            $paramsC[] = $etabCode;
+        }
+        if (Context::isCommercial()) {
+            $sqlClients .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.user_code = ?))";
+            $paramsC[] = Context::user();
+            $paramsC[] = Context::user();
+        }
+        $sqlClients .= " ORDER BY c.nom_client ASC LIMIT 50";
+        $stmtClients = $this->model->getCon()->prepare($sqlClients);
+        $stmtClients->execute($paramsC);
+        $clientsList = $stmtClients->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
         $clientCode = trim($_GET['client_code'] ?? ($_GET['client'] ?? ''));
         $preselectedClient = null;
 
@@ -717,17 +746,17 @@ class SouscriptionController extends BaseController
                        (SELECT COUNT(*) FROM souscriptions sub WHERE sub.client_code = c.code_client) as total_souscriptions
                 FROM clients c
                 WHERE (c.code_client = ? OR c.id_client = ?)
-                  AND c.etablissement_code = ?
                 LIMIT 1
             ");
-            $stmt->execute([$clientCode, $clientCode, $etabCode]);
+            $stmt->execute([$clientCode, $clientCode]);
             $preselectedClient = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         }
 
         $this->loadView('../views/souscriptions/ressouscription.php', [
             'sessions' => $sessions,
             'categories' => $categories,
-            'preselectedClient' => $preselectedClient
+            'preselectedClient' => $preselectedClient,
+            'clients' => $clientsList
         ]);
     }
 
@@ -739,11 +768,6 @@ class SouscriptionController extends BaseController
         $this->requirePermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_ADD_SOUSCRIPTION', 'COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         $q = trim($this->get('q') ?? ($this->post('q') ?? ''));
 
-        if (empty($q)) {
-            $this->json(['results' => []]);
-            return;
-        }
-
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
         $userCode = Context::user();
@@ -753,15 +777,27 @@ class SouscriptionController extends BaseController
                    c.lieu_residence_client, c.email_client, c.profession_client, c.numero_cni, c.statut_client,
                    (SELECT COUNT(*) FROM souscriptions sub WHERE sub.client_code = c.code_client) as total_souscriptions
             FROM clients c
-            WHERE c.etablissement_code = ?
-              AND (
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if (!empty($etabCode) && !Context::isSuperAdmin()) {
+            $sql .= " AND c.etablissement_code = ?";
+            $params[] = $etabCode;
+        }
+
+        if (!empty($q)) {
+            $sql .= " AND (
                 c.nom_client LIKE ? OR 
                 c.telephone_client LIKE ? OR 
                 c.code_client LIKE ? OR 
                 c.numero_cni LIKE ?
-              )
-        ";
-        $params = [$etabCode, "%$q%", "%$q%", "%$q%", "%$q%"];
+            )";
+            $params[] = "%$q%";
+            $params[] = "%$q%";
+            $params[] = "%$q%";
+            $params[] = "%$q%";
+        }
 
         if (Context::isCommercial()) {
             $sql .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.user_code = ?))";
@@ -773,7 +809,7 @@ class SouscriptionController extends BaseController
             $params[] = $zoneCode;
         }
 
-        $sql .= " ORDER BY c.created_at_client DESC LIMIT 25";
+        $sql .= " ORDER BY c.nom_client ASC LIMIT 50";
 
         $stmt = $this->model->getCon()->prepare($sql);
         $stmt->execute($params);
@@ -791,6 +827,15 @@ class SouscriptionController extends BaseController
             $results[] = [
                 'id' => $c['code_client'],
                 'text' => "{$nom} - {$tel} [{$code}]{$cni}{$badgeSous}",
+                'code_client' => $c['code_client'],
+                'nom_client' => $c['nom_client'],
+                'telephone_client' => $c['telephone_client'],
+                'numero_cni' => $c['numero_cni'],
+                'lieu_residence_client' => $c['lieu_residence_client'],
+                'email_client' => $c['email_client'],
+                'profession_client' => $c['profession_client'],
+                'sexe_client' => $c['sexe_client'],
+                'clientData' => $c,
                 'client' => $c
             ];
         }

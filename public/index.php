@@ -26,6 +26,8 @@ $route->addRoute('/user/details/{param}', ['UserController', 'details']);
 $route->addRoute('/user/formulaire', ['UserController', 'formulaire']);
 $route->addRoute('/user/tresorerieList', ['UserController', 'tresorerieList']);
 $route->addRoute('/user/apiTresorerieList', ['UserController', 'apiTresorerieList']);
+$route->addRoute('/user/gestionnaireList', ['UserController', 'gestionnaireList']);
+$route->addRoute('/user/apiGestionnaireList', ['UserController', 'apiGestionnaireList']);
 
 // -------------------------------------------------------------
 // Module: Etablissements & Fonctions
@@ -171,6 +173,7 @@ $route->addRoute('/cautisation-payment/search', ['CautisationPaymentController',
 $route->addRoute('/cautisation-payment/situation', ['CautisationPaymentController', 'situation']);
 $route->addRoute('/cautisation-payment/situation/{param}', ['CautisationPaymentController', 'situation']);
 $route->addRoute('/cautisation-payment/situation-details', ['CautisationPaymentController', 'situationDetails']);
+$route->addRoute('/cautisation-payment/situationDetails', ['CautisationPaymentController', 'situationDetails']);
 $route->addRoute('/cautisation-payment/history', ['CautisationPaymentController', 'history']);
 $route->addRoute('/cautisation-payment/savepayment', ['CautisationPaymentController', 'savepayment']);
 
@@ -222,6 +225,8 @@ $route->addRoute('/depense/formulaire', ['DepenseController', 'formulaire']);
 
 $route->addRoute('/versement/list', ['VersementController', 'list']);
 $route->addRoute('/versement/apiList', ['VersementController', 'apiList']);
+$route->addRoute('/versement/apiCommercialCaisseHistory', ['VersementController', 'apiCommercialCaisseHistory']);
+$route->addRoute('/versement/valider', ['VersementController', 'valider']);
 $route->addRoute('/versement/add', ['VersementController', 'add']);
 $route->addRoute('/versement/edit', ['VersementController', 'edit']);
 $route->addRoute('/versement/changer', ['VersementController', 'changer']);

@@ -14,8 +14,15 @@ class CautisationPaymentController extends BaseController
     {
         $this->requirePermission('COMMERCIAL_COLLECT_COTISATION');
         $clients = $this->getClientsForSearch();
+
+        $userCode     = $_SESSION[USERS_AUTH]['code_user'] ?? '';
+        $modelCaisse  = new ModelCaisse();
+        $caisseActive = $modelCaisse->getActiveOuvertureForToday($userCode);
+        $caisseOuverte = !empty($caisseActive) || !Context::isCommercial();
+
         $this->loadView('../views/cautisations_payment/search.php', [
-            'clients' => $clients
+            'clients' => $clients,
+            'caisseOuverte' => $caisseOuverte
         ]);
     }
 

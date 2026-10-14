@@ -207,6 +207,48 @@ class ModelHome extends BaseModel
             if (!empty($condsSess)) $sqlSess .= " AND " . implode(' AND ', $condsSess);
             $totalSessions = $this->safeCount($db, $sqlSess, $pSess);
 
+            // ── 10. Montants Attendus (Journée & Année) ──────────────────────────
+            // Montant total attendu pour une journée d'activité (formule dynamique pure)
+            $sqlAttJour = "
+                SELECT COALESCE(SUM(
+                    (SELECT COALESCE(SUM(p.prix_cotisation_pack), 0)
+                     FROM pack_souscriptions ps
+                     JOIN packs p ON p.code_pack = ps.pack_code
+                     WHERE ps.souscription_code = s.code_souscription)
+                ), 0)
+                FROM souscriptions s
+                WHERE s.statut_souscription IN ('valide', 'reconduite')
+            ";
+            $pAttJour = []; $condsAttJour = [];
+            Context::applyTripleFilter('s', $condsAttJour, $pAttJour, true);
+            if (!empty($condsAttJour)) $sqlAttJour .= " AND " . implode(' AND ', $condsAttJour);
+            $montantAttenduJournee = $this->safeSum($db, $sqlAttJour, $pAttJour);
+
+            // Montant total attendu pour toute l'année d'activité (formule dynamique pure : cotisations packs x jours session)
+            $sqlAttAnn = "
+                SELECT COALESCE(SUM(
+                    (SELECT COALESCE(SUM(p.prix_cotisation_pack), 0)
+                     FROM pack_souscriptions ps
+                     JOIN packs p ON p.code_pack = ps.pack_code
+                     WHERE ps.souscription_code = s.code_souscription)
+                    * COALESCE(sess.nombre_jour_session, 0)
+                ), 0)
+                FROM souscriptions s
+                LEFT JOIN sessions sess ON sess.code_session = s.session_code
+                WHERE s.statut_souscription IN ('valide', 'solde', 'reconduite')
+            ";
+            $pAttAnn = []; $condsAttAnn = [];
+            Context::applyTripleFilter('s', $condsAttAnn, $pAttAnn, true);
+            if (!empty($condsAttAnn)) $sqlAttAnn .= " AND " . implode(' AND ', $condsAttAnn);
+            $montantAttenduAnnee = $this->safeSum($db, $sqlAttAnn, $pAttAnn);
+
+            // Total encaisse aujourd'hui (pour valider si l'objectif du jour est atteint)
+            $sqlCotisToday = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE DATE(COALESCE(date_cautisation, created_at_cautisation_client)) = CURDATE() AND (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL)";
+            $pCotisToday = []; $condsCotisToday = [];
+            Context::applyTripleFilter('', $condsCotisToday, $pCotisToday, true, false);
+            if (!empty($condsCotisToday)) $sqlCotisToday .= " AND " . implode(' AND ', $condsCotisToday);
+            $totalCotisationsAujourdhui = $this->safeSum($db, $sqlCotisToday, $pCotisToday);
+
             return [
                 'annee_code'                  => $anneeCode,
                 'total_clients'               => $totalClients,
@@ -229,6 +271,9 @@ class ModelHome extends BaseModel
                 'total_commerciaux'           => $totalCommerciaux,
                 'total_categories'            => $totalCategories,
                 'total_sessions'              => $totalSessions,
+                'montant_attendu_journee'     => $montantAttenduJournee,
+                'montant_attendu_annee'       => $montantAttenduAnnee,
+                'total_cotisations_aujourdhui'=> $totalCotisationsAujourdhui,
             ];
 
         } catch (\Exception $e) {
@@ -242,6 +287,8 @@ class ModelHome extends BaseModel
                 'total_distributions_validees' => 0, 'solde_net' => 0,
                 'total_users' => 0, 'total_commerciaux' => 0,
                 'total_categories' => 0, 'total_sessions' => 0,
+                'montant_attendu_journee' => 0.0, 'montant_attendu_annee' => 0.0,
+                'total_cotisations_aujourdhui' => 0.0,
             ];
         }
     }
