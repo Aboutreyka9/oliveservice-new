@@ -137,12 +137,12 @@
             <i data-lucide="package" style="width: 18px; height: 18px; color: #059669;"></i> Étape 2 : Session & Choix des Packs
           </h3>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px;">
-            <div>
-              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
-                Session d'activité <span style="color: #EF4444;">*</span>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-bottom: 24px; align-items: flex-end;">
+            <div class="form-group" style="width: 100%; box-sizing: border-box;">
+              <label for="select-session" style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                <i data-lucide="calendar" style="width: 15px; height: 15px; color: #1E3A5F;"></i> Session d'activité <span style="color: #EF4444;">*</span>
               </label>
-              <select name="session_code" id="select-session" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" required>
+              <select name="session_code" id="select-session" class="form-control select2" style="width: 100%; box-sizing: border-box;" required>
                 <option value="">-- Sélectionner une session --</option>
                 <?php if (!empty($sessions)): ?>
                   <?php foreach ($sessions as $s): ?>
@@ -154,11 +154,11 @@
               </select>
             </div>
 
-            <div>
-              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
-                Filtrer par Catégorie de Pack
+            <div class="form-group" style="width: 100%; box-sizing: border-box;">
+              <label for="select-categorie" style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                <i data-lucide="folder" style="width: 15px; height: 15px; color: #1E3A5F;"></i> Catégorie de Pack
               </label>
-              <select id="select-categorie" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;">
+              <select id="select-categorie" class="form-control select2" style="width: 100%; box-sizing: border-box;">
                 <option value="">Toutes les catégories</option>
                 <?php if (!empty($categories)): ?>
                   <?php foreach ($categories as $c): ?>
@@ -169,6 +169,21 @@
                 <?php endif; ?>
               </select>
             </div>
+
+            <div class="form-group" style="width: 100%; box-sizing: border-box;">
+              <label for="filter-search-pack" style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                <span style="display: flex; align-items: center; gap: 6px;">
+                  <i data-lucide="search" style="width: 15px; height: 15px; color: #059669;"></i> Libellé du pack
+                </span>
+                <span id="pack-search-count" style="font-size: 11px; font-weight: 700; color: #059669; display: none;"></span>
+              </label>
+              <div style="position: relative; width: 100%;">
+                <input type="text" id="filter-search-pack" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 38px 12px 14px; font-size: 13px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A; transition: all 0.2s ease;" placeholder="Rechercher par nom de pack...">
+                <button type="button" id="btn-clear-pack-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #94A3B8; cursor: pointer; padding: 4px; display: none;" title="Effacer la recherche">
+                  <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- GRILLE DES PACKS DISPONIBLES -->
@@ -176,9 +191,9 @@
             <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 12px;">
               Packs disponibles pour cette session <span style="color: #EF4444;">*</span>
             </label>
-            <div id="packs-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
+            <div id="packs-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px;">
               <p style="color: #94A3B8; text-align: center; padding: 30px 0; grid-column: 1 / -1; font-style: italic; background: #F8FAFC; border-radius: 12px; border: 1px dashed #CBD5E1;">
-                Veuillez d'abord sélectionner une session d'activité pour afficher les packs disponibles.
+                Sélectionnez une session, une catégorie ou saisissez un libellé de pack pour afficher les offres disponibles.
               </p>
             </div>
           </div>
@@ -251,6 +266,14 @@
   </main>
 </div>
 
+<!-- STYLES ADDITIONNELS -->
+<style>
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+</style>
+
 <!-- SCRIPTS ET LOGIQUE JS -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -259,12 +282,13 @@
 <script>
 var selectedPacks = [];
 var loadedPacksData = [];
+var allKnownPacks = {};
 
 function showMessage(type, text) {
   var $msg = $('#form-messages');
-  var bg = type === 'danger' ? '#FEE2E2' : '#DCFCE7';
-  var fg = type === 'danger' ? '#991B1B' : '#166534';
-  var border = type === 'danger' ? '#FCA5A5' : '#86EFAC';
+  var bg = type === 'danger' ? '#FEE2E2' : (type === 'warning' ? '#FEF3C7' : '#DCFCE7');
+  var fg = type === 'danger' ? '#991B1B' : (type === 'warning' ? '#92400E' : '#166534');
+  var border = type === 'danger' ? '#FCA5A5' : (type === 'warning' ? '#FDE68A' : '#86EFAC');
   $msg.css({ background: bg, color: fg, border: '1px solid ' + border }).html(text).show();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -287,72 +311,119 @@ function updateClientCard(data) {
   }
 }
 
+function getCategoryBadgeStyle(catCode) {
+  var palettes = [
+    { bg: '#EFF6FF', text: '#1E40AF', border: '#BFDBFE' }, // Bleu
+    { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' }, // Émeraude
+    { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' }, // Ambre
+    { bg: '#F3E8FF', text: '#6B21A8', border: '#DDD6FE' }, // Violet
+    { bg: '#FFF1F2', text: '#9F1239', border: '#FECDD3' }, // Rose
+    { bg: '#E0F2FE', text: '#0369A1', border: '#BAE6FD' }  // Ciel
+  ];
+  if (!catCode) return palettes[0];
+  var hash = 0;
+  for (var i = 0; i < catCode.length; i++) {
+    hash = catCode.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return palettes[Math.abs(hash) % palettes.length];
+}
+
 function loadAvailablePacks() {
   var sessionCode = $('#select-session').val();
   var categorieCode = $('#select-categorie').val();
+  var searchQuery = $('#filter-search-pack').val() ? $('#filter-search-pack').val().trim() : '';
   var container = $('#packs-container');
 
-  if (!sessionCode) {
-    container.html('<p style="color: #94A3B8; text-align: center; padding: 30px 0; grid-column: 1 / -1; font-style: italic; background: #F8FAFC; border-radius: 12px; border: 1px dashed #CBD5E1;">Veuillez d\'abord sélectionner une session d\'activité pour afficher les packs disponibles.</p>');
-    loadedPacksData = [];
+  if (searchQuery.length > 0) {
+    $('#btn-clear-pack-search').show();
+  } else {
+    $('#btn-clear-pack-search').hide();
+  }
+
+  // Si aucun filtre n'est sélectionné
+  if (!sessionCode && !categorieCode && !searchQuery) {
+    container.html('<p style="color: #94A3B8; text-align: center; padding: 40px 0; font-style: italic; grid-column: 1 / -1; background: #F8FAFC; border-radius: 12px; border: 1px dashed #CBD5E1;">Sélectionnez une session, une catégorie ou saisissez un libellé de pack pour afficher les offres disponibles.</p>');
+    $('#pack-search-count').hide();
     renderSelectedPacksTable();
     return;
   }
 
-  container.html('<p style="color: #059669; text-align: center; padding: 30px 0; grid-column: 1 / -1; font-weight: 700;">Chargement des packs en cours...</p>');
+  container.html('<div style="grid-column: 1 / -1; text-align: center; padding: 36px 0; color: #059669;"><i data-lucide="loader" style="width: 28px; height: 28px; animation: spin 1s linear infinite; display: inline-block;"></i><p style="margin-top: 8px; font-size: 13px; font-weight: 600; color: #64748B;">Recherche des packs...</p></div>');
+  if (window.lucide) lucide.createIcons();
 
   $.ajax({
     url: '<?= RACINE ?>souscription/wizardData',
     type: 'GET',
-    data: { session_code: sessionCode, categorie_code: categorieCode },
+    data: { 
+      session_code: sessionCode, 
+      categorie_code: categorieCode,
+      search: searchQuery
+    },
     dataType: 'json',
     success: function(res) {
       if (res.status === 1 && res.data && res.data.length > 0) {
-        // Tri par ordre croissant de libellé pack
+        var count = res.data.length;
+        $('#pack-search-count').text(count + ' pack' + (count > 1 ? 's' : '') + ' trouvé' + (count > 1 ? 's' : '')).show();
+
+        // Tri naturel des packs par ordre croissant de libellé pack
         res.data.sort(function(a, b) {
           var nameA = (a.libelle_pack || '').trim();
           var nameB = (b.libelle_pack || '').trim();
           return nameA.localeCompare(nameB, 'fr', { numeric: true, sensitivity: 'base' });
         });
+
+        // Mémoriser tous les packs connus dans le dictionnaire persistant
+        res.data.forEach(function(p) {
+          allKnownPacks[p.code_pack] = p;
+        });
+
         loadedPacksData = res.data;
         var html = '';
         res.data.forEach(function(pack) {
           var isSelected = selectedPacks.indexOf(pack.code_pack) !== -1;
           var cardBg = isSelected ? '#F0FDF4' : '#FFFFFF';
           var borderCol = isSelected ? '#059669' : '#E2E8F0';
-          var checkIcon = isSelected ? '<span style="background: #059669; color: #FFF; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900;">✓</span>' : '<span style="border: 2px solid #CBD5E1; width: 20px; height: 20px; border-radius: 50%; display: inline-block;"></span>';
+          var shadow = isSelected ? '0 6px 18px rgba(5, 150, 105, 0.16)' : '0 2px 6px rgba(0,0,0,0.03)';
+          var badgeStyle = getCategoryBadgeStyle(pack.categorie_pack_code);
+          var sessionBadge = (!sessionCode && pack.libelle_session) ? '<div style="margin-top: 4px;"><span style="display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 12px; background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1;"><i data-lucide="calendar" style="width: 11px; height: 11px; display: inline; vertical-align: middle;"></i> ' + pack.libelle_session + '</span></div>' : '';
 
           var prixCotis = parseFloat(pack.prix_cotisation_pack || 0);
           var duree = parseInt(pack.nombre_jour_session || 0);
           var totalPack = prixCotis * duree;
 
-          html += '<div class="pack-card" data-code="' + pack.code_pack + '" style="background: ' + cardBg + '; border: 2px solid ' + borderCol + '; border-radius: 14px; padding: 18px; cursor: pointer; transition: all 0.2s ease; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">' +
-            '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">' +
-              '<span style="font-size: 11px; font-weight: 800; color: #059669; background: #ECFDF5; padding: 3px 8px; border-radius: 12px; text-transform: uppercase;">' + (pack.libelle_categorie_pack || 'Général') + '</span>' +
-              checkIcon +
+          html += '<div class="pack-card" data-code="' + pack.code_pack + '" data-session="' + (pack.session_code || '') + '" data-zone="' + (pack.zone_code || '') + '" style="background: ' + cardBg + '; border: 2px solid ' + borderCol + '; border-radius: 14px; padding: 18px; cursor: pointer; transition: all 0.2s ease; position: relative; box-shadow: ' + shadow + ';">' +
+            (isSelected ? '<div style="position: absolute; top: 12px; right: 12px; width: 24px; height: 24px; border-radius: 50%; background: #059669; color: #FFF; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35); z-index: 2;"><i data-lucide="check" style="width: 14px; height: 14px;"></i></div>' : '') +
+            '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;' + (isSelected ? ' padding-right: 26px;' : '') + '">' +
+              '<div style="flex: 1; padding-right: 10px;">' +
+                '<strong style="font-size: 15px; font-weight: 800; color: #0F172A; display: block; margin-bottom: 6px; line-height: 1.3;">' + (pack.libelle_pack || 'Pack') + '</strong>' +
+                '<span style="display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: ' + badgeStyle.bg + '; color: ' + badgeStyle.text + '; border: 1px solid ' + badgeStyle.border + ';">' + (pack.libelle_categorie_pack || 'Catalogue') + '</span>' +
+                sessionBadge +
+              '</div>' +
+              (pack.image_pack ? '<img src="<?= RACINE ?>public/assets/images/packs/' + pack.image_pack + '" style="width: 52px; height: 52px; object-fit: cover; border-radius: 10px; border: 1px solid #E2E8F0; flex-shrink: 0;">' : '<div style="width: 52px; height: 52px; background: #F1F5F9; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #64748B; flex-shrink: 0; border: 1px solid #E2E8F0;"><i data-lucide="package" style="width: 22px; height: 22px; color: #94A3B8;"></i></div>') +
             '</div>' +
-            '<h4 style="font-size: 15px; font-weight: 800; color: #0F172A; margin: 0 0 8px 0;">' + (pack.libelle_pack || 'Pack') + '</h4>' +
-            '<div style="margin-bottom: 12px;">' +
-              '<span style="font-size: 18px; font-weight: 900; color: #2563EB;">' + prixCotis.toLocaleString('fr-FR') + ' FCFA</span>' +
-              '<span style="font-size: 12px; color: #64748B; font-weight: 600;"> / jour</span>' +
-            '</div>' +
-            '<div style="font-size: 12px; color: #475569; display: flex; justify-content: space-between; border-top: 1px solid #F1F5F9; padding-top: 8px; margin-top: 8px;">' +
-              '<span>Articles: <strong>' + (pack.nombre_articles || 0) + '</strong></span>' +
-              '<span>Durée: <strong>' + duree + ' j</strong></span>' +
-            '</div>' +
-            '<div style="font-size: 12px; color: #059669; font-weight: 800; text-align: right; margin-top: 6px;">' +
-              'Total: ' + totalPack.toLocaleString('fr-FR') + ' FCFA' +
+            '<div style="grid-template-columns: 1fr 1fr; display: grid; gap: 8px; font-size: 12px; color: #475569; background: ' + (isSelected ? '#FFFFFF' : '#F8FAFC') + '; padding: 10px; border-radius: 8px; border: 1px solid #E2E8F0;">' +
+              '<div><strong>Prix jour :</strong> <span style="color: #2563EB; font-weight: 800;">' + prixCotis.toLocaleString('fr-FR') + ' FCFA</span></div>' +
+              '<div><strong>Durée :</strong> ' + duree + ' j</div>' +
+              '<div><strong>Articles :</strong> ' + (pack.nombre_articles || 0) + '</div>' +
+              '<div><strong>Total :</strong> <span style="color: #059669; font-weight: 800;">' + totalPack.toLocaleString('fr-FR') + ' FCFA</span></div>' +
             '</div>' +
           '</div>';
         });
         container.html(html);
+        if (window.lucide) lucide.createIcons();
       } else {
         loadedPacksData = [];
-        container.html('<p style="color: #94A3B8; text-align: center; padding: 30px 0; grid-column: 1 / -1; font-style: italic;">Aucun pack disponible pour cette session.</p>');
+        $('#pack-search-count').text('0 pack trouvé').show();
+        var emptyMsg = 'Aucun pack disponible pour ces critères';
+        if (searchQuery) emptyMsg += ' ("<strong>' + $('<div>').text(searchQuery).html() + '</strong>")';
+        emptyMsg += '.';
+        container.html('<div style="grid-column: 1 / -1; text-align: center; padding: 40px 0;"><i data-lucide="package-x" style="width: 38px; height: 38px; color: #94A3B8; margin-bottom: 8px;"></i><p style="color: #94A3B8; font-style: italic; margin: 0; font-size: 13px;">' + emptyMsg + '</p></div>');
+        if (window.lucide) lucide.createIcons();
       }
       renderSelectedPacksTable();
     },
     error: function() {
+      $('#pack-search-count').hide();
       container.html('<p style="color: #EF4444; text-align: center; padding: 30px 0; grid-column: 1 / -1;">Erreur lors du chargement des packs.</p>');
     }
   });
@@ -366,14 +437,14 @@ function renderSelectedPacksTable() {
   var totalGrand = 0;
 
   if (selectedPacks.length === 0) {
-    tbody.html('<tr><td colspan="7" style="padding: 20px; text-align: center; color: #94A3B8;">Aucun pack sélectionné.</td></tr>');
+    tbody.html('<tr><td colspan="7" style="padding: 20px; text-align: center; color: #94A3B8;">Aucun pack sélectionné pour l\'instant.</td></tr>');
     $('#total-daily-amount').text('0 FCFA');
     $('#total-grand-amount').text('0 FCFA');
     return;
   }
 
   selectedPacks.forEach(function(code) {
-    var pack = loadedPacksData.find(function(p) { return p.code_pack === code; });
+    var pack = allKnownPacks[code] || loadedPacksData.find(function(p) { return p.code_pack === code; });
     if (pack) {
       var prixCotis = parseFloat(pack.prix_cotisation_pack || 0);
       var duree = parseInt(pack.nombre_jour_session || 0);
@@ -382,16 +453,18 @@ function renderSelectedPacksTable() {
       totalDaily += prixCotis;
       totalGrand += totalPack;
 
+      var badgeStyle = getCategoryBadgeStyle(pack.categorie_pack_code);
+
       var row = '<tr data-code="' + pack.code_pack + '" style="border-bottom: 1px solid #E2E8F0;">' +
         '<td style="padding: 10px; font-weight: 700; color: #0F172A;">' + (pack.libelle_pack || 'Pack') + '</td>' +
-        '<td style="padding: 10px;"><span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; background: #E2E8F0; color: #334155;">' + (pack.libelle_categorie_pack || '-') + '</span></td>' +
+        '<td style="padding: 10px;"><span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; background: ' + badgeStyle.bg + '; color: ' + badgeStyle.text + '; border: 1px solid ' + badgeStyle.border + ';">' + (pack.libelle_categorie_pack || '-') + '</span></td>' +
         '<td style="padding: 10px; text-align: right; font-weight: 700; color: #2563EB;">' + prixCotis.toLocaleString('fr-FR') + ' FCFA</td>' +
         '<td style="padding: 10px; text-align: center;">' + (pack.nombre_articles || 0) + '</td>' +
         '<td style="padding: 10px; text-align: center;">' + duree + ' j</td>' +
         '<td style="padding: 10px; text-align: right; font-weight: 800; color: #059669;">' + totalPack.toLocaleString('fr-FR') + ' FCFA</td>' +
         '<td style="padding: 10px; text-align: center;">' +
-          '<button type="button" class="btn-remove-pack" data-code="' + pack.code_pack + '" style="border-radius: 6px; font-weight: 700; background: #FEE2E2; border: 1px solid #FCA5A5; color: #991B1B; padding: 4px 8px; cursor: pointer; font-size: 12px;">' +
-            'Supprimer' +
+          '<button type="button" class="btn-remove-pack" data-code="' + pack.code_pack + '" style="border-radius: 8px; font-weight: 700; background: #FEE2E2; border: 1px solid #FCA5A5; color: #991B1B; padding: 6px 10px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;" title="Retirer ce pack">' +
+            '<i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Retirer' +
           '</button>' +
         '</td>' +
       '</tr>';
@@ -401,10 +474,15 @@ function renderSelectedPacksTable() {
 
   $('#total-daily-amount').text(totalDaily.toLocaleString('fr-FR') + ' FCFA');
   $('#total-grand-amount').text(totalGrand.toLocaleString('fr-FR') + ' FCFA');
+  if (window.lucide) lucide.createIcons();
 }
 
 $(document).ready(function() {
   if (window.lucide) lucide.createIcons();
+
+  if ($.fn.select2) {
+    $('#select-session, #select-categorie').select2({ width: '100%' });
+  }
 
   // Initialisation de Select2 AJAX pour la recherche de client
   $('#select-client-search').select2({
@@ -478,9 +556,40 @@ $(document).ready(function() {
     loadAvailablePacks();
   });
 
+  // Recherche par libellé du pack avec debounce
+  var searchPackTimeout = null;
+  $('#filter-search-pack').on('input', function() {
+    clearTimeout(searchPackTimeout);
+    searchPackTimeout = setTimeout(function() {
+      loadAvailablePacks();
+    }, 280);
+  });
+
+  $('#btn-clear-pack-search').on('click', function() {
+    $('#filter-search-pack').val('');
+    loadAvailablePacks();
+  });
+
   // Sélection/Désélection d'un pack via carte
   $(document).on('click', '.pack-card', function() {
     var code = $(this).data('code');
+    var packSession = $(this).data('session');
+    var currentSession = $('#select-session').val();
+
+    // Auto-sélection de la session si aucune n'était préalablement choisie
+    if (!currentSession && packSession) {
+      $('#select-session').val(packSession);
+      if ($.fn.select2) {
+        $('#select-session').trigger('change.select2');
+      }
+      var selectedZone = $('#select-session').find('option:selected').data('zone') || '<?= Context::zone() ?>';
+      $('#zone_code').val(selectedZone);
+      currentSession = packSession;
+    } else if (currentSession && packSession && currentSession !== packSession) {
+      showMessage('warning', 'Ce pack appartient à une autre session d\'activité. Veuillez changer de session pour y souscrire.');
+      return;
+    }
+
     var idx = selectedPacks.indexOf(code);
     if (idx === -1) {
       selectedPacks.push(code);
