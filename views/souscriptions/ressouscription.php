@@ -308,6 +308,12 @@ function loadAvailablePacks() {
     dataType: 'json',
     success: function(res) {
       if (res.status === 1 && res.data && res.data.length > 0) {
+        // Tri par ordre croissant de libellé pack
+        res.data.sort(function(a, b) {
+          var nameA = (a.libelle_pack || '').trim();
+          var nameB = (b.libelle_pack || '').trim();
+          return nameA.localeCompare(nameB, 'fr', { numeric: true, sensitivity: 'base' });
+        });
         loadedPacksData = res.data;
         var html = '';
         res.data.forEach(function(pack) {

@@ -150,12 +150,12 @@
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
                   <label for="filter-search-pack" style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                     <span style="display: flex; align-items: center; gap: 6px;">
-                      <i data-lucide="search" style="width: 15px; height: 15px; color: #1E3A5F;"></i> Recherche par libellé pack
+                      <i data-lucide="search" style="width: 15px; height: 15px; color: #1E3A5F;"></i> Libellé du pack
                     </span>
                     <span id="pack-search-count" style="font-size: 11px; font-weight: 700; color: #059669; display: none;"></span>
                   </label>
                   <div style="position: relative; width: 100%;">
-                    <input type="text" id="filter-search-pack" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 38px 12px 14px; font-size: 13px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A; transition: all 0.2s ease;" placeholder="Ex: Pack Alimentaire, Téléviseur...">
+                    <input type="text" id="filter-search-pack" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 38px 12px 14px; font-size: 13px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A; transition: all 0.2s ease;" placeholder="Rechercher par nom de pack...">
                     <button type="button" id="btn-clear-pack-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #94A3B8; cursor: pointer; padding: 4px; display: none;" title="Effacer la recherche">
                       <i data-lucide="x" style="width: 16px; height: 16px;"></i>
                     </button>
@@ -406,6 +406,13 @@ function loadPacks() {
       if (res.status === 1 && res.data && res.data.length) {
         var count = res.data.length;
         $('#pack-search-count').text(count + ' pack' + (count > 1 ? 's' : '') + ' trouvé' + (count > 1 ? 's' : '')).show();
+
+        // Tri naturel des packs par ordre croissant de libellé pack
+        res.data.sort(function(a, b) {
+          var nameA = (a.libelle_pack || '').trim();
+          var nameB = (b.libelle_pack || '').trim();
+          return nameA.localeCompare(nameB, 'fr', { numeric: true, sensitivity: 'base' });
+        });
 
         var html = '';
         res.data.forEach(function(pack) {
