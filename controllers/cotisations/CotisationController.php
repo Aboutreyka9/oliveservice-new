@@ -13,6 +13,7 @@ class CotisationController extends BaseController
 
         $dateDebut = $_GET['date_debut'] ?? '';
         $dateFin = $_GET['date_fin'] ?? '';
+        $commercialCode = trim($_GET['commercial_code'] ?? '');
 
         $sqlStats = "
             SELECT 
@@ -36,6 +37,11 @@ class CotisationController extends BaseController
             $conds[] = "DATE(c.date_cautisation) <= ?";
             $params[] = $dateFin;
         }
+        if (!Context::isCommercial() && !empty($commercialCode)) {
+            $conds[] = "(c.commercial_code = ? OR c.user_code = ?)";
+            $params[] = $commercialCode;
+            $params[] = $commercialCode;
+        }
 
         if (!empty($conds)) {
             $sqlStats .= " AND " . implode(' AND ', $conds);
@@ -51,8 +57,12 @@ class CotisationController extends BaseController
             'count_attente' => 0
         ];
 
+        $commerciaux = $this->model->getCommerciauxList();
+
         $this->loadView('../views/cotisations/list.php', [
-            'stats' => $stats
+            'stats' => $stats,
+            'commerciaux' => $commerciaux,
+            'selectedCommercial' => $commercialCode
         ]);
     }
 
@@ -62,6 +72,7 @@ class CotisationController extends BaseController
         
         $dateDebut = $_REQUEST['date_debut'] ?? '';
         $dateFin = $_REQUEST['date_fin'] ?? '';
+        $commercialCode = trim($_REQUEST['commercial_code'] ?? '');
 
         $sql = "
             SELECT c.*, 
@@ -93,6 +104,11 @@ class CotisationController extends BaseController
         if (!empty($dateFin)) {
             $conds[] = "DATE(c.date_cautisation) <= ?";
             $params[] = $dateFin;
+        }
+        if (!Context::isCommercial() && !empty($commercialCode)) {
+            $conds[] = "(c.commercial_code = ? OR c.user_code = ?)";
+            $params[] = $commercialCode;
+            $params[] = $commercialCode;
         }
 
         if (!empty($conds)) {

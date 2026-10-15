@@ -14,6 +14,7 @@ $(function() {
         data: function(d) {
           d.date_debut = $('#filter-date-debut').val() || '';
           d.date_fin = $('#filter-date-fin').val() || '';
+          d.commercial_code = $('#filter-commercial').val() || '';
         }
       },
       processing: true,
@@ -137,7 +138,11 @@ $(function() {
       }
     });
 
-    // --- EVENEMENTS FILTRE DE PERIODE ---
+    // --- EVENEMENTS FILTRES (PÉRIODE & COMMERCIAL) ---
+    $('#filter-commercial').on('change', function() {
+      table.ajax.reload();
+    });
+
     $('#btn-appliquer-filtre').on('click', function() {
       table.ajax.reload();
     });
@@ -145,6 +150,9 @@ $(function() {
     $('#btn-reset-filtre').on('click', function() {
       $('#filter-date-debut').val('');
       $('#filter-date-fin').val('');
+      if (!$('#filter-commercial').is('input[type="hidden"]')) {
+        $('#filter-commercial').val('');
+      }
       $('.btn-shortcut-date').css({ 'background': '#F8FAFC', 'color': '#334155', 'border-color': '#CBD5E1' });
       table.ajax.reload();
     });

@@ -125,4 +125,52 @@ class ModelCotisation extends BaseModel
             return false;
         }
     }
+
+    /**
+     * Récupère la liste des commerciaux actifs dans le périmètre de l'établissement/zone
+     */
+    public function getCommerciauxList(): array
+    {
+        try {
+            $sql = "
+                SELECT DISTINCT u.code_user, u.nom_user, u.prenom_user, u.matricule_user
+                FROM users u
+                LEFT JOIN user_roles ur ON ur.user_code = u.code_user
+                WHERE (
+                    ur.role_code = 'ROLE_COMMERCIAL'
+                    OR u.code_user IN (
+                        SELECT DISTINCT commercial_code 
+                        FROM cautisation_clients 
+                        WHERE commercial_code IS NOT NULL AND commercial_code != ''
+                    )
+                )
+                AND u.statut_user = 'actif'
+            ";
+            $params = [];
+
+            $etab = Context::etablissement();
+            if (!empty($etab)) {
+                $sql .= " AND (u.etablissement_code = ? OR u.etablissement_code IS NULL OR u.etablissement_code = '')";
+                $params[] = $etab;
+            }
+
+            if (Context::isGestionnaire() && !Context::hasJoker()) {
+                $zone = Context::zone();
+                if (!empty($zone)) {
+                    $sql .= " AND (u.zone_code = ? OR u.zone_code IS NULL OR u.zone_code = '')";
+                    $params[] = $zone;
+                }
+            }
+
+            $sql .= " ORDER BY u.nom_user ASC, u.prenom_user ASC";
+
+            $stmt = $this->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            error_log("ModelCotisation::getCommerciauxList error: " . $e->getMessage());
+            return [];
+        }
+    }
 }
+

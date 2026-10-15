@@ -1,4 +1,8 @@
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
+<?php 
+$commerciaux = $commerciaux ?? [];
+$selectedCommercial = $selectedCommercial ?? ($_GET['commercial_code'] ?? '');
+?>
 <style>
 @media print {
   @page {
@@ -104,15 +108,46 @@
         </div>
       </div>
 
-      <!-- BARRE DE FILTRE PAR PÉRIODE -->
+      <!-- BARRE DE FILTRES (PÉRIODE & COMMERCIAL) -->
       <div class="card-premium no-print" style="background: #FFFFFF; border-radius: 16px; padding: 20px 24px; border: 1px solid #E2E8F0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); margin-bottom: 24px; width: 100%; box-sizing: border-box;">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
           
-          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 6px; color: #1E3A5F; font-weight: 800; font-size: 14px; margin-right: 8px;">
-              <i data-lucide="filter" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Filtre Période :
+          <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 6px; color: #1E3A5F; font-weight: 800; font-size: 14px; margin-right: 4px;">
+              <i data-lucide="filter" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Filtres :
+            </div>
+
+            <!-- FILTRE COMMERCIAL -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label for="filter-commercial" style="font-size: 12px; font-weight: 700; color: #64748B; display: flex; align-items: center; gap: 4px;">
+                <i data-lucide="user-check" style="width: 14px; height: 14px; color: #1E3A5F;"></i> Commercial
+              </label>
+              <?php if (Context::isCommercial()): ?>
+                <div style="padding: 8px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1px solid #CBD5E1; background: #F1F5F9; color: #1E3A5F; display: inline-flex; align-items: center; gap: 6px;" title="Scope restreint à votre propre compte">
+                  <span><?= htmlspecialchars($_SESSION[USERS_AUTH]['nom'] ?? ($_SESSION[USERS_AUTH]['nom_user'] ?? 'Mon compte')) ?></span>
+                  <span style="background: #ECFDF5; color: #059669; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">Moi</span>
+                </div>
+                <input type="hidden" id="filter-commercial" value="<?= htmlspecialchars(Context::user() ?? '') ?>">
+              <?php else: ?>
+                <select id="filter-commercial" class="form-control" style="padding: 8px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; color: #0F172A; outline: none; min-width: 190px; max-width: 250px; cursor: pointer;">
+                  <option value="">Tous les commerciaux</option>
+                  <?php if (!empty($commerciaux)): ?>
+                    <?php foreach ($commerciaux as $com): ?>
+                      <?php 
+                        $comCode = $com['code_user'] ?? '';
+                        $comNom = trim(($com['nom_user'] ?? '') . ' ' . ($com['prenom_user'] ?? ''));
+                        $comMat = !empty($com['matricule_user']) ? ' (' . $com['matricule_user'] . ')' : '';
+                      ?>
+                      <option value="<?= htmlspecialchars($comCode) ?>" <?= ($selectedCommercial === $comCode) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($comNom . $comMat) ?>
+                      </option>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </select>
+              <?php endif; ?>
             </div>
             
+            <!-- FILTRES DATES -->
             <div style="display: flex; align-items: center; gap: 8px;">
               <label style="font-size: 12px; font-weight: 700; color: #64748B;">Du</label>
               <input type="date" id="filter-date-debut" class="form-control" style="padding: 8px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; color: #0F172A; outline: none;" value="<?= htmlspecialchars($_GET['date_debut'] ?? '') ?>">
@@ -127,7 +162,7 @@
               <i data-lucide="search" style="width: 15px; height: 15px;"></i> Filtrer
             </button>
 
-            <button type="button" id="btn-reset-filtre" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 8px; padding: 9px 14px; font-size: 13px; border: 1px solid #CBD5E1; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="Réinitialiser la période">
+            <button type="button" id="btn-reset-filtre" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 8px; padding: 9px 14px; font-size: 13px; border: 1px solid #CBD5E1; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="Réinitialiser tous les filtres">
               <i data-lucide="rotate-ccw" style="width: 15px; height: 15px;"></i> Effacer
             </button>
           </div>
