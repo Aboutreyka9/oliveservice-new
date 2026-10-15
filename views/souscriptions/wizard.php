@@ -118,10 +118,10 @@
                 <i data-lucide="shopping-bag" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Sélection des packs
               </h3>
 
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 20px;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-bottom: 24px; align-items: flex-end;">
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
-                    Session d'activité <span style="color: #EF4444;">*</span>
+                  <label for="filter-session" style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    <i data-lucide="calendar" style="width: 15px; height: 15px; color: #1E3A5F;"></i> Session d'activité <span style="color: #EF4444;">*</span>
                   </label>
                   <select id="filter-session" class="form-control select2" style="width: 100%; box-sizing: border-box;" required>
                     <option value="">-- Choisir une session --</option>
@@ -134,8 +134,8 @@
                 </div>
 
                 <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
-                    Catégorie
+                  <label for="filter-categorie" style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    <i data-lucide="folder" style="width: 15px; height: 15px; color: #1E3A5F;"></i> Catégorie
                   </label>
                   <select id="filter-categorie" class="form-control select2" style="width: 100%; box-sizing: border-box;">
                     <option value="">Toutes les catégories</option>
@@ -146,10 +146,25 @@
                     <?php endif; ?>
                   </select>
                 </div>
+
+                <div class="form-group" style="width: 100%; box-sizing: border-box;">
+                  <label for="filter-search-pack" style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                      <i data-lucide="search" style="width: 15px; height: 15px; color: #1E3A5F;"></i> Recherche par libellé pack
+                    </span>
+                    <span id="pack-search-count" style="font-size: 11px; font-weight: 700; color: #059669; display: none;"></span>
+                  </label>
+                  <div style="position: relative; width: 100%;">
+                    <input type="text" id="filter-search-pack" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 38px 12px 14px; font-size: 13px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A; transition: all 0.2s ease;" placeholder="Ex: Pack Alimentaire, Téléviseur...">
+                    <button type="button" id="btn-clear-pack-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #94A3B8; cursor: pointer; padding: 4px; display: none;" title="Effacer la recherche">
+                      <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div id="packs-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px;">
-                <p style="color: #94A3B8; text-align: center; padding: 40px 0; font-style: italic;">Sélectionnez une session et/ou une catégorie pour afficher les packs disponibles.</p>
+                <p style="color: #94A3B8; text-align: center; padding: 40px 0; font-style: italic;">Sélectionnez une session, une catégorie ou saisissez un libellé de pack pour afficher les offres disponibles.</p>
               </div>
             </div>
 
@@ -340,52 +355,99 @@ function showStep(step) {
   }
 }
 
+function getCategoryBadgeStyle(catCode) {
+  var palettes = [
+    { bg: '#EFF6FF', text: '#1E40AF', border: '#BFDBFE' }, // Bleu
+    { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' }, // Émeraude
+    { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' }, // Ambre
+    { bg: '#F3E8FF', text: '#6B21A8', border: '#DDD6FE' }, // Violet
+    { bg: '#FFF1F2', text: '#9F1239', border: '#FECDD3' }, // Rose
+    { bg: '#E0F2FE', text: '#0369A1', border: '#BAE6FD' }  // Ciel
+  ];
+  if (!catCode) return palettes[0];
+  var hash = 0;
+  for (var i = 0; i < catCode.length; i++) {
+    hash = catCode.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return palettes[Math.abs(hash) % palettes.length];
+}
+
 function loadPacks() {
   var sessionCode = $('#filter-session').val();
   var categorieCode = $('#filter-categorie').val();
+  var searchQuery = $('#filter-search-pack').val().trim();
   var container = $('#packs-container');
 
-  if (!sessionCode) {
-    container.html('<p style="color: #94A3B8; text-align: center; padding: 40px 0; font-style: italic;">Sélectionnez une session pour afficher les packs disponibles.</p>');
+  if (searchQuery.length > 0) {
+    $('#btn-clear-pack-search').show();
+  } else {
+    $('#btn-clear-pack-search').hide();
+  }
+
+  // Si aucun filtre n'est activé, afficher le message d'attente
+  if (!sessionCode && !categorieCode && !searchQuery) {
+    container.html('<p style="color: #94A3B8; text-align: center; padding: 40px 0; font-style: italic; grid-column: 1 / -1;">Sélectionnez une session, une catégorie ou saisissez un libellé de pack pour afficher les offres disponibles.</p>');
+    $('#pack-search-count').hide();
     return;
   }
 
+  container.html('<div style="grid-column: 1 / -1; text-align: center; padding: 40px 0; color: #1E3A5F;"><i data-lucide="loader" style="width: 28px; height: 28px; animation: spin 1s linear infinite; display: inline-block;"></i><p style="margin-top: 8px; font-size: 13px; font-weight: 600; color: #64748B;">Recherche des packs...</p></div>');
+  if (window.lucide) lucide.createIcons();
+
   $.ajax({
     url: '<?= RACINE ?>souscription/wizardData',
-    data: { session_code: sessionCode, categorie_code: categorieCode },
+    data: { 
+      session_code: sessionCode, 
+      categorie_code: categorieCode,
+      search: searchQuery
+    },
     dataType: 'json',
     success: function(res) {
-      if (res.status === 1 && res.data.length) {
+      if (res.status === 1 && res.data && res.data.length) {
+        var count = res.data.length;
+        $('#pack-search-count').text(count + ' pack' + (count > 1 ? 's' : '') + ' trouvé' + (count > 1 ? 's' : '')).show();
+
         var html = '';
         res.data.forEach(function(pack) {
           var isSelected = selectedPacks.indexOf(pack.code_pack) !== -1;
           var borderColor = isSelected ? '#1E3A5F' : '#E2E8F0';
           var bgColor = isSelected ? '#F0F9FF' : '#FFFFFF';
-          var shadow = isSelected ? '0 4px 14px rgba(30, 58, 95, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)';
-          html += '<div class="pack-card" data-code="' + pack.code_pack + '" style="background: ' + bgColor + '; border: 2px solid ' + borderColor + '; border-radius: 14px; padding: 18px; cursor: pointer; box-shadow: ' + shadow + '; transition: all 0.2s;">' +
-            '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">' +
-              '<div>' +
-                '<strong style="font-size: 15px; color: #0F172A; display: block; margin-bottom: 6px;">' + (pack.libelle_pack || 'Pack') + '</strong>' +
-                '<span style="display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: #1E3A5F; color: #FFF;">' + (pack.libelle_categorie_pack || '') + '</span>' +
+          var shadow = isSelected ? '0 6px 18px rgba(30, 58, 95, 0.16)' : '0 2px 6px rgba(0,0,0,0.04)';
+          var badgeStyle = getCategoryBadgeStyle(pack.categorie_pack_code);
+          var sessionBadge = (!sessionCode && pack.libelle_session) ? '<span style="display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 12px; background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; margin-top: 4px;"><i data-lucide="calendar" style="width: 11px; height: 11px; display: inline; vertical-align: middle;"></i> ' + pack.libelle_session + '</span>' : '';
+
+          html += '<div class="pack-card" data-code="' + pack.code_pack + '" data-session="' + (pack.session_code || '') + '" data-zone="' + (pack.zone_code || '') + '" style="background: ' + bgColor + '; border: 2px solid ' + borderColor + '; border-radius: 14px; padding: 18px; cursor: pointer; box-shadow: ' + shadow + '; transition: all 0.2s ease; position: relative;">' +
+            (isSelected ? '<div style="position: absolute; top: 12px; right: 12px; width: 24px; height: 24px; border-radius: 50%; background: #1E3A5F; color: #FFF; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 2px 6px rgba(30, 58, 95, 0.35); z-index: 2;"><i data-lucide="check" style="width: 14px; height: 14px;"></i></div>' : '') +
+            '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;' + (isSelected ? ' padding-right: 26px;' : '') + '">' +
+              '<div style="flex: 1; padding-right: 10px;">' +
+                '<strong style="font-size: 15px; font-weight: 800; color: #0F172A; display: block; margin-bottom: 6px; line-height: 1.3;">' + (pack.libelle_pack || 'Pack') + '</strong>' +
+                '<span style="display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: ' + badgeStyle.bg + '; color: ' + badgeStyle.text + '; border: 1px solid ' + badgeStyle.border + ';">' + (pack.libelle_categorie_pack || 'Catalogue') + '</span>' +
+                (sessionBadge ? '<div style="margin-top: 4px;">' + sessionBadge + '</div>' : '') +
               '</div>' +
-              (pack.image_pack ? '<img src="<?= RACINE ?>public/assets/images/packs/' + pack.image_pack + '" style="width: 54px; height: 54px; object-fit: cover; border-radius: 10px; border: 1px solid #E2E8F0;">' : '<div style="width: 54px; height: 54px; background: #F1F5F9; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #64748B; font-size: 11px; font-weight: 700;">Pack</div>') +
+              (pack.image_pack ? '<img src="<?= RACINE ?>public/assets/images/packs/' + pack.image_pack + '" style="width: 54px; height: 54px; object-fit: cover; border-radius: 10px; border: 1px solid #E2E8F0; flex-shrink: 0;">' : '<div style="width: 54px; height: 54px; background: #F1F5F9; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #64748B; font-size: 11px; font-weight: 700; flex-shrink: 0; border: 1px solid #E2E8F0;"><i data-lucide="package" style="width: 22px; height: 22px; color: #94A3B8;"></i></div>') +
             '</div>' +
-            '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #475569;">' +
+            '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #475569; background: ' + (isSelected ? '#FFFFFF' : '#F8FAFC') + '; padding: 10px; border-radius: 8px; border: 1px solid #E2E8F0;">' +
               '<div><strong>Montant :</strong> <span style="color: #059669; font-weight: 800;">' + Number(pack.prix_cotisation_pack || 0).toLocaleString('fr-FR') + ' FCFA</span></div>' +
               '<div><strong>Durée :</strong> ' + (pack.nombre_jour_session || 0) + ' jours</div>' +
               '<div><strong>Articles :</strong> ' + (pack.nombre_articles || 0) + ' article(s)</div>' +
-              '<div><strong>Souscriptions :</strong> ' + (pack.nombre_souscriptions || 0) + '</div>' +
+              '<div><strong>Souscriptions :</strong> ' + (pack.nombre_souscriptions || 0) + ' fois</div>' +
             '</div>' +
           '</div>';
         });
         container.html(html);
         if (window.lucide) lucide.createIcons();
       } else {
-        container.html('<p style="color: #94A3B8; text-align: center; padding: 40px 0; font-style: italic;">Aucun pack disponible pour ces critères.</p>');
+        $('#pack-search-count').text('0 pack trouvé').show();
+        var emptyMsg = 'Aucun pack disponible pour ces critères';
+        if (searchQuery) emptyMsg += ' ("<strong>' + $('<div>').text(searchQuery).html() + '</strong>")';
+        emptyMsg += '.';
+        container.html('<div style="grid-column: 1 / -1; text-align: center; padding: 40px 0;"><i data-lucide="package-x" style="width: 38px; height: 38px; color: #94A3B8; margin-bottom: 8px;"></i><p style="color: #94A3B8; font-style: italic; margin: 0; font-size: 13px;">' + emptyMsg + '</p></div>');
+        if (window.lucide) lucide.createIcons();
       }
     },
     error: function() {
-      container.html('<p style="color: #DC2626; text-align: center; padding: 40px 0;">Erreur lors du chargement des packs.</p>');
+      $('#pack-search-count').hide();
+      container.html('<p style="color: #DC2626; text-align: center; padding: 40px 0; grid-column: 1 / -1;">Erreur lors du chargement des packs.</p>');
     }
   });
 }
@@ -482,6 +544,18 @@ $(document).ready(function() {
 
   $(document).on('click', '.pack-card', function() {
     var code = $(this).data('code');
+    var packSession = $(this).data('session');
+    var currentSession = $('#filter-session').val();
+
+    // Auto-sélection de la session si aucune n'était préalablement choisie
+    if (!currentSession && packSession) {
+      $('#filter-session').val(packSession).trigger('change.select2');
+      currentSession = packSession;
+    } else if (currentSession && packSession && currentSession !== packSession) {
+      showMessage('warning', 'Ce pack appartient à une autre session d\'activité. Veuillez changer de session pour y souscrire.');
+      return;
+    }
+
     var idx = selectedPacks.indexOf(code);
     if (idx === -1) {
       selectedPacks.push(code);
@@ -495,7 +569,21 @@ $(document).ready(function() {
     selectedPacks = [];
     loadPacks();
   });
+
   $('#filter-categorie').on('change', function() {
+    loadPacks();
+  });
+
+  var searchPackTimeout = null;
+  $('#filter-search-pack').on('input', function() {
+    clearTimeout(searchPackTimeout);
+    searchPackTimeout = setTimeout(function() {
+      loadPacks();
+    }, 280);
+  });
+
+  $('#btn-clear-pack-search').on('click', function() {
+    $('#filter-search-pack').val('');
     loadPacks();
   });
 

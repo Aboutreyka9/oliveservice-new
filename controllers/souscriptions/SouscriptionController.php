@@ -385,39 +385,57 @@ class SouscriptionController extends BaseController
     public function wizardData()
     {
         $this->requirePermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_ADD_SOUSCRIPTION']);
-        $sessionCode = $_GET['session_code'] ?? '';
-        $categorieCode = $_GET['categorie_code'] ?? '';
+        $sessionCode = trim($_GET['session_code'] ?? '');
+        $categorieCode = trim($_GET['categorie_code'] ?? '');
+        $search = trim($_GET['search'] ?? ($_GET['q'] ?? ''));
 
-        if (empty($sessionCode)) {
-            $this->json(['status' => 0, 'data' => []]);
+        if (empty($sessionCode) && empty($categorieCode) && empty($search)) {
+            $this->json(['status' => 1, 'data' => []]);
             return;
         }
 
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
+        if (empty($zoneCode) && !empty($sessionCode)) {
+            $stmtZ = $this->model->getCon()->prepare("SELECT zone_code FROM sessions WHERE code_session = ? LIMIT 1");
+            $stmtZ->execute([$sessionCode]);
+            $sessZ = $stmtZ->fetchColumn();
+            if (!empty($sessZ)) {
+                $zoneCode = $sessZ;
+            }
+        }
         $anneeCode = Context::annee();
 
         $sql = "
-            SELECT p.*, c.libelle_categorie_pack, s.nombre_jour_session,
+            SELECT p.*, c.libelle_categorie_pack, s.libelle_session, s.nombre_jour_session,
                    (SELECT COUNT(*) FROM pack_articles pa WHERE pa.pack_code = p.code_pack AND pa.etablissement_code = ? AND pa.zone_code = ? AND pa.annee_code = ?) as nombre_articles,
                    (SELECT COUNT(*) FROM pack_souscriptions ps WHERE ps.pack_code = p.code_pack AND ps.etablissement_code = ? AND ps.zone_code = ? AND ps.annee_code = ?) as nombre_souscriptions
             FROM packs p
             LEFT JOIN categorie_packs c ON c.code_categorie_pack = p.categorie_pack_code
             LEFT JOIN sessions s ON s.code_session = p.session_code AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
-            WHERE p.session_code = ? AND p.statut_pack = 'actif'
+            WHERE p.statut_pack = 'actif'
               AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
         ";
         $params = [
             $etabCode, $zoneCode, $anneeCode,
             $etabCode, $zoneCode, $anneeCode,
             $etabCode, $zoneCode, $anneeCode,
-            $sessionCode,
             $etabCode, $zoneCode, $anneeCode
         ];
+
+        if (!empty($sessionCode)) {
+            $sql .= " AND p.session_code = ?";
+            $params[] = $sessionCode;
+        }
 
         if (!empty($categorieCode)) {
             $sql .= " AND p.categorie_pack_code = ?";
             $params[] = $categorieCode;
+        }
+
+        if (!empty($search)) {
+            $sql .= " AND p.libelle_pack LIKE ?";
+            $params[] = '%' . $search . '%';
         }
 
         $sql .= " ORDER BY p.libelle_pack ASC";
