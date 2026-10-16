@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bienvenue sur GEICG - Olive Service</title>
+  <title>Bienvenue sur OLIVE SERVICE</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px 12px; color: #1E293B;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 620px; margin: 0 auto; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01); border: 1px solid #E2E8F0;">
@@ -14,7 +14,7 @@
         <div style="display: inline-block; background: rgba(255,255,255,0.1); padding: 8px 18px; border-radius: 20px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.15);">
           <span style="color: #60A5FA; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;">Compte Utilisateur Officiel</span>
         </div>
-        <h1 style="color: #FFFFFF; font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">GEICG - OLIVE SERVICE</h1>
+        <h1 style="color: #FFFFFF; font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">OLIVE SERVICE</h1>
         <p style="color: #94A3B8; font-size: 13px; margin: 6px 0 0 0; font-weight: 500;">Plateforme de Gestion des Souscriptions & Cotisations</p>
       </td>
     </tr>
@@ -27,7 +27,7 @@
         </h2>
         
         <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
-          Votre compte d'accès à la plateforme **GEICG Olive Service** a été créé et configuré avec succès par l'administration. Nous sommes ravis de vous compter parmi nous.
+          Votre compte d'accès à la plateforme **OLIVE SERVICE** a été créé et configuré avec succès par l'administration. Nous sommes ravis de vous compter parmi nous.
         </p>
 
         <!-- Carte des Détails du Compte & Affectation -->
@@ -110,8 +110,8 @@
     <!-- Pied de page -->
     <tr>
       <td style="background-color: #F8FAFC; padding: 24px 32px; text-align: center; border-top: 1px solid #E2E8F0; font-size: 12px; color: #94A3B8; line-height: 1.5;">
-        Cet e-mail institutionnel vous a été adressé automatiquement par le système GEICG.<br>
-        &copy; <?= date('Y') ?> GEICG - Grande École &bull; Tous droits réservés.
+        Cet e-mail institutionnel vous a été adressé automatiquement par le système OLIVE SERVICE.<br>
+        &copy; <?= date('Y') ?> OLIVE SERVICE &bull; Tous droits réservés.
       </td>
     </tr>
   </table>

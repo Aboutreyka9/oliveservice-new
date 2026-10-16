@@ -4,10 +4,10 @@ try {
     $stmt = $db->query("SELECT logo_etablissement, libelle_etablissement FROM etablissements ORDER BY id_etablissement ASC LIMIT 1");
     $etabRow = $stmt->fetch(PDO::FETCH_ASSOC);
     $loginLogo = $etabRow['logo_etablissement'] ?? '';
-    $etabLibelle = $etabRow['libelle_etablissement'] ?? 'GEICG - Grande École';
+    $etabLibelle = $etabRow['libelle_etablissement'] ?? 'OLIVE SERVICE';
 } catch (Exception $e) {
     $loginLogo = '';
-    $etabLibelle = 'GEICG - Grande École';
+    $etabLibelle = 'OLIVE SERVICE';
 }
 ?>
 
@@ -233,7 +233,7 @@ try {
             <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" style="max-height: 55px; max-width: 200px; object-fit: contain;">
           <?php else: ?>
             <div style="font-size: 24px; font-weight: 900; color: #1E3A5F; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
-              <i data-lucide="shield" style="width: 28px; height: 28px; color: #1E3A5F;"></i> GEICG
+              <i data-lucide="shield" style="width: 28px; height: 28px; color: #1E3A5F;"></i> OLIVE SERVICE
             </div>
           <?php endif; ?>
         </div>

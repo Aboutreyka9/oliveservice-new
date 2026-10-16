@@ -257,7 +257,7 @@
   </main>
 </div>
 
-<!-- MODAL DETAILS DES COTISATIONS (STRUCTURE SYSTÈME GEICG NAVY PREMIUM) -->
+<!-- MODAL DETAILS DES COTISATIONS (STRUCTURE SYSTÈME OLIVE SERVICE NAVY PREMIUM) -->
 <div class="modal-overlay" id="modalCotisationsDetails">
   <div class="modal" style="max-width: 920px; width: 92%; background: #FFFFFF; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25); overflow: hidden; border: 1px solid #E2E8F0;">
     

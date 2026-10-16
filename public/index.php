@@ -276,8 +276,8 @@ $route->addRoute('/notification/formulaire', ['NotificationController', 'formula
 // -------------------------------------------------------------
 $url = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
 
-// Nettoyage flexible des préfixes éventuels (geicg, oliveservice, public)
-$prefixes = ['/geicg/public', '/geicg', '/oliveservice/public', '/oliveservice', '/public'];
+// Nettoyage flexible des préfixes éventuels (oliveservice, public)
+$prefixes = ['/oliveservice/public', '/oliveservice', '/public'];
 foreach ($prefixes as $prefix) {
     if (strpos($url, $prefix) === 0) {
         $url = substr($url, strlen($prefix));

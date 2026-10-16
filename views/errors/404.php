@@ -47,7 +47,7 @@ $auth = $_SESSION[USERS_AUTH] ?? [];
         </div>
 
         <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #F1F5F9; font-size: 12px; color: #94A3B8;">
-          GEICG &bull; Système de Gestion Académique & Sécurité
+          OLIVE SERVICE &bull; Système de Gestion des Souscriptions & Cotisations
         </div>
 
       </div>

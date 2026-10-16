@@ -242,7 +242,7 @@
 
     <nav class="sidebar-nav">
         <!-- ACCUEIL (Visible pour tous) -->
-        <a href="<?= RACINE ?>" class="nav-item <?= in_array($currentUri, [RACINE, RACINE . 'public/', '/', '/public/', '/oliveservice/', '/oliveservice/public/', '/geicg/', '/geicg/public/'], true) ? 'active' : '' ?>" data-title="Tableau de bord">
+        <a href="<?= RACINE ?>" class="nav-item <?= in_array($currentUri, [RACINE, RACINE . 'public/', '/', '/public/', '/oliveservice/', '/oliveservice/public/'], true) ? 'active' : '' ?>" data-title="Tableau de bord">
             <i data-lucide="layout-dashboard"></i> <span>Tableau de bord</span>
         </a>
 
