@@ -10,7 +10,119 @@ class VersementController extends BaseController
     public function list()
     {
         $this->requirePermission(['COMMERCIAL_MAKE_VERSEMENT', 'FINANCE_VALIDATE_VERSEMENT']);
-        $this->loadView('../views/versements/list.php');
+
+        $dateDebut = $_GET['date_debut'] ?? '';
+        $dateFin = $_GET['date_fin'] ?? '';
+        $commercialCode = trim($_GET['commercial_code'] ?? '');
+        $statut = trim($_GET['statut'] ?? '');
+
+        $stats = $this->getStats([
+            'date_debut' => $dateDebut,
+            'date_fin' => $dateFin,
+            'commercial_code' => $commercialCode,
+            'statut' => $statut
+        ]);
+
+        $commerciaux = $this->model->getCommerciauxList();
+
+        $this->loadView('../views/versements/list.php', [
+            'stats' => $stats,
+            'commerciaux' => $commerciaux,
+            'selectedCommercial' => $commercialCode,
+            'selectedStatut' => $statut,
+            'dateDebut' => $dateDebut,
+            'dateFin' => $dateFin
+        ]);
+    }
+
+    public function getStats(array $filters = []): array
+    {
+        $etabCode = Context::etablissement();
+        $zoneCode = Context::zone();
+        $anneeCode = Context::annee();
+
+        $sql = "
+            SELECT 
+                COUNT(*) as total_versements,
+                COALESCE(SUM(v.montant_versement), 0) as total_montant,
+                COUNT(CASE WHEN v.statut_versement IN ('valide', 'validé') THEN 1 END) as count_valide,
+                COALESCE(SUM(CASE WHEN v.statut_versement IN ('valide', 'validé') THEN v.montant_versement ELSE 0 END), 0) as montant_valide,
+                COUNT(CASE WHEN v.statut_versement IN ('En attente', 'en_attente') THEN 1 END) as count_attente,
+                COALESCE(SUM(CASE WHEN v.statut_versement IN ('En attente', 'en_attente') THEN v.montant_versement ELSE 0 END), 0) as montant_attente,
+                COUNT(CASE WHEN v.statut_versement IN ('annule', 'ennule', 'rejete', 'rejeté') THEN 1 END) as count_annule,
+                COALESCE(SUM(CASE WHEN v.statut_versement IN ('annule', 'ennule', 'rejete', 'rejeté') THEN v.montant_versement ELSE 0 END), 0) as montant_annule
+            FROM versements_commerciaux v
+            WHERE v.etablissement_code = ? AND v.annee_code = ?
+        ";
+        $params = [$etabCode, $anneeCode];
+
+        if (!Context::hasJoker() && !Context::isFinance() && !Context::isAdmin()) {
+            $sql .= " AND v.zone_code = ?";
+            $params[] = $zoneCode;
+        }
+
+        if (Context::isCommercial()) {
+            $sql .= " AND (v.commercial_code = ? OR v.user_code = ?)";
+            $params[] = Context::user();
+            $params[] = Context::user();
+        } elseif (!empty($filters['commercial_code'])) {
+            $sql .= " AND (v.commercial_code = ? OR v.user_code = ?)";
+            $params[] = $filters['commercial_code'];
+            $params[] = $filters['commercial_code'];
+        }
+
+        if (!empty($filters['statut'])) {
+            $statut = $filters['statut'];
+            if ($statut === 'valide') {
+                $sql .= " AND v.statut_versement IN ('valide', 'validé')";
+            } elseif ($statut === 'en_attente' || $statut === 'En attente') {
+                $sql .= " AND (v.statut_versement = 'En attente' OR v.statut_versement = 'en_attente')";
+            } elseif ($statut === 'annule' || $statut === 'rejete') {
+                $sql .= " AND (v.statut_versement IN ('annule', 'ennule', 'rejete', 'rejeté'))";
+            } else {
+                $sql .= " AND v.statut_versement = ?";
+                $params[] = $statut;
+            }
+        }
+
+        if (!empty($filters['date_debut'])) {
+            $sql .= " AND (DATE(v.periode_versement) >= ? OR DATE(v.created_at_versement) >= ?)";
+            $params[] = $filters['date_debut'];
+            $params[] = $filters['date_debut'];
+        }
+
+        if (!empty($filters['date_fin'])) {
+            $sql .= " AND (DATE(v.periode_versement) <= ? OR DATE(v.created_at_versement) <= ?)";
+            $params[] = $filters['date_fin'];
+            $params[] = $filters['date_fin'];
+        }
+
+        try {
+            $stmt = $this->model->getCon()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [
+                'total_versements' => 0,
+                'total_montant' => 0,
+                'count_valide' => 0,
+                'montant_valide' => 0,
+                'count_attente' => 0,
+                'montant_attente' => 0,
+                'count_annule' => 0,
+                'montant_annule' => 0
+            ];
+        } catch (Exception $e) {
+            error_log("VersementController::getStats error: " . $e->getMessage());
+            return [
+                'total_versements' => 0,
+                'total_montant' => 0,
+                'count_valide' => 0,
+                'montant_valide' => 0,
+                'count_attente' => 0,
+                'montant_attente' => 0,
+                'count_annule' => 0,
+                'montant_annule' => 0
+            ];
+        }
     }
 
     public function apiList()
@@ -19,6 +131,11 @@ class VersementController extends BaseController
         $etabCode = Context::etablissement();
         $zoneCode = Context::zone();
         $anneeCode = Context::annee();
+
+        $dateDebut = $_GET['date_debut'] ?? '';
+        $dateFin = $_GET['date_fin'] ?? '';
+        $commercialCode = trim($_GET['commercial_code'] ?? '');
+        $statut = trim($_GET['statut'] ?? '');
 
         $sql = "
             SELECT v.*, c.id_caisse,
@@ -44,9 +161,38 @@ class VersementController extends BaseController
             $sql .= " AND (v.commercial_code = ? OR v.user_code = ?)";
             $params[] = Context::user();
             $params[] = Context::user();
+        } elseif (!empty($commercialCode)) {
+            $sql .= " AND (v.commercial_code = ? OR v.user_code = ?)";
+            $params[] = $commercialCode;
+            $params[] = $commercialCode;
         }
 
-        $sql .= " ORDER BY v.created_at_versement DESC";
+        if (!empty($statut)) {
+            if ($statut === 'valide') {
+                $sql .= " AND v.statut_versement IN ('valide', 'validé')";
+            } elseif ($statut === 'en_attente' || $statut === 'En attente') {
+                $sql .= " AND (v.statut_versement = 'En attente' OR v.statut_versement = 'en_attente')";
+            } elseif ($statut === 'annule' || $statut === 'rejete') {
+                $sql .= " AND (v.statut_versement IN ('annule', 'ennule', 'rejete', 'rejeté'))";
+            } else {
+                $sql .= " AND v.statut_versement = ?";
+                $params[] = $statut;
+            }
+        }
+
+        if (!empty($dateDebut)) {
+            $sql .= " AND (DATE(v.periode_versement) >= ? OR DATE(v.created_at_versement) >= ?)";
+            $params[] = $dateDebut;
+            $params[] = $dateDebut;
+        }
+
+        if (!empty($dateFin)) {
+            $sql .= " AND (DATE(v.periode_versement) <= ? OR DATE(v.created_at_versement) <= ?)";
+            $params[] = $dateFin;
+            $params[] = $dateFin;
+        }
+
+        $sql .= " ORDER BY v.created_at_versement DESC, v.id_versement DESC";
 
         $stmt = $this->model->getCon()->prepare($sql);
         $stmt->execute($params);
@@ -72,7 +218,18 @@ class VersementController extends BaseController
                 'nom_validator_complet' => trim(($v['nom_validator'] ?? '') . ' ' . ($v['prenom_validator'] ?? ''))
             ]);
         }
-        $this->json(['data' => $data]);
+
+        $stats = $this->getStats([
+            'date_debut' => $dateDebut,
+            'date_fin' => $dateFin,
+            'commercial_code' => $commercialCode,
+            'statut' => $statut
+        ]);
+
+        $this->json([
+            'data' => $data,
+            'stats' => $stats
+        ]);
     }
 
     public function apiCommercialCaisseHistory()

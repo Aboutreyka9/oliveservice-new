@@ -1,4 +1,97 @@
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
+<?php 
+$commerciaux = $commerciaux ?? [];
+$selectedCommercial = $selectedCommercial ?? ($_GET['commercial_code'] ?? '');
+$selectedStatut = $selectedStatut ?? ($_GET['statut'] ?? '');
+$dateDebut = $dateDebut ?? ($_GET['date_debut'] ?? '');
+$dateFin = $dateFin ?? ($_GET['date_fin'] ?? '');
+$stats = $stats ?? [
+    'total_versements' => 0,
+    'total_montant' => 0,
+    'count_valide' => 0,
+    'montant_valide' => 0,
+    'count_attente' => 0,
+    'montant_attente' => 0,
+    'count_annule' => 0,
+    'montant_annule' => 0
+];
+?>
+<style>
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  body, html {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .sidebar,
+  .topbar,
+  .page-header-actions,
+  .dataTables_length,
+  .dataTables_filter,
+  .dataTables_info,
+  .dataTables_paginate,
+  .btn,
+  #table-versements th:last-child,
+  #table-versements td:last-child,
+  .no-print {
+    display: none !important;
+  }
+  .app-layout,
+  .main-content,
+  .content-wrapper,
+  .card-premium,
+  div {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+  .page-header {
+    margin-bottom: 16px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  table#table-versements {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 11px !important;
+  }
+  table#table-versements th {
+    background: #F1F5F9 !important;
+    color: #0F172A !important;
+    border: 1px solid #CBD5E1 !important;
+    padding: 8px 10px !important;
+    font-weight: 800 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  table#table-versements td {
+    border: 1px solid #E2E8F0 !important;
+    padding: 8px 10px !important;
+    color: #0F172A !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  table#table-versements span,
+  table#table-versements code {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+</style>
 <div class="app-layout">
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
   <main class="main-content">
@@ -21,15 +114,177 @@
           </div>
         </div>
 
-        <?php if (Context::can('COMMERCIAL_MAKE_VERSEMENT')): ?>
-        <a href="<?= RACINE ?>versement/formulaire" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); text-decoration: none; cursor: pointer;">
-          <i data-lucide="arrow-down-left" style="width: 18px; height: 18px;"></i> Saisir un Versement
-        </a>
-        <?php endif; ?>
+        <div class="page-header-actions" style="display: flex; gap: 10px; align-items: center;">
+          <button type="button" onclick="imprimerVersements()" class="btn" style="background: #F8FAFC; border: 1px solid #CBD5E1; color: #1E3A5F; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <i data-lucide="printer" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Imprimer
+          </button>
+          <?php if (Context::can('COMMERCIAL_MAKE_VERSEMENT')): ?>
+          <a href="<?= RACINE ?>versement/formulaire" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); text-decoration: none; cursor: pointer;">
+            <i data-lucide="arrow-down-left" style="width: 18px; height: 18px;"></i> Saisir un Versement
+          </a>
+          <?php endif; ?>
+        </div>
       </div>
 
       <!-- CSRF TOKEN -->
       <input type="hidden" id="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
+
+      <!-- BARRE DE FILTRES -->
+      <div class="card-premium no-print" style="background: #FFFFFF; border-radius: 16px; padding: 20px 24px; border: 1px solid #E2E8F0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03); margin-bottom: 24px; width: 100%; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+          
+          <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 6px; color: #1E3A5F; font-weight: 800; font-size: 14px; margin-right: 4px;">
+              <i data-lucide="filter" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Filtres :
+            </div>
+
+            <!-- FILTRE COMMERCIAL -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label for="filter-commercial" style="font-size: 12px; font-weight: 700; color: #64748B; display: flex; align-items: center; gap: 4px;">
+                <i data-lucide="user-check" style="width: 14px; height: 14px; color: #1E3A5F;"></i> Commercial
+              </label>
+              <?php if (Context::isCommercial()): ?>
+                <div style="padding: 8px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1px solid #CBD5E1; background: #F1F5F9; color: #1E3A5F; display: inline-flex; align-items: center; gap: 6px;" title="Scope restreint à votre propre compte">
+                  <span><?= htmlspecialchars($_SESSION[USERS_AUTH]['nom'] ?? ($_SESSION[USERS_AUTH]['nom_user'] ?? 'Mon compte')) ?></span>
+                  <span style="background: #ECFDF5; color: #059669; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">Moi</span>
+                </div>
+                <input type="hidden" id="filter-commercial" value="<?= htmlspecialchars(Context::user() ?? '') ?>">
+              <?php else: ?>
+                <select id="filter-commercial" class="form-control" style="padding: 8px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; color: #0F172A; outline: none; min-width: 190px; max-width: 250px; cursor: pointer;">
+                  <option value="">Tous les commerciaux</option>
+                  <?php if (!empty($commerciaux)): ?>
+                    <?php foreach ($commerciaux as $com): ?>
+                      <?php 
+                        $comCode = $com['code_user'] ?? '';
+                        $comNom = trim(($com['nom_user'] ?? '') . ' ' . ($com['prenom_user'] ?? ''));
+                        $comMat = !empty($com['matricule_user']) ? ' (' . $com['matricule_user'] . ')' : '';
+                      ?>
+                      <option value="<?= htmlspecialchars($comCode) ?>" <?= ($selectedCommercial === $comCode) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($comNom . $comMat) ?>
+                      </option>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </select>
+              <?php endif; ?>
+            </div>
+
+            <!-- FILTRE STATUT -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label for="filter-statut" style="font-size: 12px; font-weight: 700; color: #64748B; display: flex; align-items: center; gap: 4px;">
+                <i data-lucide="shield-check" style="width: 14px; height: 14px; color: #1E3A5F;"></i> Statut
+              </label>
+              <select id="filter-statut" class="form-control" style="padding: 8px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; color: #0F172A; outline: none; min-width: 150px; cursor: pointer;">
+                <option value="">Tous les statuts</option>
+                <option value="valide" <?= ($selectedStatut === 'valide') ? 'selected' : '' ?>>Validé</option>
+                <option value="en_attente" <?= ($selectedStatut === 'en_attente') ? 'selected' : '' ?>>En attente</option>
+                <option value="annule" <?= ($selectedStatut === 'annule') ? 'selected' : '' ?>>Annulé / Rejeté</option>
+              </select>
+            </div>
+            
+            <!-- FILTRES DATES -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label style="font-size: 12px; font-weight: 700; color: #64748B;">Du</label>
+              <input type="date" id="filter-date-debut" class="form-control" style="padding: 8px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; color: #0F172A; outline: none;" value="<?= htmlspecialchars($dateDebut) ?>">
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label style="font-size: 12px; font-weight: 700; color: #64748B;">Au</label>
+              <input type="date" id="filter-date-fin" class="form-control" style="padding: 8px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; color: #0F172A; outline: none;" value="<?= htmlspecialchars($dateFin) ?>">
+            </div>
+
+            <button type="button" id="btn-appliquer-filtre" class="btn" style="background: #1E3A5F; color: #FFFFFF; font-weight: 800; border-radius: 8px; padding: 9px 18px; font-size: 13px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(30, 58, 95, 0.15);">
+              <i data-lucide="search" style="width: 15px; height: 15px;"></i> Filtrer
+            </button>
+
+            <button type="button" id="btn-reset-filtre" class="btn" style="background: #F1F5F9; color: #475569; font-weight: 700; border-radius: 8px; padding: 9px 14px; font-size: 13px; border: 1px solid #CBD5E1; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="Réinitialiser tous les filtres">
+              <i data-lucide="rotate-ccw" style="width: 15px; height: 15px;"></i> Effacer
+            </button>
+          </div>
+
+          <!-- RACCOURCIS RAPIDES -->
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-shortcut-date" data-range="today" style="background: #F8FAFC; color: #334155; font-weight: 700; border-radius: 8px; padding: 6px 12px; font-size: 12px; border: 1px solid #CBD5E1; cursor: pointer;">Aujourd'hui</button>
+            <button type="button" class="btn btn-shortcut-date" data-range="month" style="background: #F8FAFC; color: #334155; font-weight: 700; border-radius: 8px; padding: 6px 12px; font-size: 12px; border: 1px solid #CBD5E1; cursor: pointer;">Ce Mois</button>
+            <button type="button" class="btn btn-shortcut-date" data-range="year" style="background: #F8FAFC; color: #334155; font-weight: 700; border-radius: 8px; padding: 6px 12px; font-size: 12px; border: 1px solid #CBD5E1; cursor: pointer;">Cette Année</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- CARTE ET STATISTIQUES (KPI CARDS) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; margin-bottom: 24px;" class="stats-section">
+        
+        <!-- KPI 1 : TOTAL VERSÉ -->
+        <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #E2E8F0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Total Versé</span>
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: #ECFDF5; color: #059669; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.15);">
+              <i data-lucide="banknote" style="width: 22px; height: 22px;"></i>
+            </div>
+          </div>
+          <div id="kpi-total-montant" style="font-size: 22px; font-weight: 900; color: #059669; line-height: 1.2;">
+            <?= number_format((float)($stats['total_montant'] ?? 0), 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700;">FCFA</small>
+          </div>
+          <span style="font-size: 12px; color: #64748B; font-weight: 600; margin-top: 6px; display: block;">Cumul des versements déclarés</span>
+        </div>
+
+        <!-- KPI 2 : VERSEMENTS VALIDÉS -->
+        <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #E2E8F0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Versements Validés</span>
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: #EFF6FF; color: #1E3A5F; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(30, 58, 95, 0.15);">
+              <i data-lucide="check-circle-2" style="width: 22px; height: 22px;"></i>
+            </div>
+          </div>
+          <div id="kpi-montant-valide" style="font-size: 22px; font-weight: 900; color: #1E3A5F; line-height: 1.2;">
+            <?= number_format((float)($stats['montant_valide'] ?? 0), 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700;">FCFA</small>
+          </div>
+          <span style="font-size: 12px; color: #059669; font-weight: 700; margin-top: 6px; display: flex; align-items: center; gap: 4px;">
+            <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i> Approuvés par la caisse
+          </span>
+        </div>
+
+        <!-- KPI 3 : EN ATTENTE DE VALIDATION -->
+        <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #E2E8F0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">En Attente Caisse</span>
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.15);">
+              <i data-lucide="clock" style="width: 22px; height: 22px;"></i>
+            </div>
+          </div>
+          <div id="kpi-montant-attente" style="font-size: 22px; font-weight: 900; color: #D97706; line-height: 1.2;">
+            <?= number_format((float)($stats['montant_attente'] ?? 0), 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700;">FCFA</small>
+          </div>
+          <span style="font-size: 12px; color: #D97706; font-weight: 700; margin-top: 6px; display: flex; align-items: center; gap: 4px;">
+            <i data-lucide="alert-circle" style="width: 14px; height: 14px;"></i> En cours de contrôle
+          </span>
+        </div>
+
+        <!-- KPI 4 : NOMBRE D'OPÉRATIONS -->
+        <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #E2E8F0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Volume d'Opérations</span>
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: #F1F5F9; color: #475569; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);">
+              <i data-lucide="receipt" style="width: 22px; height: 22px;"></i>
+            </div>
+          </div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap;">
+            <div id="kpi-total-versements" style="font-size: 22px; font-weight: 900; color: #0F172A; line-height: 1.2;">
+              <?= number_format((int)($stats['total_versements'] ?? 0), 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700;">opér.</small>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span id="kpi-count-valide" style="background: #ECFDF5; color: #047857; font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 8px; border: 1px solid #A7F3D0;">
+                <?= (int)($stats['count_valide'] ?? 0) ?> Val.
+              </span>
+              <span id="kpi-count-attente" style="background: #FEF3C7; color: #B45309; font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 8px; border: 1px solid #FDE68A;">
+                <?= (int)($stats['count_attente'] ?? 0) ?> Att.
+              </span>
+            </div>
+          </div>
+          <span style="font-size: 12px; color: #64748B; font-weight: 600; margin-top: 6px; display: block;">Dépôts de caisse enregistrés</span>
+        </div>
+
+      </div>
 
       <!-- CARTE TABLEAU PRINCIPALE (NAVY PREMIUM) -->
       <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 28px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01); width: 100%; box-sizing: border-box; overflow: hidden;">
@@ -222,5 +477,5 @@
   </div>
 </div>
 
-<script src="<?= RACINE ?>public/assets/js/modules/versements.js?v=1.2"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/versements.js?v=1.3"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

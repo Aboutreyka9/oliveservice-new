@@ -13,7 +13,22 @@ $(function() {
 
   if ($tableVers.length) {
     dataTableInstance = $tableVers.DataTable({
-      ajax: racine + 'versement/apiList',
+      ajax: {
+        url: racine + 'versement/apiList',
+        type: 'GET',
+        data: function(d) {
+          d.commercial_code = $('#filter-commercial').val() || '';
+          d.statut = $('#filter-statut').val() || '';
+          d.date_debut = $('#filter-date-debut').val() || '';
+          d.date_fin = $('#filter-date-fin').val() || '';
+        },
+        dataSrc: function(json) {
+          if (json.stats) {
+            updateKpis(json.stats);
+          }
+          return json.data || [];
+        }
+      },
       processing: true,
       autoWidth: false,
       columns: [
@@ -159,6 +174,81 @@ $(function() {
       }
     });
   }
+
+  // --- MISE À JOUR DYNAMIQUE DES KPI STATS ---
+  function updateKpis(stats) {
+    if (!stats) return;
+    const totalMontant = Number(stats.total_montant || 0);
+    const montantValide = Number(stats.montant_valide || 0);
+    const montantAttente = Number(stats.montant_attente || 0);
+    const totalVers = Number(stats.total_versements || 0);
+    const countValide = Number(stats.count_valide || 0);
+    const countAttente = Number(stats.count_attente || 0);
+
+    $('#kpi-total-montant').html(totalMontant.toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">FCFA</small>');
+    $('#kpi-montant-valide').html(montantValide.toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">FCFA</small>');
+    $('#kpi-montant-attente').html(montantAttente.toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">FCFA</small>');
+    $('#kpi-total-versements').html(totalVers.toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">opér.</small>');
+
+    $('#kpi-count-valide').text(countValide + ' Val.');
+    $('#kpi-count-attente').text(countAttente + ' Att.');
+  }
+
+  // --- ÉVÉNEMENTS SUR LA BARRE DE FILTRES ---
+  $('#btn-appliquer-filtre').on('click', function() {
+    if (dataTableInstance) {
+      dataTableInstance.ajax.reload();
+    }
+  });
+
+  $('#filter-commercial, #filter-statut, #filter-date-debut, #filter-date-fin').on('change', function() {
+    if (dataTableInstance) {
+      dataTableInstance.ajax.reload();
+    }
+  });
+
+  $('#btn-reset-filtre').on('click', function() {
+    if (!isCommercial) {
+      $('#filter-commercial').val('');
+    }
+    $('#filter-statut').val('');
+    $('#filter-date-debut').val('');
+    $('#filter-date-fin').val('');
+    if (dataTableInstance) {
+      dataTableInstance.ajax.reload();
+    }
+  });
+
+  $('.btn-shortcut-date').on('click', function() {
+    const range = $(this).data('range');
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const today = `${yyyy}-${mm}-${dd}`;
+
+    let debut = '';
+    let fin = today;
+
+    if (range === 'today') {
+      debut = today;
+    } else if (range === 'month') {
+      debut = `${yyyy}-${mm}-01`;
+    } else if (range === 'year') {
+      debut = `${yyyy}-01-01`;
+    }
+
+    $('#filter-date-debut').val(debut);
+    $('#filter-date-fin').val(fin);
+
+    if (dataTableInstance) {
+      dataTableInstance.ajax.reload();
+    }
+  });
+
+  window.imprimerVersements = function() {
+    window.print();
+  };
 
   // --- GESTION DE LA MODALE DE VALIDATION COMPTABLE ET HISTORIQUE CAISSE ---
   const $modalVal = $('#modalValiderVersement');
