@@ -2,7 +2,7 @@ const LINK = (typeof window.LINK !== 'undefined' && window.LINK)
     ? window.LINK
     : ((typeof window.RACINE !== 'undefined' && window.RACINE)
         ? window.RACINE
-        : (window.location.origin + (window.location.pathname.startsWith('/oliveservice/public') ? '/oliveservice/public/' : (window.location.pathname.startsWith('/oliveservice') ? '/oliveservice/' : (window.location.pathname.startsWith('/geicg') ? '/geicg/' : '/')))));
+        : (window.location.origin + (window.location.pathname.startsWith('/oliveservice/public') ? '/oliveservice/public/' : (window.location.pathname.startsWith('/oliveservice') ? '/oliveservice/' : '/'))));
 
 $.ajaxSetup({
     xhrFields: {
@@ -37,15 +37,15 @@ function initDataTable(tableId, ajaxUrl, columns) {
         ...dataTableDefaults,
         ajax: { url: LINK + ajaxUrl, dataSrc: 'data' },
         columns: columns,
-        drawCallback: function() {
+        drawCallback: function () {
             if (window.innerWidth <= 768) {
                 const api = $(`#${tableId}`).DataTable();
                 const headers = [];
-                $(`#${tableId} thead th`).each(function() {
+                $(`#${tableId} thead th`).each(function () {
                     headers.push($(this).text().trim());
                 });
-                $(api.rows().nodes()).each(function() {
-                    $(this).find('td').each(function(idx, td) {
+                $(api.rows().nodes()).each(function () {
+                    $(this).find('td').each(function (idx, td) {
                         if (headers[idx]) $(td).attr('data-label', headers[idx]);
                     });
                 });
@@ -55,11 +55,11 @@ function initDataTable(tableId, ajaxUrl, columns) {
 }
 
 function bindStatusToggle(tableId, changerUrl, tableRef) {
-    $(`#${tableId}`).on('click', '.changerStatus', function() {
+    $(`#${tableId}`).on('click', '.changerStatus', function () {
         const id = $(this).data('id');
-        $.post(LINK + changerUrl, { id: id }, function(response) {
+        $.post(LINK + changerUrl, { id: id }, function (response) {
             console.log(response);
-            
+
             showToast(response.message, response.status === 1 ? 'success' : 'error');
             if (response.status === 1 && response.reload) {
                 $(`#${tableId}`).DataTable().ajax.reload(null, false);
@@ -221,9 +221,9 @@ function getEntityConfig(type) {
     let config = entityConfigs[type] || { modalTitle: 'Ajouter', fields: [] };
     let resolved = JSON.parse(JSON.stringify(config));
     resolved.type = type;
-    resolved.fields.forEach(function(f) {
+    resolved.fields.forEach(function (f) {
         if (f.optionsKey) {
-        const opts = window[f.optionsKey];
+            const opts = window[f.optionsKey];
             if (opts && typeof opts === 'object' && Object.keys(opts).length > 0) {
                 f.options = opts;
             } else if (entityOptionEndpoints[f.optionsKey]) {
@@ -239,14 +239,14 @@ function getEntityConfig(type) {
     return resolved;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const modal = document.getElementById('genericModal');
     const modalTitle = document.getElementById('modalTitle');
     const modalForm = document.getElementById('modalForm');
     const modalSave = document.getElementById('modalSave');
     let currentFormConfig = null;
     let currentSaveHandler = null;
-    window.openModal = function(type, saveHandler) {
+    window.openModal = function (type, saveHandler) {
         // 1. Si c'est un ID d'élément DOM existant dans la page (qui n'est pas le genericModal)
         if (typeof type === 'string' && type) {
             const customEl = document.getElementById(type);
@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         currentFormType = type;
         const formType = type;
-        currentSaveHandler = saveHandler || function(formData) {
+        currentSaveHandler = saveHandler || function (formData) {
             const endpoints = {
                 product: LINK + 'article/add',
                 category: LINK + 'categorie/add',
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     loading(modalSave, false, 'Enregistrer');
                     if (response.status) {
                         showToast(response.message, 'success');
@@ -307,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (table) table.ajax.reload(null, false);
                         console.log('[form success] type=', formType, 'response=', response);
                         if (formType === 'client' && response.client_code) {
-                            setTimeout(function() {
+                            setTimeout(function () {
                                 window.location.href = LINK + 'client/list';
                             }, 400);
                         }
@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         showToast(errMsg, 'error');
                     }
                 },
-                error: function(xhr) {
+                error: function (xhr) {
                     loading(modalSave, false, 'Enregistrer');
                     let errorMsg = 'Erreur serveur';
                     console.error('[form error] status:', xhr.status, 'response:', xhr.responseText);
@@ -352,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const rows = [];
         const forceSingleCol = (type !== 'utilisateur') && fields.length <= 5;
         let row = [];
-        fields.forEach(function(f) {
+        fields.forEach(function (f) {
             f.options = f.options || {};
             if (forceSingleCol) {
                 if (row.length) rows.push(row);
@@ -376,14 +376,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         if (row.length) rows.push(row);
 
-        rows.forEach(function(row) {
+        rows.forEach(function (row) {
             const isFull = row.length === 1;
             html += '<div class="' + (isFull ? 'form-row-full' : 'form-row') + '" style="display: flex; gap: 16px; width: 100%; margin-bottom: 14px; flex-wrap: wrap;">';
-            row.forEach(function(f) {
+            row.forEach(function (f) {
                 const isHalf = !isFull && row.length === 2;
                 html += '<div class="form-group" style="flex: ' + (isHalf ? '1 1 calc(50% - 8px)' : '1 1 100%') + '; min-width: 220px; display: flex; flex-direction: column; gap: 6px;"><label style="font-weight: 700; font-size: 13px; color: #334155;">' + f.label + (f.required ? ' *' : '') + '</label><div class="input-wrapper" style="position: relative; width: 100%;">';
                 if (f.type === 'select') {
-                    html += '<select name="' + f.name + '" class="form-control" ' + (f.required ? 'required' : '') + ' style="border-radius: 8px; height: 42px; width: 100%; padding: 0 12px;">' + Object.entries(f.options || {}).map(function(e) { return '<option value="' + e[0] + '">' + e[1] + '</option>'; }).join('') + '</select>';
+                    html += '<select name="' + f.name + '" class="form-control" ' + (f.required ? 'required' : '') + ' style="border-radius: 8px; height: 42px; width: 100%; padding: 0 12px;">' + Object.entries(f.options || {}).map(function (e) { return '<option value="' + e[0] + '">' + e[1] + '</option>'; }).join('') + '</select>';
                 } else if (f.type === 'textarea') {
                     html += '<textarea name="' + f.name + '" class="form-control" ' + (f.required ? 'required' : '') + ' style="border-radius: 8px; width: 100%; min-height: 80px;"></textarea>';
                 } else if (f.type === 'image-upload') {
@@ -410,10 +410,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const triggerBtn = modalForm.querySelector('.image-upload-trigger');
             const previewsGrid = modalForm.querySelector('.image-previews-grid');
 
-            triggerBtn.addEventListener('click', function() { fileInput.click(); });
+            triggerBtn.addEventListener('click', function () { fileInput.click(); });
 
-            fileInput.addEventListener('change', function() {
-                Array.from(this.files).forEach(function(file) {
+            fileInput.addEventListener('change', function () {
+                Array.from(this.files).forEach(function (file) {
                     uploadImageFile(file, previewsGrid, modalForm);
                 });
                 this.value = '';
@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     data: fd,
                     processData: false,
                     contentType: false,
-                    success: function(resp) {
+                    success: function (resp) {
                         if (resp.status) {
                             const entry = { filename: resp.filename, url: LINK + resp.url, is_primary: false };
                             form._uploadedImages.push(entry);
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             showToast(resp.message || 'Erreur upload', 'error');
                         }
                     },
-                    error: function() { showToast('Erreur upload image', 'error'); }
+                    error: function () { showToast('Erreur upload image', 'error'); }
                 });
             }
 
@@ -455,33 +455,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
                 const radio = card.querySelector('input[type="radio"]');
-                radio.addEventListener('change', function() {
-                    form._uploadedImages.forEach(function(img) { img.is_primary = (img.filename === entry.filename); });
+                radio.addEventListener('change', function () {
+                    form._uploadedImages.forEach(function (img) { img.is_primary = (img.filename === entry.filename); });
                 });
-                card.querySelector('.image-remove-btn').addEventListener('click', function() {
-                    form._uploadedImages = form._uploadedImages.filter(function(img) { return img.filename !== entry.filename; });
+                card.querySelector('.image-remove-btn').addEventListener('click', function () {
+                    form._uploadedImages = form._uploadedImages.filter(function (img) { return img.filename !== entry.filename; });
                     card.remove();
                 });
                 grid.appendChild(card);
             }
         }
 
-        currentFormConfig.fields.forEach(function(f) {
+        currentFormConfig.fields.forEach(function (f) {
             if (f._optionsEndpoint) {
                 const select = modalForm.querySelector('select[name="' + f.name + '"]');
                 if (!select) return;
-                $.get(f._optionsEndpoint, function(resp) {
+                $.get(f._optionsEndpoint, function (resp) {
                     const options = (resp && resp.options) ? resp.options : {};
                     const entries = Object.entries(options);
-                    const placeholder = entries.find(function(e) { return e[0] === ''; });
-                    const realOptions = entries.filter(function(e) { return e[0] !== ''; });
+                    const placeholder = entries.find(function (e) { return e[0] === ''; });
+                    const realOptions = entries.filter(function (e) { return e[0] !== ''; });
                     const placeholderHtml = placeholder
                         ? '<option value="" disabled selected>' + placeholder[1] + '</option>'
                         : '<option value="" disabled selected>Sélectionner...</option>';
-                    select.innerHTML = placeholderHtml + realOptions.map(function(e) {
+                    select.innerHTML = placeholderHtml + realOptions.map(function (e) {
                         return '<option value="' + e[0] + '">' + e[1] + '</option>';
                     }).join('');
-                }, 'json').fail(function(xhr) {
+                }, 'json').fail(function (xhr) {
                     console.error('[openModal] Options load failed:', f._optionsEndpoint, 'status:', xhr.status, 'response:', xhr.responseJSON);
                     select.innerHTML = '<option value="">Erreur chargement</option>';
                 });
@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('[product modal] categorieSelect:', !!categorieSelect, 'sousCategorieSelect:', !!sousCategorieSelect);
             if (categorieSelect && sousCategorieSelect) {
                 console.log('[product modal] attaching change listener');
-                categorieSelect.addEventListener('change', function() {
+                categorieSelect.addEventListener('change', function () {
                     console.log('[product modal] categorie changed to:', this.value);
                     const catCode = this.value;
                     if (!catCode) {
@@ -504,19 +504,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     sousCategorieSelect.disabled = true;
                     sousCategorieSelect.innerHTML = '<option value="">Chargement...</option>';
-                    $.get(LINK + 'subcategory/getByCategory', { categorie_code: catCode }, function(resp) {
+                    $.get(LINK + 'subcategory/getByCategory', { categorie_code: catCode }, function (resp) {
                         const options = resp.options || {};
                         const entries = Object.entries(options);
-                        const placeholder = entries.find(function(e) { return e[0] === ''; });
-                        const realOptions = entries.filter(function(e) { return e[0] !== ''; });
+                        const placeholder = entries.find(function (e) { return e[0] === ''; });
+                        const realOptions = entries.filter(function (e) { return e[0] !== ''; });
                         const placeholderHtml = placeholder
                             ? '<option value="" disabled selected>' + placeholder[1] + '</option>'
                             : '<option value="" disabled selected>Sélectionner...</option>';
-                        sousCategorieSelect.innerHTML = placeholderHtml + realOptions.map(function(e) {
+                        sousCategorieSelect.innerHTML = placeholderHtml + realOptions.map(function (e) {
                             return '<option value="' + e[0] + '">' + e[1] + '</option>';
                         }).join('');
                         sousCategorieSelect.disabled = false;
-                    }, 'json').fail(function() {
+                    }, 'json').fail(function () {
                         sousCategorieSelect.innerHTML = '<option value="">Erreur chargement</option>';
                         sousCategorieSelect.disabled = false;
                     });
@@ -525,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    window.closeModal = function(id) {
+    window.closeModal = function (id) {
         if (typeof id === 'string' && id) {
             const customEl = document.getElementById(id);
             if (customEl && customEl !== modal) {
@@ -551,20 +551,20 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('modalCancel').addEventListener('click', closeModal);
     }
     if (modal) {
-        modal.addEventListener('click', function(e) {
+        modal.addEventListener('click', function (e) {
             if (e.target === modal) closeModal();
         });
     }
 
-if (modalSave) {
-        modalSave.addEventListener('click', function() {
+    if (modalSave) {
+        modalSave.addEventListener('click', function () {
             if (!currentSaveHandler || !currentFormConfig) return;
             const form = document.getElementById('modalForm');
             const entityType = Object.keys(entityConfigs).find(key => entityConfigs[key] === currentFormConfig) || 'modal';
             const csrfTokenInput = form.querySelector('[name="csrf_token"]');
             const formData = {};
-            
-            currentFormConfig.fields.forEach(function(f) {
+
+            currentFormConfig.fields.forEach(function (f) {
                 const input = form.querySelector(`[name="${f.name}"]`);
                 if (f.type === 'image-upload') {
                     formData[f.name] = JSON.stringify(form._uploadedImages || []);
@@ -575,7 +575,7 @@ if (modalSave) {
                     formData[f.name] = value;
                 }
             });
-            
+
             if (csrfTokenInput) {
                 formData.csrf_token = csrfTokenInput.value;
             }
@@ -585,7 +585,7 @@ if (modalSave) {
                 isFormValid = FormValidator.validateForm(form);
             } else {
                 const requiredFields = currentFormConfig.fields.filter(f => f.required);
-                requiredFields.forEach(function(f) {
+                requiredFields.forEach(function (f) {
                     const input = form.querySelector(`[name="${f.name}"]`);
                     if (input && !input.value.trim()) {
                         isFormValid = false;
@@ -606,13 +606,13 @@ if (modalSave) {
                 showToast('Veuillez corriger les erreurs dans le formulaire', 'warning');
                 return;
             }
-            
+
             currentSaveHandler(formData);
         });
     }
 
-    document.querySelectorAll('[data-modal]').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
+    document.querySelectorAll('[data-modal]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
             e.preventDefault();
             const type = this.getAttribute('data-modal');
             if (type) openModal(type);
@@ -630,8 +630,7 @@ if (modalSave) {
             if (footer) footer.classList.toggle('expanded', isCollapsed);
             try {
                 localStorage.setItem('oliveservice_sidebar_collapsed', isCollapsed ? '1' : '0');
-                localStorage.setItem('geicg_sidebar_collapsed', isCollapsed ? '1' : '0');
-            } catch (e) {}
+            } catch (e) { }
             if (window.lucide) {
                 lucide.createIcons();
             }
@@ -639,7 +638,7 @@ if (modalSave) {
     }
 
     try {
-        if (localStorage.getItem('oliveservice_sidebar_collapsed') === '1' || localStorage.getItem('geicg_sidebar_collapsed') === '1') {
+        if (localStorage.getItem('oliveservice_sidebar_collapsed') === '1' || localStorage.getItem('oliveservice_sidebar_collapsed') === '1') {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.querySelector('.main-content');
             const footer = document.getElementById('footer') || document.querySelector('.footer');
@@ -647,11 +646,11 @@ if (modalSave) {
             if (mainContent) mainContent.classList.add('expanded');
             if (footer) footer.classList.add('expanded');
         }
-    } catch (e) {}
+    } catch (e) { }
 
     const sidebarToggle = document.getElementById('sidebarToggle');
     if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', function(e) {
+        sidebarToggle.addEventListener('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
             toggleSidebar();
@@ -681,7 +680,7 @@ if (modalSave) {
             document.body.style.overflow = '';
         }
 
-        mobileMenuBtn.addEventListener('click', function(e) {
+        mobileMenuBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (sidebar.classList.contains('mobile-open')) {
                 closeMobileSidebar();
@@ -690,7 +689,7 @@ if (modalSave) {
             }
         });
 
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && sidebar.classList.contains('mobile-open')) {
                 closeMobileSidebar();
             }
@@ -700,25 +699,25 @@ if (modalSave) {
     const searchToggle = document.getElementById('searchToggle');
     const searchMobile = document.getElementById('searchMobile');
     if (searchToggle && searchMobile) {
-        searchToggle.addEventListener('click', function(e) {
+        searchToggle.addEventListener('click', function (e) {
             e.stopPropagation();
             const isActive = searchMobile.classList.contains('active');
-            document.querySelectorAll('.search-wrapper--mobile').forEach(function(el) { el.classList.remove('active'); });
+            document.querySelectorAll('.search-wrapper--mobile').forEach(function (el) { el.classList.remove('active'); });
             if (!isActive) {
                 searchMobile.classList.add('active');
                 const input = searchMobile.querySelector('#globalSearchMobile');
-                if (input) setTimeout(function() { input.focus(); }, 100);
+                if (input) setTimeout(function () { input.focus(); }, 100);
             }
         });
     }
 
-    ['notification', 'profile', 'quickActions'].forEach(function(name) {
+    ['notification', 'profile', 'quickActions'].forEach(function (name) {
         const btn = document.getElementById(name + 'Btn');
         const panel = document.getElementById(name + 'Panel');
         if (btn && panel) {
-            btn.addEventListener('click', function(e) {
+            btn.addEventListener('click', function (e) {
                 e.stopPropagation();
-                document.querySelectorAll('.dropdown-panel').forEach(function(p) {
+                document.querySelectorAll('.dropdown-panel').forEach(function (p) {
                     if (p !== panel) p.classList.remove('active');
                 });
                 panel.classList.toggle('active');
@@ -726,13 +725,13 @@ if (modalSave) {
         }
     });
 
-    ['bnProfil'].forEach(function(id) {
+    ['bnProfil'].forEach(function (id) {
         const btn = document.getElementById(id);
         const panel = document.getElementById('panelProfil');
         if (btn && panel) {
-            btn.addEventListener('click', function(e) {
+            btn.addEventListener('click', function (e) {
                 e.stopPropagation();
-                document.querySelectorAll('.dropdown-panel').forEach(function(p) {
+                document.querySelectorAll('.dropdown-panel').forEach(function (p) {
                     if (p !== panel) p.classList.remove('active');
                 });
                 panel.classList.toggle('active');
@@ -741,24 +740,24 @@ if (modalSave) {
     });
 
     // Empêcher la fermeture intempestive lors des clics à l'intérieur d'un panneau déroulant
-    document.querySelectorAll('.dropdown-panel').forEach(function(p) {
-        p.addEventListener('click', function(e) {
+    document.querySelectorAll('.dropdown-panel').forEach(function (p) {
+        p.addEventListener('click', function (e) {
             e.stopPropagation();
         });
     });
 
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         if (!e.target.closest('.dropdown-panel') && !e.target.closest('.btn-icon') && !e.target.closest('#profileBtn') && !e.target.closest('.bottom-nav-item')) {
-            document.querySelectorAll('.dropdown-panel').forEach(function(p) { p.classList.remove('active'); });
+            document.querySelectorAll('.dropdown-panel').forEach(function (p) { p.classList.remove('active'); });
         }
     });
 
     function updateBottomNavActive() {
-        const path = window.location.pathname.replace(/^\/(geicg|oliveservice)\/?/, '/');
-        document.querySelectorAll('.bottom-nav-item').forEach(function(item) {
+        const path = window.location.pathname.replace(/^\/(oliveservice)\/?/, '/');
+        document.querySelectorAll('.bottom-nav-item').forEach(function (item) {
             item.classList.remove('active');
             const href = item.getAttribute('href') || '';
-            const cleanHref = href.replace(/^\/(geicg|oliveservice)\/?/, '/');
+            const cleanHref = href.replace(/^\/(oliveservice)\/?/, '/');
             if (path === cleanHref || path.startsWith(cleanHref + '/')) {
                 item.classList.add('active');
             }
@@ -772,7 +771,7 @@ if (modalSave) {
     }
 
     // Empêcher le scroll de la molette de la souris sur TOUS les champs type="number"
-    document.addEventListener('wheel', function(e) {
+    document.addEventListener('wheel', function (e) {
         if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'number') {
             e.preventDefault();
             e.target.blur();
@@ -781,12 +780,12 @@ if (modalSave) {
         }
     }, { passive: false });
 
-    $(document).on('wheel', 'input[type=number]', function(e) {
+    $(document).on('wheel', 'input[type=number]', function (e) {
         e.preventDefault();
         $(this).blur();
     });
 
-    window.quickMarkNotifRead = function(e, notifId, url) {
+    window.quickMarkNotifRead = function (e, notifId, url) {
         const base = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
         const card = document.querySelector(`.notification-card-item[data-notif-id="${notifId}"]`);
         if (card) {
@@ -808,17 +807,17 @@ if (modalSave) {
                 if (markAllBtn) markAllBtn.remove();
             }
         }
-        $.post(base + 'notification/marquerLu', { id: notifId }, function() {
+        $.post(base + 'notification/marquerLu', { id: notifId }, function () {
             if (url && url !== 'javascript:void(0)' && !url.startsWith('#')) {
                 window.location.href = url;
             }
         });
     };
 
-    window.quickMarkAllNotifsRead = function(e) {
+    window.quickMarkAllNotifsRead = function (e) {
         if (e) e.stopPropagation();
         const base = (typeof LINK !== 'undefined') ? LINK : ((typeof RACINE !== 'undefined') ? RACINE : '/');
-        $.post(base + 'notification/marquerToutLu', {}, function(rep) {
+        $.post(base + 'notification/marquerToutLu', {}, function (rep) {
             if (rep.status) {
                 const badge = document.getElementById('navNotifBadge');
                 if (badge) badge.remove();
@@ -827,7 +826,7 @@ if (modalSave) {
                 const markAllBtn = document.getElementById('navMarkAllBtn');
                 if (markAllBtn) markAllBtn.remove();
 
-                document.querySelectorAll('.notification-card-item').forEach(function(el) {
+                document.querySelectorAll('.notification-card-item').forEach(function (el) {
                     el.style.background = '#FFFFFF';
                     el.style.borderLeft = 'none';
                     const dot = el.querySelector('.unread-dot');

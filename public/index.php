@@ -28,6 +28,10 @@ $route->addRoute('/user/tresorerieList', ['UserController', 'tresorerieList']);
 $route->addRoute('/user/apiTresorerieList', ['UserController', 'apiTresorerieList']);
 $route->addRoute('/user/gestionnaireList', ['UserController', 'gestionnaireList']);
 $route->addRoute('/user/apiGestionnaireList', ['UserController', 'apiGestionnaireList']);
+$route->addRoute('/user/recruterCommercial', ['UserController', 'recruterCommercial']);
+$route->addRoute('/user/addCommercial', ['UserController', 'addCommercial']);
+$route->addRoute('/user/modifierCommercial/{param}', ['UserController', 'modifierCommercial']);
+$route->addRoute('/user/editCommercial', ['UserController', 'editCommercial']);
 
 // -------------------------------------------------------------
 // Module: Etablissements & Fonctions
@@ -131,6 +135,9 @@ $route->addRoute('/client/changer', ['ClientController', 'changer']);
 $route->addRoute('/client/details/{param}', ['ClientController', 'details']);
 $route->addRoute('/client/edition/{param}', ['ClientController', 'edition']);
 $route->addRoute('/client/formulaire', ['ClientController', 'formulaire']);
+$route->addRoute('/client/transferCommercial', ['ClientController', 'transferCommercial']);
+$route->addRoute('/client/bulkTransferCommercial', ['ClientController', 'bulkTransferCommercial']);
+$route->addRoute('/client/historyCommercial/{param}', ['ClientController', 'historyCommercial']);
 
 $route->addRoute('/zone_commercial/list', ['ZoneCommercialController', 'list']);
 $route->addRoute('/zone_commercial/apiList', ['ZoneCommercialController', 'apiList']);
@@ -276,8 +283,8 @@ $route->addRoute('/notification/formulaire', ['NotificationController', 'formula
 // -------------------------------------------------------------
 $url = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
 
-// Nettoyage flexible des préfixes éventuels (geicg, oliveservice, public)
-$prefixes = ['/geicg/public', '/geicg', '/oliveservice/public', '/oliveservice', '/public'];
+// Nettoyage flexible des préfixes éventuels (oliveservice, public)
+$prefixes = ['/oliveservice/public', '/oliveservice', '/public'];
 foreach ($prefixes as $prefix) {
     if (strpos($url, $prefix) === 0) {
         $url = substr($url, strlen($prefix));

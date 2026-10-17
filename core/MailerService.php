@@ -20,7 +20,7 @@ class MailerService
 
         try {
             // Configuration SMTP LWS extraite de .env
-            $host       = $_ENV['MAIL_HOST'] ?? ($_SERVER['MAIL_HOST'] ?? 'mail.groupe-eicg.net');
+            $host       = $_ENV['MAIL_HOST'] ?? ($_SERVER['MAIL_HOST'] ?? 'mail.oliveservice.net');
             $port       = (int)($_ENV['MAIL_PORT'] ?? ($_SERVER['MAIL_PORT'] ?? 465));
             $username   = $_ENV['MAIL_USERNAME'] ?? ($_SERVER['MAIL_USERNAME'] ?? '');
             $password   = $_ENV['MAIL_PASSWORD'] ?? ($_SERVER['MAIL_PASSWORD'] ?? '');

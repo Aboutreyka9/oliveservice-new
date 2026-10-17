@@ -1,8 +1,8 @@
 /**
- * GEICG - Theme, Color, Typography & Layout Manager
+ *  - Theme, Color, Typography & Layout Manager
  * Gestion interactive des thèmes, polices, tailles et couleurs institutionnelles
  */
-(function() {
+(function () {
     const ZONES = ['primary', 'font', 'fontsize', 'radius', 'topbar', 'sidebar', 'content'];
     const DEFAULTS = {
         primary: 'navy',
@@ -46,7 +46,7 @@
 
     function applyThemeToDOM(zone, value) {
         document.documentElement.setAttribute('data-theme-' + zone, value);
-        
+
         // Si c'est la couleur principale
         if (zone === 'primary' && COLOR_HEX_MAP[value]) {
             const hex = COLOR_HEX_MAP[value];
@@ -76,7 +76,7 @@
 
         // Mettre à jour l'état visuel actif dans le panneau
         const options = document.querySelectorAll('.theme-option[data-category="' + zone + '"]');
-        options.forEach(function(opt) {
+        options.forEach(function (opt) {
             const optVal = opt.getAttribute('data-value');
             if (optVal === value) {
                 opt.classList.add('active');
@@ -91,18 +91,18 @@
     }
 
     function resetToDefaults() {
-        ZONES.forEach(function(zone) {
+        ZONES.forEach(function (zone) {
             setSavedPref(zone, DEFAULTS[zone]);
             applyThemeToDOM(zone, DEFAULTS[zone]);
         });
         if (window.lucide) {
-            try { lucide.createIcons(); } catch(e) {}
+            try { lucide.createIcons(); } catch (e) { }
         }
     }
 
     function initThemeManager() {
         // 1. Appliquer les thèmes mémorisés
-        ZONES.forEach(function(zone) {
+        ZONES.forEach(function (zone) {
             applyThemeToDOM(zone, getSavedPref(zone));
         });
 
@@ -114,12 +114,12 @@
         if (!themeBtn || !themePanel) return;
 
         // 2. Bascule du panneau
-        themeBtn.addEventListener('click', function(e) {
+        themeBtn.addEventListener('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const isOpen = themePanel.classList.contains('active');
-            document.querySelectorAll('.dropdown-panel').forEach(function(p) {
+            document.querySelectorAll('.dropdown-panel').forEach(function (p) {
                 if (p !== themePanel) p.classList.remove('active');
             });
 
@@ -132,7 +132,7 @@
 
         // 3. Fermeture via bouton X
         if (themePanelClose) {
-            themePanelClose.addEventListener('click', function(e) {
+            themePanelClose.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 themePanel.classList.remove('active');
@@ -140,25 +140,25 @@
         }
 
         // 4. Empêcher la fermeture lors des clics à l'intérieur
-        themePanel.addEventListener('click', function(e) {
+        themePanel.addEventListener('click', function (e) {
             e.stopPropagation();
         });
 
         // 5. Clic sur les options de configuration
-        document.querySelectorAll('.theme-option').forEach(function(opt) {
-            opt.addEventListener('click', function(e) {
+        document.querySelectorAll('.theme-option').forEach(function (opt) {
+            opt.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 const category = this.getAttribute('data-category');
                 const value = this.getAttribute('data-value');
-                
+
                 if (category && value) {
                     setSavedPref(category, value);
                     applyThemeToDOM(category, value);
-                    
+
                     if (window.lucide) {
-                        try { lucide.createIcons(); } catch(err) {}
+                        try { lucide.createIcons(); } catch (err) { }
                     }
                 }
             });
@@ -166,7 +166,7 @@
 
         // 6. Réinitialisation
         if (themeResetBtn) {
-            themeResetBtn.addEventListener('click', function(e) {
+            themeResetBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 resetToDefaults();
@@ -174,21 +174,21 @@
         }
 
         // 7. Fermeture au clic en dehors
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             if (!themePanel.contains(e.target) && !e.target.closest('#themeBtn')) {
                 themePanel.classList.remove('active');
             }
         });
 
         // 8. Touche Échap
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && themePanel.classList.contains('active')) {
                 themePanel.classList.remove('active');
             }
         });
 
         if (window.lucide) {
-            try { lucide.createIcons(); } catch(err) {}
+            try { lucide.createIcons(); } catch (err) { }
         }
     }
 

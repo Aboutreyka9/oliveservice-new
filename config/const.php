@@ -13,7 +13,7 @@ if (!defined('RACINE')) {
         $reqUri = $_SERVER['REQUEST_URI'] ?? '';
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
         
-        // Détecter si on tourne dans un sous-dossier (/oliveservice ou /geicg)
+        // Détecter si on tourne dans un sous-dossier (/oliveservice)
         // ATTENTION : RACINE ne doit JAMAIS contenir /public/ car les vues et layouts préfixent déjà "public/"
         // Exemple : RACINE . 'public/assets/css/style.css'
         $basePath = '/';

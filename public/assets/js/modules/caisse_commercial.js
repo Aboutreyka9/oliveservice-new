@@ -1,9 +1,9 @@
 /**
- * Module Caisse Commercial - Administration Olive Service / GEICG
+ * Module Caisse Commercial - Administration Olive Service
  * Registre des caisses journalières pour commerciaux et validation comptable
  */
 
-$(function() {
+$(function () {
   const racine = window.AppConfig ? window.AppConfig.racine : (window.RACINE || '/');
   const csrfToken = $('#csrf_token').val() || '';
   const isCommercial = window.AppConfig ? window.AppConfig.isCommercial : false;
@@ -17,55 +17,59 @@ $(function() {
       autoWidth: false,
       columns: [
         { data: 'id_cloture', defaultContent: '-', width: '50px' },
-        { 
-          data: 'code_cloture', 
+        {
+          data: 'code_cloture',
           width: '140px',
           render: (d, type) => {
             if (type !== 'display') return d || '';
             return `<code style="font-weight:700; color:#1E3A5F; background:#F1F5F9; padding:4px 8px; border-radius:6px; font-size:12px; border:1px solid #CBD5E1;">${d || '-'}</code>`;
-          } 
+          }
         },
-        { data: 'date_cloture', defaultContent: '-', render: (d, type) => {
-          if (type !== 'display') return d || '';
-          return `<span style="color:#334155; font-weight:600;">${d || '-'}</span>`;
-        }},
-        { data: 'nom_auteur_complet', defaultContent: '-', render: (d, type) => {
-          if (type !== 'display') return d || '';
-          return `<strong style="color:#0F172A; font-weight:800;">${d || '-'}</strong>`;
-        }},
-        { 
-          data: 'total_especes', 
+        {
+          data: 'date_cloture', defaultContent: '-', render: (d, type) => {
+            if (type !== 'display') return d || '';
+            return `<span style="color:#334155; font-weight:600;">${d || '-'}</span>`;
+          }
+        },
+        {
+          data: 'nom_auteur_complet', defaultContent: '-', render: (d, type) => {
+            if (type !== 'display') return d || '';
+            return `<strong style="color:#0F172A; font-weight:800;">${d || '-'}</strong>`;
+          }
+        },
+        {
+          data: 'total_especes',
           render: (d, type) => {
             if (type !== 'display') return d || 0;
             return `<span style="color:#1E3A5F; font-weight:700;">${d ? Number(d).toLocaleString('fr-FR') + ' F' : '0 F'}</span>`;
-          } 
+          }
         },
-        { 
-          data: 'total_mobile_money', 
+        {
+          data: 'total_mobile_money',
           render: (d, type) => {
             if (type !== 'display') return d || 0;
             return `<span style="color:#7E22CE; font-weight:700;">${d ? Number(d).toLocaleString('fr-FR') + ' F' : '0 F'}</span>`;
-          } 
+          }
         },
-        { 
-          data: 'total_cheque_virement', 
+        {
+          data: 'total_cheque_virement',
           render: (d, type) => {
             if (type !== 'display') return d || 0;
             return `<span style="color:#0284C7; font-weight:700;">${d ? Number(d).toLocaleString('fr-FR') + ' F' : '0 F'}</span>`;
-          } 
+          }
         },
-        { 
-          data: 'total_general', 
+        {
+          data: 'total_general',
           render: (d, type) => {
             if (type !== 'display') return d || 0;
             return `<strong style="color:#059669; font-size:14px; font-weight:800;">${d ? Number(d).toLocaleString('fr-FR') + ' FCFA' : '0 FCFA'}</strong>`;
-          } 
+          }
         },
-        { 
-          data: 'statut_cloture', 
-          width: '140px', 
-          className: 'text-center', 
-          render: function(d, type, row) {
+        {
+          data: 'statut_cloture',
+          width: '140px',
+          className: 'text-center',
+          render: function (d, type, row) {
             if (type !== 'display') return d || 'attente';
             const val = d || 'attente';
             const bgColors = { 'valide': '#ECFDF5', 'attente': '#FEF3C7', 'rejete': '#FEE2E2' };
@@ -86,19 +90,19 @@ $(function() {
                 <option value="valide" ${val === 'valide' ? 'selected' : ''} style="background:#fff; color:#059669;">Validée</option>
                 <option value="rejete" ${val === 'rejete' ? 'selected' : ''} style="background:#fff; color:#DC2626;">Rejetée</option>
               </select>`;
-          } 
+          }
         },
-        { 
-          data: null, 
-          width: '100px', 
-          orderable: false, 
+        {
+          data: null,
+          width: '100px',
+          orderable: false,
           className: 'text-end',
-          render: function(d) {
+          render: function (d) {
             const editId = d.editId || d.id_cloture;
             return `
               <a href="${racine}caisse_commercial/details/${editId}" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir détails"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>
             `;
-          } 
+          }
         }
       ],
       language: { url: racine + 'json/datatables-i18n-fr-FR.json' },
@@ -107,7 +111,7 @@ $(function() {
       }
     });
 
-    $(document).on('change', '.select-statut-cloture', function() {
+    $(document).on('change', '.select-statut-cloture', function () {
       const id = $(this).data('id');
       const newStatut = $(this).val();
 
@@ -121,7 +125,7 @@ $(function() {
           csrf_token: csrfToken
         },
         dataType: 'json',
-        success: function(res) {
+        success: function (res) {
           if (res.status === 1 || res.success) {
             if (window.toastr) toastr.success(res.message || 'Statut mis à jour avec succès');
             table.ajax.reload(null, false);
@@ -130,7 +134,7 @@ $(function() {
             table.ajax.reload(null, false);
           }
         },
-        error: function() {
+        error: function () {
           if (window.toastr) toastr.error('Erreur réseau');
           table.ajax.reload(null, false);
         }
@@ -154,7 +158,7 @@ $(function() {
         url: racine + 'caisse_commercial/apiGetCommercialSession',
         type: 'GET',
         dataType: 'json',
-        success: function(res) {
+        success: function (res) {
           $caisseLoader.hide();
 
           if (res.status === 1) {
@@ -214,7 +218,7 @@ $(function() {
             if (window.lucide) lucide.createIcons();
           }
         },
-        error: function() {
+        error: function () {
           $caisseLoader.hide();
           $('#section-caisse-fermee').show();
           if (window.toastr) toastr.error('Erreur réseau lors de la récupération de votre session de caisse.');
@@ -234,7 +238,7 @@ $(function() {
           'border': '1px solid #CBD5E1',
           'color': '#475569'
         }).html('<i data-lucide="info" style="width: 18px; height: 18px; color: #0284C7; flex-shrink: 0;"></i><span>Veuillez renseigner le montant de votre pot pour vérifier la conformité avec la recette de caisse.</span>');
-        
+
         $('#btn-submit-cloture').prop('disabled', true).css({
           'background': '#94A3B8',
           'cursor': 'not-allowed',
@@ -315,9 +319,9 @@ $(function() {
         return;
       }
 
-      list.forEach(function(item) {
+      list.forEach(function (item) {
         const isValide = (item.statut === 'valide');
-        const badge = isValide 
+        const badge = isValide
           ? '<span style="background: #ECFDF5; color: #059669; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid #A7F3D0;">Validée</span>'
           : '<span style="background: #FEF3C7; color: #D97706; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid #FDE68A;">En attente</span>';
 
@@ -338,12 +342,12 @@ $(function() {
     }
 
     // Action Ouverture de Caisse
-    $('#form-ouvrir-caisse').on('submit', function(e) {
+    $('#form-ouvrir-caisse').on('submit', function (e) {
       e.preventDefault();
       const $btn = $(this).find('button[type="submit"]');
       const origHtml = $btn.html();
       $btn.prop('disabled', true).css({ 'opacity': '0.65', 'pointer-events': 'none' })
-          .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Ouverture...');
+        .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Ouverture...');
       if (window.lucide) lucide.createIcons();
 
       const formData = $(this).serialize();
@@ -353,7 +357,7 @@ $(function() {
         type: 'POST',
         data: formData,
         dataType: 'json',
-        success: function(res) {
+        success: function (res) {
           if (res.status === 1 || res.success) {
             if (window.toastr) toastr.success(res.message || 'Caisse ouverte avec succès !');
             loadCommercialSession();
@@ -362,7 +366,7 @@ $(function() {
             resetBtn();
           }
         },
-        error: function() {
+        error: function () {
           if (window.toastr) toastr.error('Erreur réseau');
           resetBtn();
         }
@@ -375,7 +379,7 @@ $(function() {
     });
 
     // Action Clôture de Caisse avec vérification stricte
-    $('#form-cloturer-caisse').on('submit', function(e) {
+    $('#form-cloturer-caisse').on('submit', function (e) {
       e.preventDefault();
 
       const valRaw = $('#cloture_montant_pot').val();
@@ -393,7 +397,7 @@ $(function() {
       const $btn = $(this).find('button[type="submit"]');
       const origHtml = $btn.html();
       $btn.prop('disabled', true).css({ 'opacity': '0.65', 'pointer-events': 'none' })
-          .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Traitement...');
+        .html('<i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Traitement...');
       if (window.lucide) lucide.createIcons();
 
       const formData = $(this).serialize();
@@ -403,7 +407,7 @@ $(function() {
         type: 'POST',
         data: formData,
         dataType: 'json',
-        success: function(res) {
+        success: function (res) {
           if (res.status === 1 || res.success) {
             if (window.toastr) toastr.success(res.message || 'Clôture et versement transmis avec succès !');
             loadCommercialSession();
@@ -412,7 +416,7 @@ $(function() {
             resetBtn();
           }
         },
-        error: function() {
+        error: function () {
           if (window.toastr) toastr.error('Erreur réseau');
           resetBtn();
         }
@@ -425,18 +429,18 @@ $(function() {
     });
 
     // GESTION DU DÉCLENCHEMENT DE LA MODALE
-    $(document).on('click', '.btn-open-modal-details', function(e) {
+    $(document).on('click', '.btn-open-modal-details', function (e) {
       e.preventDefault();
       $modalCotisations.addClass('active');
       if (window.lucide) lucide.createIcons();
     });
 
-    $('#modalCotisationsClose, #btn-close-modal-cotisations').on('click', function(e) {
+    $('#modalCotisationsClose, #btn-close-modal-cotisations').on('click', function (e) {
       e.preventDefault();
       $modalCotisations.removeClass('active');
     });
 
-    $modalCotisations.on('click', function(e) {
+    $modalCotisations.on('click', function (e) {
       if ($(e.target).is('#modalCotisationsDetails')) {
         $modalCotisations.removeClass('active');
       }

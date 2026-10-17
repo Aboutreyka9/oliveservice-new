@@ -21,11 +21,18 @@
           </div>
         </div>
 
-        <?php if (Context::can('ADMIN_MANAGE_USERS') || Context::can('GESTIONNAIRE_MANAGE_PACKS')): ?>
-        <a href="<?= RACINE ?>user/formulaire" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); text-decoration: none; cursor: pointer;">
-          <i data-lucide="user-plus" style="width: 18px; height: 18px;"></i> Recruter un Commercial
-        </a>
-        <?php endif; ?>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <?php if (Context::can('ADMIN_MANAGE_ZONES')): ?>
+          <a href="<?= RACINE ?>zone_commercial/list" class="btn" style="background: #FFFFFF; border: 1.5px solid #CBD5E1; color: #1E3A5F; font-weight: 700; border-radius: 10px; padding: 11px 18px; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s ease;">
+            <i data-lucide="map-pin" style="width: 17px; height: 17px; color: #059669;"></i> Affectations Zones
+          </a>
+          <?php endif; ?>
+          <?php if (Context::can('ADMIN_MANAGE_USERS') || Context::can('GESTIONNAIRE_MANAGE_PACKS')): ?>
+          <a href="<?= RACINE ?>user/recruterCommercial" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); text-decoration: none; cursor: pointer;">
+            <i data-lucide="user-plus" style="width: 18px; height: 18px;"></i> Recruter un Commercial
+          </a>
+          <?php endif; ?>
+        </div>
       </div>
 
       <!-- BARRE DE FILTRAGE PAR ZONE -->
@@ -40,7 +47,7 @@
 
           <div style="min-width: 260px;">
             <?php if (!empty($hasJoker)): ?>
-              <select id="filter-zone-gest" class="form-control" disabled readonly aria-readonly="true" style="border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; color: #1E3A5F; background: #F8FAFC; width: 100%; cursor: not-allowed; opacity: 0.85;">
+              <select id="filter-zone-gest" class="form-control" style="border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; color: #1E3A5F; background: #FFFFFF; width: 100%; cursor: pointer;">
                 <option value="">Toutes les zones (Affichage Global)</option>
                 <?php if (!empty($zones)): ?>
                   <?php foreach ($zones as $z): ?>
@@ -81,7 +88,7 @@
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Code Agent</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Commercial / Agent</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Contact (Tél / Email)</th>
-                <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Zone Affectée</th>
+                <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Zone(s) Affectée(s)</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; text-align: center;">Portefeuille Clients</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; text-align: center;">Souscriptions Actives</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; text-align: center;">Statut</th>
@@ -131,7 +138,13 @@ $(function() {
         },
         { 
           data: 'zone', 
-          render: (d) => `<span style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; padding:3px 10px; border-radius:6px; font-weight:700; font-size:11px;">${d || 'Globale'}</span>`
+          render: (d) => {
+            if (!d || d === 'Non assignée') {
+              return '<span style="background:#F1F5F9; color:#64748B; border:1px solid #CBD5E1; padding:3px 10px; border-radius:6px; font-weight:700; font-size:11px;">Non assignée</span>';
+            }
+            const parts = d.split(', ');
+            return parts.map(z => `<span style="display:inline-flex; align-items:center; gap:4px; background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; padding:3px 8px; border-radius:6px; font-weight:700; font-size:11px; margin:2px 4px 2px 0;"><i data-lucide="map-pin" style="width:11px;height:11px;"></i>${z}</span>`).join('');
+          }
         },
         { 
           data: 'total_clients', 
@@ -158,7 +171,7 @@ $(function() {
             return `
               <div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">
                 <a href="${racine}user/details/${d.editId}" class="btn" style="background:#1E3A5F; color:#FFF; font-weight:700; border-radius:8px; padding:6px 12px; font-size:12px; text-decoration:none;" title="Fiche Agent"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>
-                <a href="${racine}user/edition/${d.editId}" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; font-size:12px; text-decoration:none; border:1px solid #CBD5E1;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Modifier</a>
+                <a href="${racine}user/modifierCommercial/${d.editId}" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; font-size:12px; text-decoration:none; border:1px solid #CBD5E1;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Modifier</a>
               </div>
             `;
           }

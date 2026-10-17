@@ -62,7 +62,7 @@
               }
             ?>
             <div style="width: 110px; height: 110px; border-radius: 14px; background: #FFFFFF; border: 2px dashed #CBD5E1; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
-              <img id="logo-img-preview" src="<?= htmlspecialchars($logoSrc) ?>" alt="Logo GEICG" style="max-width: 100%; max-height: 100%; object-fit: contain; <?= empty($logoSrc) ? 'display:none;' : '' ?>">
+              <img id="logo-img-preview" src="<?= htmlspecialchars($logoSrc) ?>" alt="Logo OLIVE SERVICE" style="max-width: 100%; max-height: 100%; object-fit: contain; <?= empty($logoSrc) ? 'display:none;' : '' ?>">
               <i id="logo-icon-placeholder" data-lucide="building" style="width: 44px; height: 44px; color: #94A3B8; <?= !empty($logoSrc) ? 'display:none;' : '' ?>"></i>
             </div>
             <div style="flex: 1; min-width: 250px;">
@@ -80,7 +80,7 @@
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; width: 100%; margin-bottom: 28px;">
             <div class="form-group" style="width: 100%;">
               <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Nom de l'Établissement <span style="color: #EF4444;">*</span></label>
-              <input type="text" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" name="libelle_etablissement" value="<?= htmlspecialchars($item['libelle_etablissement'] ?? 'GEICG') ?>" placeholder="Ex: GEICG - Campus Principal" required>
+              <input type="text" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" name="libelle_etablissement" value="<?= htmlspecialchars($item['libelle_etablissement'] ?? 'OLIVE SERVICE') ?>" placeholder="Ex: OLIVE SERVICE" required>
             </div>
 
             <div class="form-group" style="width: 100%;">
@@ -102,7 +102,7 @@
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; width: 100%; margin-bottom: 28px;">
             <div class="form-group" style="width: 100%;">
               <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Email Officiel <span style="color: #EF4444;">*</span></label>
-              <input type="email" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" name="email_etablissement" value="<?= htmlspecialchars($item['email_etablissement'] ?? 'contact@geicg.ci') ?>" placeholder="Ex: contact@geicg.ci" required>
+              <input type="email" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" name="email_etablissement" value="<?= htmlspecialchars($item['email_etablissement'] ?? '') ?>" placeholder="Ex: contact@oliveservice.net" required>
             </div>
 
             <div class="form-group" style="width: 100%;">
@@ -124,7 +124,7 @@
           <div style="width: 100%; margin-bottom: 28px;">
             <div class="form-group" style="width: 100%;">
               <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Adresse Physique Complète</label>
-              <textarea class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" name="adresse_etablissement" rows="3" placeholder="Ex: Abidjan Cocody Angré 8ème Tranche, Boulevard Principal GEICG"><?= htmlspecialchars($item['adresse_etablissement'] ?? '') ?></textarea>
+              <textarea class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" name="adresse_etablissement" rows="3" placeholder="Ex: Abidjan Cocody Angré 8ème Tranche, Boulevard Principal OLIVE SERVICE"><?= htmlspecialchars($item['adresse_etablissement'] ?? '') ?></textarea>
             </div>
           </div>
 

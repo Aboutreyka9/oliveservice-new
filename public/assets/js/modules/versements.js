@@ -1,9 +1,9 @@
 /**
- * Module Versements Commerciaux - Administration Olive Service / GEICG
+ * Module Versements Commerciaux - Administration Olive Service
  * Suivi & Validation Caisse des versements commerciaux
  */
 
-$(function() {
+$(function () {
   const racine = window.AppConfig ? window.AppConfig.racine : (window.RACINE || '/');
   const isFinanceOrAdmin = window.AppConfig ? (window.AppConfig.can('FINANCE_VALIDATE_VERSEMENT') || window.AppConfig.isFinance || window.AppConfig.isAdmin) : false;
   const isCommercial = window.AppConfig ? window.AppConfig.isCommercial : false;
@@ -13,33 +13,50 @@ $(function() {
 
   if ($tableVers.length) {
     dataTableInstance = $tableVers.DataTable({
-      ajax: racine + 'versement/apiList',
+      ajax: {
+        url: racine + 'versement/apiList',
+        type: 'GET',
+        data: function (d) {
+          d.commercial_code = $('#filter-commercial').val() || '';
+          d.statut = $('#filter-statut').val() || '';
+          d.date_debut = $('#filter-date-debut').val() || '';
+          d.date_fin = $('#filter-date-fin').val() || '';
+        },
+        dataSrc: function (json) {
+          if (json.stats) {
+            updateKpis(json.stats);
+          }
+          return json.data || [];
+        }
+      },
       processing: true,
       autoWidth: false,
       columns: [
-        { 
-          data: 'code_versement_commercial', 
-          width: '130px', 
+        {
+          data: 'code_versement_commercial',
+          width: '130px',
           render: (d, type) => {
             if (type !== 'display') return d || '';
             return d ? `<code style="font-weight:700; color:#1E3A5F; background:#F1F5F9; padding:4px 8px; border-radius:6px; font-size:12px; border:1px solid #CBD5E1;">${d}</code>` : '-';
           }
         },
-        { 
-          data: 'nom_commercial_complet', 
+        {
+          data: 'nom_commercial_complet',
           render: (d, type) => {
             if (type !== 'display') return d || '';
             return `<strong style="color:#0F172A; font-size:14px; font-weight:800;">${d || '-'}</strong>`;
           }
         },
-        { data: 'libelle_zone', defaultContent: '-', render: (d, type) => {
-          if (type !== 'display') return d || '';
-          return `<span style="color:#334155; font-weight:600;">${d || '-'}</span>`;
-        }},
-        { 
-          data: null, 
-          defaultContent: '-', 
-          render: function(d, type) {
+        {
+          data: 'libelle_zone', defaultContent: '-', render: (d, type) => {
+            if (type !== 'display') return d || '';
+            return `<span style="color:#334155; font-weight:600;">${d || '-'}</span>`;
+          }
+        },
+        {
+          data: null,
+          defaultContent: '-',
+          render: function (d, type) {
             const debut = d.periode_versement_debut || d.periode_versement || (d.created_at_versement ? d.created_at_versement.split(' ')[0] : '');
             const fin = d.periode_versement_fin || debut;
             if (type !== 'display') return (debut + ' ' + fin).trim();
@@ -50,28 +67,28 @@ $(function() {
             return `<span style="color:#64748B; font-size:12px; font-weight:600;"><i class="fa fa-calendar-alt" style="margin-right:4px; color:#2563EB;"></i>${debut || '-'}</span>`;
           }
         },
-        { 
-          data: null, 
-          defaultContent: '-', 
+        {
+          data: null,
+          defaultContent: '-',
           render: (d, type) => {
             const codeC = d.caisse_code || (d.reference_versement || '-');
             if (type !== 'display') return codeC;
             return `<span style="color:#475569; font-weight:600; font-family:monospace;">${codeC}</span>`;
           }
         },
-        { 
-          data: 'montant_versement', 
+        {
+          data: 'montant_versement',
           className: 'text-end',
           render: (d, type) => {
             if (type !== 'display') return d || 0;
             return `<strong style="color:#059669; font-size:14px; font-weight:800;">+${Number(d || 0).toLocaleString('fr-FR')} FCFA</strong>`;
           }
         },
-        { 
-          data: 'statut_versement', 
-          className: 'text-center', 
-          width: '120px', 
-          render: function(d, type) {
+        {
+          data: 'statut_versement',
+          className: 'text-center',
+          width: '120px',
+          render: function (d, type) {
             if (type !== 'display') return d || '';
             if (d === 'valide') {
               return `<span style="background:#ECFDF5; color:#059669; border:1px solid #A7F3D0; padding:4px 12px; border-radius:20px; font-weight:800; font-size:11px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="check-circle" style="width:12px;height:12px;"></i> Validé</span>`;
@@ -81,14 +98,14 @@ $(function() {
             return `<span style="background:#FEF3C7; color:#D97706; border:1px solid #FDE68A; padding:4px 12px; border-radius:20px; font-weight:800; font-size:11px; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="clock" style="width:12px;height:12px;"></i> En attente</span>`;
           }
         },
-        { 
-          data: null, 
-          width: isFinanceOrAdmin ? '230px' : '160px', 
-          orderable: false, 
+        {
+          data: null,
+          width: isFinanceOrAdmin ? '230px' : '160px',
+          orderable: false,
           className: 'text-end',
-          render: function(d) {
+          render: function (d) {
             const editId = d.editId || d.id_versement;
-            const periodeTxt = d.periode_versement_debut && d.periode_versement_fin && d.periode_versement_fin !== d.periode_versement_debut 
+            const periodeTxt = d.periode_versement_debut && d.periode_versement_fin && d.periode_versement_fin !== d.periode_versement_debut
               ? `${d.periode_versement_debut} → ${d.periode_versement_fin}`
               : (d.periode_versement_debut || d.periode_versement || (d.created_at_versement ? d.created_at_versement.split(' ')[0] : '-'));
             const isValide = (d.statut_versement === 'valide' || d.statut_versement === 'validé');
@@ -150,7 +167,7 @@ $(function() {
                 <a href="${racine}caisse_commercial/details/${caisseTarget}" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir procès-verbal de caisse"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>
               </div>
             `;
-          } 
+          }
         }
       ],
       language: { url: racine + 'json/datatables-i18n-fr-FR.json' },
@@ -160,11 +177,86 @@ $(function() {
     });
   }
 
+  // --- MISE À JOUR DYNAMIQUE DES KPI STATS ---
+  function updateKpis(stats) {
+    if (!stats) return;
+    const totalMontant = Number(stats.total_montant || 0);
+    const montantValide = Number(stats.montant_valide || 0);
+    const montantAttente = Number(stats.montant_attente || 0);
+    const totalVers = Number(stats.total_versements || 0);
+    const countValide = Number(stats.count_valide || 0);
+    const countAttente = Number(stats.count_attente || 0);
+
+    $('#kpi-total-montant').html(totalMontant.toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">FCFA</small>');
+    $('#kpi-montant-valide').html(montantValide.toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">FCFA</small>');
+    $('#kpi-montant-attente').html(montantAttente.toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">FCFA</small>');
+    $('#kpi-total-versements').html(totalVers.toLocaleString('fr-FR') + ' <small style="font-size: 13px; font-weight: 700;">opér.</small>');
+
+    $('#kpi-count-valide').text(countValide + ' Val.');
+    $('#kpi-count-attente').text(countAttente + ' Att.');
+  }
+
+  // --- ÉVÉNEMENTS SUR LA BARRE DE FILTRES ---
+  $('#btn-appliquer-filtre').on('click', function () {
+    if (dataTableInstance) {
+      dataTableInstance.ajax.reload();
+    }
+  });
+
+  $('#filter-commercial, #filter-statut, #filter-date-debut, #filter-date-fin').on('change', function () {
+    if (dataTableInstance) {
+      dataTableInstance.ajax.reload();
+    }
+  });
+
+  $('#btn-reset-filtre').on('click', function () {
+    if (!isCommercial) {
+      $('#filter-commercial').val('');
+    }
+    $('#filter-statut').val('');
+    $('#filter-date-debut').val('');
+    $('#filter-date-fin').val('');
+    if (dataTableInstance) {
+      dataTableInstance.ajax.reload();
+    }
+  });
+
+  $('.btn-shortcut-date').on('click', function () {
+    const range = $(this).data('range');
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const today = `${yyyy}-${mm}-${dd}`;
+
+    let debut = '';
+    let fin = today;
+
+    if (range === 'today') {
+      debut = today;
+    } else if (range === 'month') {
+      debut = `${yyyy}-${mm}-01`;
+    } else if (range === 'year') {
+      debut = `${yyyy}-01-01`;
+    }
+
+    $('#filter-date-debut').val(debut);
+    $('#filter-date-fin').val(fin);
+
+    if (dataTableInstance) {
+      dataTableInstance.ajax.reload();
+    }
+  });
+
+  window.imprimerVersements = function () {
+    window.print();
+  };
+
   // --- GESTION DE LA MODALE DE VALIDATION COMPTABLE ET HISTORIQUE CAISSE ---
   const $modalVal = $('#modalValiderVersement');
 
   // Gestion des onglets de l'historique
-  $(document).on('click', '#tab-btn-caisse-cotis', function() {
+  $(document).on('click', '#tab-btn-caisse-cotis', function () {
     $('#tab-btn-caisse-cotis').addClass('active').css({ 'background': '#FFFFFF', 'color': '#059669', 'border-color': '#CBD5E1' });
     $('#tab-btn-cotis').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
     $('#tab-btn-sessions').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
@@ -173,7 +265,7 @@ $(function() {
     $('#tab-content-sessions').hide();
   });
 
-  $(document).on('click', '#tab-btn-cotis', function() {
+  $(document).on('click', '#tab-btn-cotis', function () {
     $('#tab-btn-cotis').addClass('active').css({ 'background': '#FFFFFF', 'color': '#1E3A5F', 'border-color': '#CBD5E1' });
     $('#tab-btn-caisse-cotis').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
     $('#tab-btn-sessions').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
@@ -182,7 +274,7 @@ $(function() {
     $('#tab-content-sessions').hide();
   });
 
-  $(document).on('click', '#tab-btn-sessions', function() {
+  $(document).on('click', '#tab-btn-sessions', function () {
     $('#tab-btn-sessions').addClass('active').css({ 'background': '#FFFFFF', 'color': '#1E3A5F', 'border-color': '#CBD5E1' });
     $('#tab-btn-caisse-cotis').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
     $('#tab-btn-cotis').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#64748B', 'border-color': '#E2E8F0' });
@@ -191,7 +283,7 @@ $(function() {
     $('#tab-content-cotis').hide();
   });
 
-  $(document).on('click', '.btn-valider-versement', function() {
+  $(document).on('click', '.btn-valider-versement', function () {
     const btn = $(this);
     const id = btn.data('id');
     const code = btn.data('code') || '-';
@@ -228,7 +320,7 @@ $(function() {
       type: 'GET',
       data: { id_versement: id },
       dataType: 'json',
-      success: function(res) {
+      success: function (res) {
         $('#caisse_history_loading').hide();
         $('#caisse_history_content').show();
 
@@ -243,13 +335,13 @@ $(function() {
 
             if (d.caisse_ecart === 0) {
               $('#hist_caisse_ecart').text('0 FCFA').css('color', '#059669');
-              $('#hist_ecart_badge').text('Conforme').css({'color': '#059669', 'background': '#ECFDF5'});
+              $('#hist_ecart_badge').text('Conforme').css({ 'color': '#059669', 'background': '#ECFDF5' });
             } else if (d.caisse_ecart > 0) {
               $('#hist_caisse_ecart').text('+' + d.caisse_ecart_fmt).css('color', '#2563EB');
-              $('#hist_ecart_badge').text('Surplus').css({'color': '#2563EB', 'background': '#EFF6FF'});
+              $('#hist_ecart_badge').text('Surplus').css({ 'color': '#2563EB', 'background': '#EFF6FF' });
             } else {
               $('#hist_caisse_ecart').text('-' + d.caisse_ecart_fmt).css('color', '#DC2626');
-              $('#hist_ecart_badge').text('Manquant').css({'color': '#DC2626', 'background': '#FEE2E2'});
+              $('#hist_ecart_badge').text('Manquant').css({ 'color': '#DC2626', 'background': '#FEE2E2' });
             }
           } else {
             $('#hist_linked_caisse_code').text(d.linked_caisse_code || '-');
@@ -296,13 +388,13 @@ $(function() {
           const ecartFmt = d.caisse_ecart_fmt || '0 FCFA';
           if (caisseEcart === 0) {
             $('#hist_caisse_ecart').text('0 FCFA').css('color', '#059669');
-            $('#hist_ecart_badge').text('Conforme').css({'color': '#059669', 'background': '#ECFDF5'});
+            $('#hist_ecart_badge').text('Conforme').css({ 'color': '#059669', 'background': '#ECFDF5' });
           } else if (caisseEcart > 0) {
             $('#hist_caisse_ecart').text('+' + ecartFmt).css('color', '#2563EB');
-            $('#hist_ecart_badge').text('Surplus (+' + ecartFmt + ')').css({'color': '#2563EB', 'background': '#EFF6FF'});
+            $('#hist_ecart_badge').text('Surplus (+' + ecartFmt + ')').css({ 'color': '#2563EB', 'background': '#EFF6FF' });
           } else {
             $('#hist_caisse_ecart').text('-' + ecartFmt).css('color', '#DC2626');
-            $('#hist_ecart_badge').text('Sous-versement (-' + ecartFmt + ')').css({'color': '#DC2626', 'background': '#FEE2E2'});
+            $('#hist_ecart_badge').text('Sous-versement (-' + ecartFmt + ')').css({ 'color': '#DC2626', 'background': '#FEE2E2' });
           }
 
           // Cotisations récentes
@@ -360,7 +452,7 @@ $(function() {
           $('#hist_tbody_cotis').html('<tr><td colspan="5" style="text-align: center; padding: 12px; color: #EF4444;">Erreur de chargement de l\'historique</td></tr>');
         }
       },
-      error: function() {
+      error: function () {
         $('#caisse_history_loading').hide();
         $('#caisse_history_content').show();
         $('#hist_tbody_cotis').html('<tr><td colspan="5" style="text-align: center; padding: 12px; color: #EF4444;">Erreur réseau lors du chargement de l\'historique</td></tr>');
@@ -368,17 +460,17 @@ $(function() {
     });
   });
 
-  $(document).on('click', '#modalValiderClose, .modal-close-btn', function() {
+  $(document).on('click', '#modalValiderClose, .modal-close-btn', function () {
     $modalVal.fadeOut(150);
   });
 
-  $modalVal.on('click', function(e) {
+  $modalVal.on('click', function (e) {
     if ($(e.target).is($modalVal)) {
       $modalVal.fadeOut(150);
     }
   });
 
-  $('#form-valider-versement').on('submit', function(e) {
+  $('#form-valider-versement').on('submit', function (e) {
     e.preventDefault();
     const idVersement = $('#val_id_versement').val();
     const statut = $('input[name="statut_versement"]:checked').val() || 'valide';
@@ -400,7 +492,7 @@ $(function() {
         csrf_token: csrfToken
       },
       dataType: 'json',
-      success: function(res) {
+      success: function (res) {
         $btnSubmit.prop('disabled', false).html(originalHtml);
         if (res.status === 1 || res.success) {
           if (window.toastr) toastr.success(res.message || 'Opération réussie');
@@ -414,7 +506,7 @@ $(function() {
           if (window.toastr) toastr.error(res.message || 'Erreur lors de la validation');
         }
       },
-      error: function(xhr) {
+      error: function (xhr) {
         $btnSubmit.prop('disabled', false).html(originalHtml);
         const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Erreur réseau ou action non autorisée';
         if (window.toastr) toastr.error(msg);
