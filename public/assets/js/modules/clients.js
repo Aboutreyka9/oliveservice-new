@@ -20,8 +20,8 @@ $(function () {
   // État du filtre rapide actif
   let currentFilter = 'all';
 
-  // Ensemble des clients sélectionnés pour action groupée
-  const selectedClients = new Set();
+  // Ensemble des clients sélectionnés pour action groupée (Map: code_client -> nom_complet)
+  const selectedClients = new Map();
 
   function updateBulkToolbar() {
     const count = selectedClients.size;
@@ -31,9 +31,33 @@ $(function () {
       $('#bulk-selected-count').text(count + ' client' + (count > 1 ? 's' : '') + ' sélectionné' + (count > 1 ? 's' : ''));
       $('#bulk-modal-count-text').text(count + ' client' + (count > 1 ? 's' : ''));
       $toolbar.css('display', 'flex');
+
+      // Mettre à jour l'aperçu visuel des clients dans le modal
+      const $preview = $('#bulk-selected-preview');
+      $preview.empty();
+      let shown = 0;
+      selectedClients.forEach((nom, code) => {
+        if (shown < 25) {
+          $preview.append(`
+            <span style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+              <i data-lucide="user" style="width: 10px; height: 10px;"></i> ${nom} <span style="font-size: 10px; color: #64748B; font-family: monospace;">(${code})</span>
+            </span>
+          `);
+        }
+        shown++;
+      });
+      if (shown > 25) {
+        $preview.append(`
+          <span style="background: #F1F5F9; color: #475569; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px;">
+            + ${shown - 25} autre(s)...
+          </span>
+        `);
+      }
+      if (window.lucide) lucide.createIcons();
     } else {
       $toolbar.hide();
       $('#check-all-clients').prop('checked', false);
+      $('#bulk-selected-preview').empty();
     }
   }
 
@@ -73,7 +97,7 @@ $(function () {
             const isChecked = selectedClients.has(code) ? 'checked' : '';
             return `
               <div style="display: flex; align-items: center; justify-content: center;">
-                <input type="checkbox" class="client-bulk-cb" value="${code}" data-nom="${row.nom_complet || ''}" ${isChecked} style="cursor: pointer; width: 16px; height: 16px; accent-color: #1E3A5F;">
+                <input type="checkbox" class="client-bulk-cb" value="${code}" data-nom="${row.nom_complet || code}" ${isChecked} style="cursor: pointer; width: 16px; height: 16px; accent-color: #1E3A5F;">
               </div>
             `;
           }
@@ -316,8 +340,9 @@ $(function () {
     // GESTION DE LA SÉLECTION MULTIPLE (BULK)
     $(document).on('change', '.client-bulk-cb', function () {
       const code = $(this).val();
+      const nom = $(this).data('nom') || code;
       if ($(this).is(':checked')) {
-        selectedClients.add(code);
+        selectedClients.set(code, nom);
       } else {
         selectedClients.delete(code);
       }
@@ -328,9 +353,10 @@ $(function () {
       const isChecked = $(this).is(':checked');
       $('.client-bulk-cb').each(function () {
         const code = $(this).val();
+        const nom = $(this).data('nom') || code;
         $(this).prop('checked', isChecked);
         if (isChecked) {
-          selectedClients.add(code);
+          selectedClients.set(code, nom);
         } else {
           selectedClients.delete(code);
         }
@@ -343,6 +369,38 @@ $(function () {
       $('.client-bulk-cb').prop('checked', false);
       $('#check-all-clients').prop('checked', false);
       updateBulkToolbar();
+    });
+
+    // OUVERTURE & FERMETURE DE LA MODALE DE RÉAFFECTATION EN MASSE
+    $('#btn-open-bulk-transfer').on('click', function (e) {
+      e.preventDefault();
+      if (selectedClients.size === 0) {
+        if (window.Swal) {
+          Swal.fire('Aucun client sélectionné', 'Veuillez cocher au moins un client à réaffecter.', 'warning');
+        } else {
+          alert('Veuillez cocher au moins un client.');
+        }
+        return;
+      }
+      const $modal = $('#modal-bulk-transfer');
+      $modal.fadeIn(200).css('display', 'flex');
+      if (window.lucide) lucide.createIcons();
+    });
+
+    $('#modal-bulk-close, #btn-cancel-bulk-transfer').on('click', function () {
+      $('#modal-bulk-transfer').fadeOut(150);
+    });
+
+    $('#modal-bulk-transfer').on('click', function (e) {
+      if ($(e.target).is('#modal-bulk-transfer')) {
+        $(this).fadeOut(150);
+      }
+    });
+
+    $(document).on('keydown', function (e) {
+      if (e.key === 'Escape' && $('#modal-bulk-transfer').is(':visible')) {
+        $('#modal-bulk-transfer').fadeOut(150);
+      }
     });
 
     // Soumission du transfert en masse
@@ -377,7 +435,7 @@ $(function () {
         csrf_token: $form.find('input[name="csrf_token"]').val(),
         commercial_code: commercialCode,
         motif: motif,
-        client_codes: Array.from(selectedClients)
+        client_codes: Array.from(selectedClients.keys())
       };
 
       $.ajax({
@@ -391,7 +449,7 @@ $(function () {
           if (window.lucide) lucide.createIcons();
 
           if (res.status === 1 || res.status === 'success' || res.success) {
-            $('#modal-bulk-transfer').modal('hide');
+            $('#modal-bulk-transfer').fadeOut(150);
             selectedClients.clear();
             $('#check-all-clients').prop('checked', false);
             updateBulkToolbar();

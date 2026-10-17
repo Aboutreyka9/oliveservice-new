@@ -613,7 +613,7 @@ $stats = $stats ?? [
               <button type="button" id="btn-uncheck-all" class="btn btn-sm" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; font-weight: 700; border-radius: 8px; padding: 7px 14px; font-size: 12.5px;">
                 Désélectionner tout
               </button>
-              <button type="button" id="btn-open-bulk-transfer" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#modal-bulk-transfer" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; font-weight: 700; border-radius: 8px; padding: 7px 16px; font-size: 12.5px; border: none; box-shadow: 0 2px 6px rgba(15,23,42,0.25); display: inline-flex; align-items: center; gap: 6px;">
+              <button type="button" id="btn-open-bulk-transfer" class="btn btn-sm" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; font-weight: 700; border-radius: 8px; padding: 7px 16px; font-size: 12.5px; border: none; box-shadow: 0 2px 6px rgba(15,23,42,0.25); display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
                 <i data-lucide="user-plus" style="width: 14px; height: 14px;"></i> Réaffecter la sélection à un commercial
               </button>
             </div>
@@ -649,96 +649,98 @@ $stats = $stats ?? [
 
 <!-- MODAL DE TRANSFERT EN MASSE (BULK TRANSFER) -->
 <?php if (Context::can(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'GESTIONNAIRE_MANAGE_PACKS'])): ?>
-<div class="modal fade" id="modal-bulk-transfer" tabindex="-1" aria-labelledby="modalBulkTransferLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
-    <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 40px rgba(15,23,42,0.2); overflow: hidden;">
-      
-      <!-- EN-TÊTE -->
-      <div class="modal-header" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; padding: 18px 22px; border: none;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <i data-lucide="users" style="width: 20px; height: 20px; color: #FFFFFF;"></i>
-          </div>
-          <div>
-            <h5 class="modal-title" id="modalBulkTransferLabel" style="font-weight: 800; font-size: 16px; margin: 0; color: #FFFFFF;">
-              Réaffectation en Masse
-            </h5>
-            <span style="font-size: 11.5px; color: #94A3B8;">Transfert groupé de clients vers un nouveau commercial</span>
+<div class="modal-overlay" id="modal-bulk-transfer" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(5px); padding: 16px; box-sizing: border-box;">
+  <div class="modal-card" style="max-width: 560px; width: 100%; max-height: calc(100vh - 40px); display: flex; flex-direction: column; background: #FFFFFF; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35); overflow: hidden; border: 1px solid #E2E8F0; margin: auto;">
+    
+    <!-- EN-TÊTE DU MODAL -->
+    <div style="flex-shrink: 0; background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <i data-lucide="users" style="width: 20px; height: 20px; color: #FFFFFF;"></i>
+        </div>
+        <div>
+          <h4 style="font-weight: 800; font-size: 16px; margin: 0; color: #FFFFFF; line-height: 1.2;">
+            Réaffectation en Masse des Clients
+          </h4>
+          <span style="font-size: 11.5px; color: #94A3B8;">Transfert groupé de portefeuille sans mélange financier</span>
+        </div>
+      </div>
+      <button type="button" class="btn-close-modal" id="modal-bulk-close" style="background: rgba(255,255,255,0.12); border: none; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; transition: background 0.2s;" title="Fermer">
+        <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+      </button>
+    </div>
+
+    <!-- FORMULAIRE -->
+    <form id="form-bulk-transfer" method="POST" action="<?= RACINE ?>client/bulkTransferCommercial" style="margin: 0; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden;">
+      <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
+
+      <div class="modal-body" style="padding: 24px; flex: 1; min-height: 0; overflow-y: auto;">
+
+        <!-- AVERTISSEMENT DE SÉPARATION FINANCIÈRE -->
+        <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-left: 4px solid #2563EB; border-radius: 10px; padding: 14px; margin-bottom: 20px;">
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <i data-lucide="shield-check" style="width: 20px; height: 20px; color: #2563EB; flex-shrink: 0; margin-top: 2px;"></i>
+            <div style="font-size: 12px; color: #1E3A5F; line-height: 1.5;">
+              <strong style="display: block; font-size: 12.5px; margin-bottom: 2px;">Intégrité Financière & Commissions :</strong>
+              Les versements, caisses et commissions des anciens commerciaux pour toutes les cotisations passées restent <strong>totalement scellés et intacts</strong>.
+            </div>
           </div>
         </div>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+
+        <!-- RÉSUMÉ DES SÉLECTIONS -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Clients Sélectionnés</span>
+            <span style="font-size: 12px; color: #059669; font-weight: 700; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 3px 10px; border-radius: 6px;" id="bulk-modal-count-text">
+              0 client(s)
+            </span>
+          </div>
+          <div id="bulk-selected-preview" style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 120px; overflow-y: auto; padding-right: 4px;">
+            <!-- Rempli dynamiquement en JS -->
+          </div>
+        </div>
+
+        <!-- NOUVEAU COMMERCIAL CIBLE -->
+        <div style="margin-bottom: 18px;">
+          <label for="select-bulk-commercial" style="display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+            Commercial Récepteur Référent <span style="color: #DC2626;">*</span>
+          </label>
+          <select name="commercial_code" id="select-bulk-commercial" class="form-select" required style="width: 100%; border-radius: 8px; border: 1.5px solid #CBD5E1; padding: 11px 12px; font-size: 13.5px; font-weight: 600; background: #FFFFFF; color: #0F172A; box-sizing: border-box;">
+            <option value="">-- Sélectionner un commercial cible --</option>
+            <?php foreach (($commerciaux ?? []) as $comm): ?>
+              <?php 
+                $cNom = trim($comm['nom_user'] . ' ' . ($comm['prenom_user'] ?? ''));
+                $cTel = !empty($comm['telephone_user']) ? ' (' . $comm['telephone_user'] . ')' : '';
+                $cCommPct = !empty($comm['commission']) ? ' - ' . $comm['commission'] . '%' : '';
+              ?>
+              <option value="<?= htmlspecialchars($comm['code_user']) ?>">
+                <?= htmlspecialchars($cNom . $cTel . $cCommPct) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <!-- MOTIF / COMMENTAIRE -->
+        <div>
+          <label for="input-bulk-motif" style="display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+            Motif de la réaffectation groupée (Facultatif)
+          </label>
+          <input type="text" name="motif" id="input-bulk-motif" class="form-control" placeholder="Ex: Réaffectation mensuelle de secteur, départ..." style="width: 100%; border-radius: 8px; border: 1.5px solid #CBD5E1; padding: 11px 12px; font-size: 13px; background: #FFFFFF; color: #0F172A; box-sizing: border-box;">
+        </div>
+
       </div>
 
-      <!-- FORMULAIRE -->
-      <form id="form-bulk-transfer" method="POST" action="<?= RACINE ?>client/bulkTransferCommercial">
-        <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
+      <!-- PIED DU MODAL -->
+      <div class="modal-footer" style="flex-shrink: 0; background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn" id="btn-cancel-bulk-transfer" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; font-weight: 700; border-radius: 8px; padding: 10px 18px; cursor: pointer; font-size: 13px;">
+          Annuler
+        </button>
+        <button type="submit" id="btn-submit-bulk-transfer" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #FFFFFF; font-weight: 700; border-radius: 8px; padding: 10px 22px; border: none; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25); display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
+          <i data-lucide="check-check" style="width: 16px; height: 16px;"></i> Confirmer le Transfert Groupé
+        </button>
+      </div>
 
-        <div class="modal-body" style="padding: 22px;">
-
-          <!-- AVERTISSEMENT DE SÉPARATION FINANCIÈRE -->
-          <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-left: 4px solid #2563EB; border-radius: 10px; padding: 14px; margin-bottom: 20px;">
-            <div style="display: flex; gap: 10px; align-items: flex-start;">
-              <i data-lucide="shield-check" style="width: 20px; height: 20px; color: #2563EB; flex-shrink: 0; margin-top: 1px;"></i>
-              <div style="font-size: 12px; color: #1E3A5F; line-height: 1.45;">
-                <strong style="display: block; font-size: 12.5px; margin-bottom: 2px;">Intégrité Financière & Commissions :</strong>
-                Les versements, caisses et commissions des anciens commerciaux pour toutes les cotisations passées restent <strong>totalement scellés et intacts</strong>.
-              </div>
-            </div>
-          </div>
-
-          <!-- RÉSUMÉ DES SÉLECTIONS -->
-          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px 16px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-              <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase;">Volume à transférer</span>
-              <div style="font-size: 16px; font-weight: 800; color: #0F172A;" id="bulk-modal-count-text">0 client(s)</div>
-            </div>
-            <div style="font-size: 12px; color: #059669; font-weight: 700; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 6px;">
-              Prêt pour transfert
-            </div>
-          </div>
-
-          <!-- NOUVEAU COMMERCIAL CIBLE -->
-          <div style="margin-bottom: 18px;">
-            <label for="select-bulk-commercial" style="display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 6px;">
-              Commercial Référent Récepteur <span style="color: #DC2626;">*</span>
-            </label>
-            <select name="commercial_code" id="select-bulk-commercial" class="form-select" required style="width: 100%; border-radius: 8px; border: 1.5px solid #CBD5E1; padding: 10px 12px; font-size: 13.5px; font-weight: 600;">
-              <option value="">-- Sélectionner un commercial cible --</option>
-              <?php foreach (($commerciaux ?? []) as $comm): ?>
-                <?php 
-                  $cNom = trim($comm['nom_user'] . ' ' . ($comm['prenom_user'] ?? ''));
-                  $cTel = !empty($comm['telephone_user']) ? ' (' . $comm['telephone_user'] . ')' : '';
-                  $cCommPct = !empty($comm['commission']) ? ' - ' . $comm['commission'] . '%' : '';
-                ?>
-                <option value="<?= htmlspecialchars($comm['code_user']) ?>">
-                  <?= htmlspecialchars($cNom . $cTel . $cCommPct) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-
-          <!-- MOTIF / COMMENTAIRE -->
-          <div>
-            <label for="input-bulk-motif" style="display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 6px;">
-              Motif du transfert groupé (Facultatif)
-            </label>
-            <input type="text" name="motif" id="input-bulk-motif" class="form-control" placeholder="Ex: Réaffectation de portefeuille mensuelle..." style="width: 100%; border-radius: 8px; border: 1.5px solid #CBD5E1; padding: 10px 12px; font-size: 13px;">
-          </div>
-
-        </div>
-
-        <!-- PIED DU MODAL -->
-        <div class="modal-footer" style="background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 14px 22px; display: flex; justify-content: space-between;">
-          <button type="button" class="btn" data-bs-dismiss="modal" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; font-weight: 700; border-radius: 8px; padding: 9px 16px;">
-            Annuler
-          </button>
-          <button type="submit" id="btn-submit-bulk-transfer" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #FFFFFF; font-weight: 700; border-radius: 8px; padding: 9px 20px; border: none; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25); display: inline-flex; align-items: center; gap: 8px;">
-            <i data-lucide="check-check" style="width: 16px; height: 16px;"></i> Confirmer le Transfert Groupé
-          </button>
-        </div>
-
-      </form>
-    </div>
+    </form>
   </div>
 </div>
 <?php endif; ?>
