@@ -142,31 +142,7 @@ $nomComplet = trim(($user['nom_user'] ?? '') . ' ' . ($user['prenom_user'] ?? ''
             </div>
           </div>
 
-          <!-- BLOC 3 : SÉCURITÉ & MODIFICATION DU MOT DE PASSE -->
-          <div style="margin-bottom: 28px;">
-            <h3 style="font-size: 14px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 18px 0; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #F1F5F9; padding-bottom: 10px;">
-              <i data-lucide="shield-check" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Sécurité & Modification du Mot de Passe
-            </h3>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-              <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
-                  Nouveau mot de passe <span style="font-weight: 500; color: #64748B; font-size: 12px;">(Optionnel)</span>
-                </label>
-                <div style="display: flex; gap: 8px;">
-                  <input type="text" id="input-password" name="password" class="form-control" style="flex: 1; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 700; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; letter-spacing: 1px;" placeholder="Laisser vide pour conserver le mot de passe actuel">
-                  <button type="button" id="btn-generate-password" class="btn" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #1E3A5F; font-weight: 700; border-radius: 10px; padding: 10px 14px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer;">
-                    <i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i> Générer
-                  </button>
-                </div>
-                <small style="color: #64748B; font-size: 12px; margin-top: 6px; display: block;">
-                  Renseignez ce champ uniquement si vous souhaitez réinitialiser l'accès de l'agent.
-                </small>
-              </div>
-            </div>
-          </div>
-
-          <!-- BLOC 4 : CARTE DE TRAÇABILITÉ -->
+          <!-- BLOC 3 : CARTE DE TRAÇABILITÉ -->
           <div style="background: #F8FAFC; border-radius: 12px; padding: 18px 24px; border: 1px solid #E2E8F0; margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
             <div style="display: flex; align-items: center; gap: 12px;">
               <div style="width: 36px; height: 36px; border-radius: 10px; background: #EFF6FF; color: #1D4ED8; display: flex; align-items: center; justify-content: center; border: 1px solid #BFDBFE;">
@@ -220,17 +196,6 @@ $(document).ready(function() {
       width: '100%'
     });
   }
-
-  // Générateur de mot de passe aléatoire
-  $('#btn-generate-password').on('click', function() {
-    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%';
-    var gen = 'COM-';
-    for (var i = 0; i < 6; i++) {
-      gen += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    $('#input-password').val(gen);
-    notifyToast('Nouveau mot de passe généré : ' + gen, 'info');
-  });
 
   function notifyToast(msg, type) {
     if (typeof showToast === 'function') {

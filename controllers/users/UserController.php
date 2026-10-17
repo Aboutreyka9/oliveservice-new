@@ -911,10 +911,6 @@ class UserController extends BaseController
             'updated_at_user' => date('Y-m-d H:i:s')
         ];
 
-        if (!empty($_POST['password'])) {
-            $updateData['password_user'] = password_hash(trim($_POST['password']), PASSWORD_DEFAULT);
-        }
-
         if ($this->model->update($updateData, $id)) {
             // Synchronisation de zone_commercials
             $currentUserCode = Context::user() ?: 'SYSTEM';
