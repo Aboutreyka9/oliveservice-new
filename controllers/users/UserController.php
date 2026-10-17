@@ -1309,22 +1309,27 @@ class UserController extends BaseController
             $params[':curr_user_code'] = $currentUserCode;
         }
 
-        // 2. Inclure strictement les commerciaux & agents terrain (ROLE_COMMERCIAL)
-        $conds[] = "u.code_user IN (
-            SELECT DISTINCT ur.user_code 
-            FROM user_roles ur 
-            WHERE ur.role_code = 'ROLE_COMMERCIAL'
+        // 2. Inclure les commerciaux via zone_commercials (ou rôle commercial)
+        $conds[] = "(
+            u.code_user IN (SELECT DISTINCT zc.commercial_code FROM zone_commercials zc WHERE zc.statut_zone_commercial = 'actif')
+            OR u.code_user IN (SELECT DISTINCT ur.user_code FROM user_roles ur WHERE ur.role_code = 'ROLE_COMMERCIAL')
         )";
 
-        // 3. Filtrage zone
+        // 3. Filtrage par zone
         $requestedZone = trim($_POST['zone_code'] ?? ($_GET['zone_code'] ?? ''));
 
         if (!$hasJoker) {
-            $conds[] = "u.zone_code = :forced_zone";
+            $conds[] = "(
+                u.code_user IN (SELECT zc2.commercial_code FROM zone_commercials zc2 WHERE zc2.zone_code = :forced_zone AND zc2.statut_zone_commercial = 'actif')
+                OR u.zone_code = :forced_zone
+            )";
             $params[':forced_zone'] = $userZone;
         } else {
             if (!empty($requestedZone) && $requestedZone !== 'ALL') {
-                $conds[] = "u.zone_code = :selected_zone";
+                $conds[] = "(
+                    u.code_user IN (SELECT zc2.commercial_code FROM zone_commercials zc2 WHERE zc2.zone_code = :selected_zone AND zc2.statut_zone_commercial = 'actif')
+                    OR u.zone_code = :selected_zone
+                )";
                 $params[':selected_zone'] = $requestedZone;
             }
         }
@@ -1332,7 +1337,18 @@ class UserController extends BaseController
         $whereClause = !empty($conds) ? ("WHERE " . implode(" AND ", $conds)) : "";
 
         $sql = "SELECT u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code,
-                       z.libelle_zone,
+                       (
+                           SELECT GROUP_CONCAT(DISTINCT z.libelle_zone ORDER BY z.libelle_zone SEPARATOR ', ')
+                           FROM zone_commercials zc
+                           JOIN zones z ON z.code_zone = zc.zone_code
+                           WHERE zc.commercial_code = u.code_user AND zc.statut_zone_commercial = 'actif'
+                       ) as zones_affectees,
+                       (
+                           SELECT GROUP_CONCAT(DISTINCT zc.zone_code ORDER BY zc.zone_code SEPARATOR ',')
+                           FROM zone_commercials zc
+                           WHERE zc.commercial_code = u.code_user AND zc.statut_zone_commercial = 'actif'
+                       ) as zones_codes_affectees,
+                       z_fallback.libelle_zone as zone_defaut,
                        GROUP_CONCAT(DISTINCT r.libelle_role ORDER BY r.id SEPARATOR '||') as roles_libelles,
                        GROUP_CONCAT(DISTINCT r.code_role ORDER BY r.id SEPARATOR ',') as roles_codes,
                        f.libelle_fonction,
@@ -1342,9 +1358,9 @@ class UserController extends BaseController
                 LEFT JOIN user_roles ur ON ur.user_code = u.code_user
                 LEFT JOIN roles r ON r.code_role = ur.role_code
                 LEFT JOIN fonctions f ON f.code_fonction = u.fonction_code
-                LEFT JOIN zones z ON z.code_zone = u.zone_code
+                LEFT JOIN zones z_fallback ON z_fallback.code_zone = u.zone_code
                 {$whereClause}
-                GROUP BY u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code, z.libelle_zone, f.libelle_fonction
+                GROUP BY u.id_user, u.code_user, u.nom_user, u.prenom_user, u.email_user, u.telephone_user, u.statut_user, u.fonction_code, u.token_user, u.zone_code, z_fallback.libelle_zone, f.libelle_fonction
                 ORDER BY u.id_user DESC";
         $stmt = $this->model->getCon()->prepare($sql);
         $stmt->execute($params);
@@ -1361,6 +1377,9 @@ class UserController extends BaseController
                 ? rtrim(RACINE, '/') . '/' 
                 : ($protocol . '://' . $host . '/' . ltrim(RACINE, '/'));
 
+            $zoneLibelle = !empty($u['zones_affectees']) ? $u['zones_affectees'] : (!empty($u['zone_defaut']) ? $u['zone_defaut'] : 'Non assignée');
+            $zonesCodes = !empty($u['zones_codes_affectees']) ? explode(',', $u['zones_codes_affectees']) : (!empty($u['zone_code']) ? [$u['zone_code']] : []);
+
             $data[] = [
                 'code' => $u['code_user'],
                 'nom' => $u['nom_user'],
@@ -1369,7 +1388,8 @@ class UserController extends BaseController
                 'telephone' => $u['telephone_user'] ?? '',
                 'statut' => $u['statut_user'] ?? 'actif',
                 'fonction' => $u['libelle_fonction'] ?? 'Commercial',
-                'zone' => $u['libelle_zone'] ?? 'Non assignée',
+                'zone' => $zoneLibelle,
+                'zones_codes' => $zonesCodes,
                 'roles' => $roleNames,
                 'roles_codes' => $roleCodes,
                 'total_clients' => (int)($u['total_clients'] ?? 0),
