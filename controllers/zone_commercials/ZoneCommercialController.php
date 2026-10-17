@@ -174,7 +174,7 @@ class ZoneCommercialController extends BaseController
         }
 
         $commerciaux = $this->model->getCon()->query("
-            SELECT DISTINCT u.code_user, u.nom_user, u.prenom_user 
+            SELECT DISTINCT u.code_user, u.nom_user, u.prenom_user, u.telephone_user, u.email_user 
             FROM users u
             JOIN user_roles ur ON ur.user_code = u.code_user
             WHERE ur.role_code = 'ROLE_COMMERCIAL' AND u.statut_user = 'actif'
@@ -182,7 +182,7 @@ class ZoneCommercialController extends BaseController
         ")->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($commerciaux)) {
-            $commerciaux = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user FROM users WHERE statut_user='actif' ORDER BY nom_user ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $commerciaux = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user, telephone_user, email_user FROM users WHERE statut_user='actif' ORDER BY nom_user ASC")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $this->loadView('../views/zone_commercials/edit.php', ['item' => $item, 'zones' => $zones, 'commerciaux' => $commerciaux, 'encryptedId' => $encryptedId]);
@@ -202,7 +202,7 @@ class ZoneCommercialController extends BaseController
         }
 
         $commerciaux = $this->model->getCon()->query("
-            SELECT DISTINCT u.code_user, u.nom_user, u.prenom_user 
+            SELECT DISTINCT u.code_user, u.nom_user, u.prenom_user, u.telephone_user, u.email_user 
             FROM users u
             JOIN user_roles ur ON ur.user_code = u.code_user
             WHERE ur.role_code = 'ROLE_COMMERCIAL' AND u.statut_user = 'actif'
@@ -210,7 +210,7 @@ class ZoneCommercialController extends BaseController
         ")->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($commerciaux)) {
-            $commerciaux = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user FROM users WHERE statut_user='actif' ORDER BY nom_user ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $commerciaux = $this->model->getCon()->query("SELECT code_user, nom_user, prenom_user, telephone_user, email_user FROM users WHERE statut_user='actif' ORDER BY nom_user ASC")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $this->loadView('../views/zone_commercials/edit.php', ['item' => [], 'zones' => $zones, 'commerciaux' => $commerciaux]);
