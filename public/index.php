@@ -30,6 +30,8 @@ $route->addRoute('/user/gestionnaireList', ['UserController', 'gestionnaireList'
 $route->addRoute('/user/apiGestionnaireList', ['UserController', 'apiGestionnaireList']);
 $route->addRoute('/user/recruterCommercial', ['UserController', 'recruterCommercial']);
 $route->addRoute('/user/addCommercial', ['UserController', 'addCommercial']);
+$route->addRoute('/user/modifierCommercial/{param}', ['UserController', 'modifierCommercial']);
+$route->addRoute('/user/editCommercial', ['UserController', 'editCommercial']);
 
 // -------------------------------------------------------------
 // Module: Etablissements & Fonctions

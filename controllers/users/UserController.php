@@ -758,6 +758,222 @@ class UserController extends BaseController
         }
     }
 
+    public function modifierCommercial($param)
+    {
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);
+        $hasJoker = Context::hasJoker();
+        $userZoneCode = Context::zone();
+        $etabCode = Context::etablissement();
+
+        try {
+            $decryptedId = $this->validator->decrypter($param);
+            $userProfile = $this->model->getById($decryptedId);
+
+            if (!$userProfile) {
+                header('Location: ' . RACINE . 'user/gestionnaireList');
+                exit();
+            }
+
+            // Récupérer les zones assignées dans zone_commercials
+            $stmtAssigned = $this->model->getCon()->prepare("
+                SELECT zone_code 
+                FROM zone_commercials 
+                WHERE commercial_code = ? AND statut_zone_commercial = 'actif'
+            ");
+            $stmtAssigned->execute([$userProfile['code_user']]);
+            $assignedZoneCodes = $stmtAssigned->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+            // Repli vers zone_code si aucune entrée active dans zone_commercials
+            if (empty($assignedZoneCodes) && !empty($userProfile['zone_code'])) {
+                $assignedZoneCodes = [$userProfile['zone_code']];
+            }
+
+            // Récupérer toutes les zones disponibles selon contexte
+            if ($hasJoker) {
+                $stmtZones = $this->model->getCon()->query("
+                    SELECT code_zone, libelle_zone 
+                    FROM zones 
+                    WHERE statut_zone = 'actif' 
+                    ORDER BY libelle_zone ASC
+                ");
+                $zones = $stmtZones ? $stmtZones->fetchAll(PDO::FETCH_ASSOC) : [];
+            } else {
+                $stmtZones = $this->model->getCon()->prepare("
+                    SELECT code_zone, libelle_zone 
+                    FROM zones 
+                    WHERE etablissement_code = ? AND statut_zone = 'actif' 
+                    ORDER BY libelle_zone ASC
+                ");
+                $stmtZones->execute([$etabCode]);
+                $zones = $stmtZones->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
+
+            $encryptedId = $this->validator->crypter($decryptedId);
+
+            $this->loadView('../views/users/modifier_commercial.php', [
+                'user'              => $userProfile,
+                'encryptedId'       => $encryptedId,
+                'assignedZoneCodes' => $assignedZoneCodes,
+                'zones'             => $zones,
+                'hasJoker'          => $hasJoker,
+                'userZoneCode'      => $userZoneCode
+            ]);
+        } catch (Exception $e) {
+            header('Location: ' . RACINE . 'user/gestionnaireList');
+            exit();
+        }
+    }
+
+    public function editCommercial()
+    {
+        $this->requirePost(false);
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);
+
+        if (!Validator::validateCsrfToken($_POST['csrf_token'] ?? '')) {
+            $this->error('Token CSRF invalide ou session expirée. Veuillez recharger la page.');
+            return;
+        }
+
+        $id = (int)$this->post('id_user');
+        if (!$id) {
+            $this->error('Identifiant utilisateur invalide.');
+            return;
+        }
+
+        $user = $this->model->getById($id);
+        if (!$user) {
+            $this->error('Commercial introuvable.');
+            return;
+        }
+
+        $nom = trim($_POST['nom'] ?? '');
+        $prenom = trim($_POST['prenom'] ?? '');
+        $telephone = Validator::cleanPhone($_POST['telephone'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $sexe = in_array($_POST['sexe'] ?? '', ['M', 'F']) ? $_POST['sexe'] : 'M';
+        $commission = (isset($_POST['commission']) && $_POST['commission'] !== '') ? (float)$_POST['commission'] : 0.0;
+        $statut = in_array($_POST['statut'] ?? '', ['actif', 'inactif']) ? $_POST['statut'] : 'actif';
+
+        if (empty($nom)) {
+            $this->error('Le nom du commercial est obligatoire !');
+            return;
+        }
+        if (empty($prenom)) {
+            $this->error('Le prénom du commercial est obligatoire !');
+            return;
+        }
+        if (empty($email)) {
+            $this->error('L\'adresse email est obligatoire !');
+            return;
+        }
+
+        // Vérification unicité email
+        $stmtCheckEmail = $this->model->getCon()->prepare("SELECT id_user FROM users WHERE email_user = ? AND id_user != ?");
+        $stmtCheckEmail->execute([$email, $id]);
+        if ($stmtCheckEmail->fetch()) {
+            $this->error('Cette adresse email est déjà attribuée à un autre compte !');
+            return;
+        }
+
+        // Vérification unicité téléphone
+        if (!empty($telephone)) {
+            $stmtCheckTel = $this->model->getCon()->prepare("SELECT id_user FROM users WHERE telephone_user = ? AND id_user != ?");
+            $stmtCheckTel->execute([$telephone, $id]);
+            if ($stmtCheckTel->fetch()) {
+                $this->error('Ce numéro de téléphone est déjà attribué à un autre compte !');
+                return;
+            }
+        }
+
+        // Zones sélectionnées
+        $zonesInput = $_POST['zone_codes'] ?? ($_POST['zone_code'] ?? []);
+        if (!is_array($zonesInput)) {
+            $zonesInput = !empty($zonesInput) ? [$zonesInput] : [];
+        }
+        $zonesInput = array_values(array_unique(array_filter(array_map('trim', $zonesInput))));
+
+        if (empty($zonesInput)) {
+            $this->error('Veuillez affecter au moins une zone commerciale à cet agent.');
+            return;
+        }
+
+        $primaryZone = $zonesInput[0] ?? $user['zone_code'];
+
+        $updateData = [
+            'nom_user'        => $nom,
+            'prenom_user'     => $prenom,
+            'telephone_user'  => $telephone ?: null,
+            'email_user'      => $email,
+            'sexe_user'       => $sexe,
+            'commission'      => $commission,
+            'statut_user'     => $statut,
+            'zone_code'       => $primaryZone,
+            'updated_at_user' => date('Y-m-d H:i:s')
+        ];
+
+        if (!empty($_POST['password'])) {
+            $updateData['password_user'] = password_hash(trim($_POST['password']), PASSWORD_DEFAULT);
+        }
+
+        if ($this->model->update($updateData, $id)) {
+            // Synchronisation de zone_commercials
+            $currentUserCode = Context::user() ?: 'SYSTEM';
+            $etabCode = Context::etablissement() ?: ($user['etablissement_code'] ?? '5454544456');
+
+            // Récupérer l'état actuel des affectations pour ce commercial
+            $stmtExisting = $this->model->getCon()->prepare("
+                SELECT zone_code, statut_zone_commercial 
+                FROM zone_commercials 
+                WHERE commercial_code = ?
+            ");
+            $stmtExisting->execute([$user['code_user']]);
+            $existingRows = $stmtExisting->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $existingMap = [];
+            foreach ($existingRows as $row) {
+                $existingMap[$row['zone_code']] = $row['statut_zone_commercial'];
+            }
+
+            $stmtInsert = $this->model->getCon()->prepare("
+                INSERT INTO zone_commercials 
+                (commercial_code, zone_code, user_code, statut_zone_commercial, created_at_zone_commercial, etablissement_code)
+                VALUES (?, ?, ?, 'actif', NOW(), ?)
+            ");
+            $stmtActivate = $this->model->getCon()->prepare("
+                UPDATE zone_commercials 
+                SET statut_zone_commercial = 'actif', updated_at_zone_commercial = NOW() 
+                WHERE commercial_code = ? AND zone_code = ?
+            ");
+            $stmtDeactivate = $this->model->getCon()->prepare("
+                UPDATE zone_commercials 
+                SET statut_zone_commercial = 'inactif', updated_at_zone_commercial = NOW() 
+                WHERE commercial_code = ? AND zone_code = ?
+            ");
+
+            // Activer ou Insérer les zones cochées
+            foreach ($zonesInput as $zCode) {
+                if (!isset($existingMap[$zCode])) {
+                    $stmtInsert->execute([$user['code_user'], $zCode, $currentUserCode, $etabCode]);
+                } elseif ($existingMap[$zCode] !== 'actif') {
+                    $stmtActivate->execute([$user['code_user'], $zCode]);
+                }
+            }
+
+            // Désactiver les zones décochées
+            foreach ($existingMap as $zCode => $currentStatut) {
+                if (!in_array($zCode, $zonesInput) && $currentStatut === 'actif') {
+                    $stmtDeactivate->execute([$user['code_user'], $zCode]);
+                }
+            }
+
+            $this->success("Profil du commercial <strong>" . htmlspecialchars($nom . ' ' . $prenom) . "</strong> mis à jour avec succès !", [
+                'redirect' => RACINE . 'user/gestionnaireList'
+            ]);
+        } else {
+            $this->error('Erreur technique lors de la mise à jour du profil commercial.');
+        }
+    }
+
+
 
     public function edition($details)
     {

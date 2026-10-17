@@ -171,7 +171,7 @@ $(function() {
             return `
               <div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">
                 <a href="${racine}user/details/${d.editId}" class="btn" style="background:#1E3A5F; color:#FFF; font-weight:700; border-radius:8px; padding:6px 12px; font-size:12px; text-decoration:none;" title="Fiche Agent"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>
-                <a href="${racine}user/edition/${d.editId}" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; font-size:12px; text-decoration:none; border:1px solid #CBD5E1;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Modifier</a>
+                <a href="${racine}user/modifierCommercial/${d.editId}" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; font-size:12px; text-decoration:none; border:1px solid #CBD5E1;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Modifier</a>
               </div>
             `;
           }
