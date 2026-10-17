@@ -1,6 +1,6 @@
 /**
  * Module Client - Administration Olive Service
- * Gestion DataTables, Statistiques KPI temps réel, Filtres rapides & Statuts
+ * Gestion DataTables, Statistiques KPI temps réel, Filtres rapides, Statuts & Réaffectation Commerciale
  */
 
 $(function () {
@@ -19,6 +19,23 @@ $(function () {
 
   // État du filtre rapide actif
   let currentFilter = 'all';
+
+  // Ensemble des clients sélectionnés pour action groupée
+  const selectedClients = new Set();
+
+  function updateBulkToolbar() {
+    const count = selectedClients.size;
+    const $toolbar = $('#bulk-actions-toolbar');
+    if (count > 0) {
+      $('#bulk-badge-count').text(count);
+      $('#bulk-selected-count').text(count + ' client' + (count > 1 ? 's' : '') + ' sélectionné' + (count > 1 ? 's' : ''));
+      $('#bulk-modal-count-text').text(count + ' client' + (count > 1 ? 's' : ''));
+      $toolbar.css('display', 'flex');
+    } else {
+      $toolbar.hide();
+      $('#check-all-clients').prop('checked', false);
+    }
+  }
 
   // Filtre personnalisé pour DataTables
   $.fn.dataTable.ext.search.push(function (settings, data, dataIndex, rowData) {
@@ -45,12 +62,21 @@ $(function () {
       processing: true,
       autoWidth: false,
       columns: [
-        // 0. N° Index
+        // 0. Checkbox Sélection
         {
           data: null,
           width: '45px',
-          className: 'text-muted fw-bold text-center',
-          render: (d, type, row, meta) => meta.row + 1
+          orderable: false,
+          className: 'text-center',
+          render: (d, type, row) => {
+            const code = row.code_client || '';
+            const isChecked = selectedClients.has(code) ? 'checked' : '';
+            return `
+              <div style="display: flex; align-items: center; justify-content: center;">
+                <input type="checkbox" class="client-bulk-cb" value="${code}" data-nom="${row.nom_complet || ''}" ${isChecked} style="cursor: pointer; width: 16px; height: 16px; accent-color: #1E3A5F;">
+              </div>
+            `;
+          }
         },
         // 1. Code Client
         {
@@ -120,7 +146,28 @@ $(function () {
             return (zone || lieu) ? `${zone}${lieu}` : '<span style="color: #94A3B8;">-</span>';
           }
         },
-        // 6. Souscription (nombre de souscriptions du client)
+        // 6. Commercial Référent Actif
+        {
+          data: 'nom_commercial',
+          render: (d, type, row) => {
+            const nom = d || 'Non assigné';
+            const isAssigned = (nom !== 'Non assigné' && nom !== '-');
+            const bg = isAssigned ? '#F0FDF4' : '#F8FAFC';
+            const color = isAssigned ? '#166534' : '#94A3B8';
+            const border = isAssigned ? '#BBF7D0' : '#E2E8F0';
+            const tel = row.telephone_commercial ? `<span style="font-size: 11px; color: #64748B; display: block; margin-top: 2px;"><i data-lucide="phone" style="width: 10px; height: 10px; display: inline-block;"></i> ${row.telephone_commercial}</span>` : '';
+            return `
+              <div>
+                <span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; font-weight: 700; font-size: 11.5px; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                  <i data-lucide="user-check" style="width: 12px; height: 12px;"></i>
+                  <span>${nom}</span>
+                </span>
+                ${tel}
+              </div>
+            `;
+          }
+        },
+        // 7. Souscription (nombre de souscriptions du client)
         {
           data: 'nb_souscriptions',
           className: 'text-center',
@@ -141,7 +188,7 @@ $(function () {
             `;
           }
         },
-        // 7. Statut (Toggle interactif si gestionnaire/admin)
+        // 8. Statut (Toggle interactif si gestionnaire/admin)
         {
           data: 'statut_client',
           width: '110px',
@@ -169,7 +216,7 @@ $(function () {
             return `<span class="badge ${isActif ? 'bg-success' : 'bg-secondary'}" style="font-size: 11.5px; padding: 4px 8px;">${isActif ? 'Actif' : 'Inactif'}</span>`;
           }
         },
-        // 8. Actions Directes
+        // 9. Actions Directes
         {
           data: null,
           width: '130px',
@@ -206,6 +253,11 @@ $(function () {
       pageLength: 25,
       order: [],
       drawCallback: () => {
+        // Restaurer l'état des cases à cocher après pagination / redraw
+        $('.client-bulk-cb').each(function () {
+          const code = $(this).val();
+          $(this).prop('checked', selectedClients.has(code));
+        });
         if (window.lucide) lucide.createIcons();
       }
     });
@@ -259,6 +311,121 @@ $(function () {
         setTimeout(() => $icon.css({ 'transform': 'none' }), 600);
         notifyToast('Répertoire des clients actualisé avec succès', 'info');
       }, false);
+    });
+
+    // GESTION DE LA SÉLECTION MULTIPLE (BULK)
+    $(document).on('change', '.client-bulk-cb', function () {
+      const code = $(this).val();
+      if ($(this).is(':checked')) {
+        selectedClients.add(code);
+      } else {
+        selectedClients.delete(code);
+      }
+      updateBulkToolbar();
+    });
+
+    $('#check-all-clients').on('change', function () {
+      const isChecked = $(this).is(':checked');
+      $('.client-bulk-cb').each(function () {
+        const code = $(this).val();
+        $(this).prop('checked', isChecked);
+        if (isChecked) {
+          selectedClients.add(code);
+        } else {
+          selectedClients.delete(code);
+        }
+      });
+      updateBulkToolbar();
+    });
+
+    $('#btn-uncheck-all').on('click', function () {
+      selectedClients.clear();
+      $('.client-bulk-cb').prop('checked', false);
+      $('#check-all-clients').prop('checked', false);
+      updateBulkToolbar();
+    });
+
+    // Soumission du transfert en masse
+    $('#form-bulk-transfer').on('submit', function (e) {
+      e.preventDefault();
+      const $form = $(this);
+      const $btn = $('#btn-submit-bulk-transfer');
+      const commercialCode = $('#select-bulk-commercial').val();
+      const motif = $('#input-bulk-motif').val();
+
+      if (selectedClients.size === 0) {
+        if (window.Swal) {
+          Swal.fire('Aucun client sélectionné', 'Veuillez cocher au moins un client à réaffecter.', 'warning');
+        } else {
+          alert('Veuillez cocher au moins un client.');
+        }
+        return;
+      }
+
+      if (!commercialCode) {
+        if (window.Swal) {
+          Swal.fire('Commercial requis', 'Veuillez sélectionner le commercial récepteur.', 'warning');
+        } else {
+          alert('Veuillez sélectionner un commercial.');
+        }
+        return;
+      }
+
+      $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span> Transfert groupé...');
+
+      const formData = {
+        csrf_token: $form.find('input[name="csrf_token"]').val(),
+        commercial_code: commercialCode,
+        motif: motif,
+        client_codes: Array.from(selectedClients)
+      };
+
+      $.ajax({
+        url: $form.attr('action'),
+        type: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        data: formData,
+        dataType: 'json',
+        success: function (res) {
+          $btn.prop('disabled', false).html('<i data-lucide="check-check" style="width: 16px; height: 16px;"></i> Confirmer le Transfert Groupé');
+          if (window.lucide) lucide.createIcons();
+
+          if (res.status === 1 || res.status === 'success' || res.success) {
+            $('#modal-bulk-transfer').modal('hide');
+            selectedClients.clear();
+            $('#check-all-clients').prop('checked', false);
+            updateBulkToolbar();
+
+            if (window.Swal) {
+              Swal.fire({
+                icon: 'success',
+                title: 'Transfert groupé effectué !',
+                text: res.message || 'Les clients ont été réaffectés avec succès.',
+                confirmButtonColor: '#059669'
+              });
+            } else {
+              notifyToast(res.message || 'Transfert groupé effectué', 'success');
+            }
+            table.ajax.reload(null, false);
+          } else {
+            if (window.Swal) {
+              Swal.fire('Erreur', res.message || 'Erreur lors du transfert.', 'error');
+            } else {
+              notifyToast(res.message || 'Erreur lors du transfert', 'error');
+            }
+          }
+        },
+        error: function (xhr) {
+          $btn.prop('disabled', false).html('<i data-lucide="check-check" style="width: 16px; height: 16px;"></i> Confirmer le Transfert Groupé');
+          if (window.lucide) lucide.createIcons();
+          const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Une erreur de communication est survenue.';
+          if (window.Swal) {
+            Swal.fire('Erreur serveur', msg, 'error');
+          } else {
+            notifyToast(msg, 'error');
+          }
+        }
+      });
     });
 
     // Basculement de statut via AJAX

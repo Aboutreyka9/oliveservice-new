@@ -135,6 +135,9 @@ $route->addRoute('/client/changer', ['ClientController', 'changer']);
 $route->addRoute('/client/details/{param}', ['ClientController', 'details']);
 $route->addRoute('/client/edition/{param}', ['ClientController', 'edition']);
 $route->addRoute('/client/formulaire', ['ClientController', 'formulaire']);
+$route->addRoute('/client/transferCommercial', ['ClientController', 'transferCommercial']);
+$route->addRoute('/client/bulkTransferCommercial', ['ClientController', 'bulkTransferCommercial']);
+$route->addRoute('/client/historyCommercial/{param}', ['ClientController', 'historyCommercial']);
 
 $route->addRoute('/zone_commercial/list', ['ZoneCommercialController', 'list']);
 $route->addRoute('/zone_commercial/apiList', ['ZoneCommercialController', 'apiList']);

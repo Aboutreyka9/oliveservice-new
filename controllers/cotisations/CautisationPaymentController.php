@@ -43,7 +43,13 @@ class CautisationPaymentController extends BaseController
         $params = [$etabCode, $zoneCode, $anneeCode];
 
         if (Context::isCommercial()) {
-            $sql .= " AND (c.user_code = ? OR s.user_code = ?)";
+            $sql .= " AND (c.user_code = ? OR s.user_code = ? OR EXISTS (
+                SELECT 1 FROM client_commercials cc 
+                WHERE cc.client_code = c.code_client 
+                  AND cc.commercial_code = ? 
+                  AND cc.statut_client_commercial = 'actif'
+            ))";
+            $params[] = $userCode;
             $params[] = $userCode;
             $params[] = $userCode;
         } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
@@ -286,7 +292,8 @@ class CautisationPaymentController extends BaseController
         $zoneCode = Context::zone() ?: ($souscription['zone_code'] ?? '');
 
         // Priorité : annee_code soumis > souscription['annee_code'] > Context::annee()
-        $anneeCode = !empty($data['annee_code']) ? trim($data['annee_code']) : (!empty($souscription['annee_code']) ? $souscription['annee_code'] : Context::annee());
+        $postedAnnee = $this->post('annee_code');
+        $anneeCode = !empty($postedAnnee) ? trim($postedAnnee) : (!empty($souscription['annee_code']) ? $souscription['annee_code'] : Context::annee());
 
         if (empty($anneeCode)) {
             $this->error("L'année d'exercice est obligatoire pour enregistrer un versement/cotisation. Veuillez configurer une année active.");
@@ -413,8 +420,15 @@ class CautisationPaymentController extends BaseController
 
         $paramsBase = [$etabCode, $zoneCode, $anneeCode, $etabCode, $zoneCode, $anneeCode];
         if (Context::isCommercial()) {
-            $sql .= " AND s.user_code = ?";
-            $paramsBase[] = Context::user() ?? '';
+            $commercialCode = Context::user() ?? '';
+            $sql .= " AND (s.user_code = ? OR EXISTS (
+                SELECT 1 FROM client_commercials cc 
+                WHERE cc.client_code = s.client_code 
+                  AND cc.commercial_code = ? 
+                  AND cc.statut_client_commercial = 'actif'
+            ))";
+            $paramsBase[] = $commercialCode;
+            $paramsBase[] = $commercialCode;
         }
 
         // 1. Recherche directe par code_client ou code_souscription
@@ -481,9 +495,16 @@ class CautisationPaymentController extends BaseController
         $params = [$etabCode, $zoneCode, $anneeCode, $codeSouscription, $etabCode, $zoneCode, $anneeCode];
 
         if (Context::isCommercial()) {
-            $sql .= " AND (s.user_code = ? OR s.zone_code = ?)";
-            $params[] = Context::user();
+            $commercialCode = Context::user() ?? '';
+            $sql .= " AND (s.user_code = ? OR s.zone_code = ? OR EXISTS (
+                SELECT 1 FROM client_commercials cc 
+                WHERE cc.client_code = s.client_code 
+                  AND cc.commercial_code = ? 
+                  AND cc.statut_client_commercial = 'actif'
+            ))";
+            $params[] = $commercialCode;
             $params[] = Context::zone();
+            $params[] = $commercialCode;
         }
 
         $stmt = $con->prepare($sql);

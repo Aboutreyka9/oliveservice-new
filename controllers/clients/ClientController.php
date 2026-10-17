@@ -18,7 +18,8 @@ class ClientController extends BaseController
         $params = [$etabCode];
 
         if (Context::isCommercial()) {
-            $whereClause .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.user_code = ? AND sub.etablissement_code = ?))";
+            $whereClause .= " AND (EXISTS (SELECT 1 FROM client_commercials cc_st WHERE cc_st.client_code = c.code_client AND cc_st.commercial_code = ? AND cc_st.statut_client_commercial = 'actif') OR c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.user_code = ? AND sub.etablissement_code = ?))";
+            $params[] = $userCode;
             $params[] = $userCode;
             $params[] = $userCode;
             $params[] = $etabCode;
@@ -117,9 +118,25 @@ class ClientController extends BaseController
     {
         $this->requirePermission(['COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
         $stats = $this->getStats();
+        $commerciaux = $this->getActiveCommerciaux();
         $this->loadView('../views/clients/list.php', [
-            'stats' => $stats
+            'stats' => $stats,
+            'commerciaux' => $commerciaux
         ]);
+    }
+
+    private function getActiveCommerciaux(): array
+    {
+        $etabCode = Context::etablissement();
+        $stmtComms = $this->model->getCon()->prepare("
+            SELECT u.code_user, u.nom_user, u.prenom_user, u.telephone_user, u.matricule_user, u.commission
+            FROM users u
+            INNER JOIN user_roles ur ON ur.user_code = u.code_user AND ur.role_code = 'ROLE_COMMERCIAL'
+            WHERE u.statut_user = 'actif' AND (u.etablissement_code = ? OR ? = 1)
+            ORDER BY u.nom_user ASC, u.prenom_user ASC
+        ");
+        $stmtComms->execute([$etabCode, Context::hasJoker() ? 1 : 0]);
+        return $stmtComms->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     public function apiList()
@@ -150,17 +167,23 @@ class ClientController extends BaseController
 
         $sql = "
             SELECT c.*, z.libelle_zone,
+                   COALESCE(cc_act.commercial_code, c.user_code) as active_commercial_code,
+                   TRIM(CONCAT(COALESCE(u_comm.nom_user, ''), ' ', COALESCE(u_comm.prenom_user, ''))) as nom_commercial,
+                   u_comm.telephone_user as telephone_commercial,
                    ({$subSousSql}) as nb_souscriptions,
                    ({$subCotSql}) as total_cotise
             FROM clients c
             LEFT JOIN zones z ON z.code_zone = c.zone_code
+            LEFT JOIN client_commercials cc_act ON cc_act.client_code = c.code_client AND cc_act.statut_client_commercial = 'actif'
+            LEFT JOIN users u_comm ON u_comm.code_user = COALESCE(cc_act.commercial_code, c.user_code)
             WHERE c.etablissement_code = ?
         ";
         $params = array_merge($subSousParams, $subCotParams, [$etabCode]);
 
         // Application du filtrage strict selon le rôle RBAC (Context)
         if (Context::isCommercial()) {
-            $sql .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.user_code = ? AND sub2.etablissement_code = ?))";
+            $sql .= " AND (cc_act.commercial_code = ? OR (cc_act.id_client_commercial IS NULL AND c.user_code = ?) OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.user_code = ? AND sub2.etablissement_code = ?))";
+            $params[] = $userCode;
             $params[] = $userCode;
             $params[] = $userCode;
             $params[] = $etabCode;
@@ -213,6 +236,9 @@ class ClientController extends BaseController
                 'editId' => $idCrypte,
                 'nom_complet' => $nomComplet,
                 'initiales' => $inits,
+                'active_commercial_code' => $c['active_commercial_code'] ?? '',
+                'nom_commercial' => !empty(trim($c['nom_commercial'] ?? '')) ? trim($c['nom_commercial']) : (!empty($c['user_code']) ? $c['user_code'] : 'Non assigné'),
+                'telephone_commercial' => $c['telephone_commercial'] ?? '',
                 'date_creation' => !empty($c['created_at_client']) ? date('d/m/Y', strtotime($c['created_at_client'])) : '-',
                 'nb_souscriptions' => $nbSous,
                 'total_cotise' => $cotise,
@@ -321,6 +347,15 @@ class ClientController extends BaseController
 
         $filteredData = array_intersect_key($data, array_flip($cols));
         if ($this->model->create($filteredData)) {
+            $targetCommercial = Context::isCommercial() ? $userCode : (!empty($data['user_code']) ? $data['user_code'] : null);
+            if (!empty($targetCommercial)) {
+                try {
+                    $modelCC = new ModelClientCommercial();
+                    $modelCC->assignClient($data['code_client'], $targetCommercial, $userCode, $etabCode, $data['zone_code'] ?? null);
+                } catch (Exception $e) {
+                    error_log("Error initial client_commercials assignment: " . $e->getMessage());
+                }
+            }
             $this->success('Client créé avec succès!', ['code_client' => $data['code_client']]);
         } else {
             $this->error('Erreur lors de la création du client');
@@ -426,6 +461,23 @@ class ClientController extends BaseController
             $zoneCode = Context::zone();
             $anneeCode = Context::annee();
 
+            // Gestion de l'affectation active et de l'historique commercial
+            $modelClientComm = new ModelClientCommercial();
+            $modelClientComm->initMissingActiveAssignments($etabCode);
+            $activeAssignment = $modelClientComm->getActiveCommercial($item['code_client']);
+
+            if ($activeAssignment) {
+                $item['commercial_nom'] = $activeAssignment['nom_user'];
+                $item['commercial_prenom'] = $activeAssignment['prenom_user'];
+                $item['commercial_matricule'] = $activeAssignment['matricule_user'];
+                $item['commercial_telephone'] = $activeAssignment['telephone_user'];
+                $item['active_commercial_code'] = $activeAssignment['commercial_code'];
+            }
+            $historyCommercial = $modelClientComm->getHistoryByClient($item['code_client']);
+
+            // Récupérer la liste des commerciaux actifs pour le modal de transfert
+            $commerciaux = $this->getActiveCommerciaux();
+
             // Récupérer les souscriptions de ce client avec filtrage par rôle
             $sql = "
                 SELECT s.*, 
@@ -446,7 +498,8 @@ class ClientController extends BaseController
             $params = [$item['code_client'], $etabCode];
 
             if (Context::isCommercial()) {
-                $sql .= " AND s.user_code = ?";
+                $sql .= " AND (s.user_code = ? OR EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = s.client_code AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif'))";
+                $params[] = Context::user();
                 $params[] = Context::user();
             }
 
@@ -489,7 +542,7 @@ class ClientController extends BaseController
             }
             unset($s);
 
-            // Récupérer la liste des cotisations (versements) effectuées par ce client
+            // Récupérer la liste des cotisations effectuées par ce client
             $sqlCot = "
                 SELECT cc.*, s.code_souscription
                 FROM cautisation_clients cc
@@ -521,11 +574,141 @@ class ClientController extends BaseController
             return;
         }
         $this->loadView('../views/clients/details.php', [
-            'item' => $item,
-            'souscriptions' => $souscriptions,
-            'cotisations' => $cotisations,
-            'encryptedId' => $encryptedId
+            'item'              => $item,
+            'souscriptions'     => $souscriptions,
+            'cotisations'       => $cotisations,
+            'encryptedId'       => $encryptedId,
+            'historyCommercial' => $historyCommercial,
+            'commerciaux'       => $commerciaux,
+            'activeCommercial'  => $activeAssignment
         ]);
+    }
+
+    public function transferCommercial()
+    {
+        $this->requirePost(false);
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'GESTIONNAIRE_MANAGE_PACKS']);
+
+        if (!Validator::validateCsrfToken($_POST['csrf_token'] ?? '')) {
+            $this->error('Token CSRF invalide ou session expirée.');
+            return;
+        }
+
+        $clientCode = trim($_POST['client_code'] ?? '');
+        $newCommercialCode = trim($_POST['commercial_code'] ?? '');
+        $etabCode = Context::etablissement();
+        $adminCode = Context::user();
+
+        if (empty($clientCode)) {
+            $this->error('Code client manquant.');
+            return;
+        }
+
+        if (empty($newCommercialCode)) {
+            $this->error('Veuillez sélectionner le nouveau commercial.');
+            return;
+        }
+
+        // Vérifier que le commercial cible existe et est actif
+        $stmtCheckComm = $this->model->getCon()->prepare("
+            SELECT u.code_user, u.nom_user, u.prenom_user 
+            FROM users u 
+            INNER JOIN user_roles ur ON ur.user_code = u.code_user AND ur.role_code = 'ROLE_COMMERCIAL'
+            WHERE u.code_user = ? AND u.statut_user = 'actif'
+            LIMIT 1
+        ");
+        $stmtCheckComm->execute([$newCommercialCode]);
+        $newComm = $stmtCheckComm->fetch(PDO::FETCH_ASSOC);
+
+        if (!$newComm) {
+            $this->error('Commercial sélectionné introuvable ou inactif.');
+            return;
+        }
+
+        $modelClientComm = new ModelClientCommercial();
+        if ($modelClientComm->assignClient($clientCode, $newCommercialCode, $adminCode, $etabCode)) {
+            $nomNouveau = trim($newComm['nom_user'] . ' ' . $newComm['prenom_user']);
+            $this->success("Le client a été affecté avec succès au commercial <strong>" . htmlspecialchars($nomNouveau) . "</strong> ! Les versements et commissions passés restent 100% rattachés au précédent commercial.", [
+                'client_code'     => $clientCode,
+                'commercial_code' => $newCommercialCode,
+                'reload'          => true
+            ]);
+        } else {
+            $this->error("Erreur technique lors de la réaffectation du client.");
+        }
+    }
+
+    public function bulkTransferCommercial()
+    {
+        $this->requirePost(false);
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'GESTIONNAIRE_MANAGE_PACKS']);
+
+        if (!Validator::validateCsrfToken($_POST['csrf_token'] ?? '')) {
+            $this->error('Token CSRF invalide ou session expirée.');
+            return;
+        }
+
+        $clientCodes = $_POST['client_codes'] ?? [];
+        if (!is_array($clientCodes)) {
+            $clientCodes = !empty($clientCodes) ? explode(',', (string)$clientCodes) : [];
+        }
+        $clientCodes = array_values(array_unique(array_filter(array_map('trim', $clientCodes))));
+
+        $newCommercialCode = trim($_POST['commercial_code'] ?? '');
+        $etabCode = Context::etablissement();
+        $adminCode = Context::user();
+
+        if (empty($clientCodes)) {
+            $this->error('Veuillez sélectionner au moins un client à affecter.');
+            return;
+        }
+
+        if (empty($newCommercialCode)) {
+            $this->error('Veuillez sélectionner le commercial d\'affectation.');
+            return;
+        }
+
+        $stmtCheckComm = $this->model->getCon()->prepare("
+            SELECT u.code_user, u.nom_user, u.prenom_user 
+            FROM users u 
+            INNER JOIN user_roles ur ON ur.user_code = u.code_user AND ur.role_code = 'ROLE_COMMERCIAL'
+            WHERE u.code_user = ? AND u.statut_user = 'actif'
+            LIMIT 1
+        ");
+        $stmtCheckComm->execute([$newCommercialCode]);
+        $newComm = $stmtCheckComm->fetch(PDO::FETCH_ASSOC);
+
+        if (!$newComm) {
+            $this->error('Commercial sélectionné introuvable ou inactif.');
+            return;
+        }
+
+        $modelClientComm = new ModelClientCommercial();
+        $res = $modelClientComm->assignMultipleClients($clientCodes, $newCommercialCode, $adminCode, $etabCode);
+
+        $nomNouveau = trim($newComm['nom_user'] . ' ' . $newComm['prenom_user']);
+        $this->success("Transfert groupé réussi : <strong>{$res['succes']}</strong> client(s) affecté(s) au commercial <strong>" . htmlspecialchars($nomNouveau) . "</strong>. L'historique et la séparation des commissions ont été préservés.", [
+            'stats'  => $res,
+            'reload' => true
+        ]);
+    }
+
+    public function historyCommercial($details)
+    {
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS']);
+        try {
+            $id = $this->validator->decrypter($details);
+            $client = $this->model->getById($id);
+            if (!$client) {
+                $this->json(['error' => 'Client introuvable'], 404);
+                return;
+            }
+            $modelClientComm = new ModelClientCommercial();
+            $history = $modelClientComm->getHistoryByClient($client['code_client']);
+            $this->json(['status' => 1, 'data' => $history]);
+        } catch (Exception $e) {
+            $this->json(['error' => 'Identifiant client invalide'], 400);
+        }
     }
 
     public function edition($details)

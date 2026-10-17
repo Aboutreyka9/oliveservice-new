@@ -3,6 +3,7 @@
 $item = $item ?? [];
 $souscriptions = $souscriptions ?? [];
 $cotisations = $cotisations ?? [];
+$encryptedId = $encryptedId ?? '';
 
 $nomClient = trim($item['nom_client'] ?? '');
 $prenomClient = trim($item['prenom_client'] ?? '');
@@ -83,12 +84,25 @@ if ($createdDate) {
     $dateCreationFmt = '-';
 }
 
-// Commercial référent
+// Commercial référent & historique d'affectation
+$historyCommercial = $historyCommercial ?? [];
+$commerciaux = $commerciaux ?? [];
+$activeCommercial = $activeCommercial ?? null;
+
 $nomCommercial = trim(($item['commercial_nom'] ?? '') . ' ' . ($item['commercial_prenom'] ?? ''));
-if (empty($nomCommercial)) {
-    $nomCommercial = !empty($item['user_code']) ? $item['user_code'] : 'Non assigné';
+if (!empty($activeCommercial['nom_user'])) {
+    $nomCommercial = trim($activeCommercial['nom_user'] . ' ' . ($activeCommercial['prenom_user'] ?? ''));
+    $commercialMatricule = !empty($activeCommercial['matricule_user']) ? $activeCommercial['matricule_user'] : ($activeCommercial['commercial_code'] ?? '');
+    $commercialTelephone = $activeCommercial['telephone_user'] ?? '';
+} else {
+    if (empty($nomCommercial)) {
+        $nomCommercial = !empty($item['user_code']) ? $item['user_code'] : 'Non assigné';
+    }
+    $commercialMatricule = !empty($item['commercial_matricule']) ? $item['commercial_matricule'] : ($item['user_code'] ?? '');
+    $commercialTelephone = $item['commercial_telephone'] ?? '';
 }
-$commercialMatricule = !empty($item['commercial_matricule']) ? $item['commercial_matricule'] : ($item['user_code'] ?? '');
+
+$canTransfer = Context::can(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'GESTIONNAIRE_MANAGE_PACKS']);
 ?>
 <div class="app-layout">
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
@@ -140,6 +154,11 @@ $commercialMatricule = !empty($item['commercial_matricule']) ? $item['commercial
           <a href="<?= RACINE ?>souscription/wizard" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 20px; text-decoration: none; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);">
             <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Nouvelle Souscription
           </a>
+          <?php if ($canTransfer): ?>
+            <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#modal-transfer-commercial" style="background: #EFF6FF; border: 1.5px solid #BFDBFE; color: #1D4ED8; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 10px; padding: 10px 18px; cursor: pointer; box-shadow: 0 1px 3px rgba(37,99,235,0.08);">
+              <i data-lucide="user-plus" style="width: 16px; height: 16px; color: #1D4ED8;"></i> Réaffecter / Transférer
+            </button>
+          <?php endif; ?>
         </div>
       </div>
 
@@ -317,12 +336,22 @@ $commercialMatricule = !empty($item['commercial_matricule']) ? $item['commercial
               <div style="font-size: 14px; font-weight: 800; color: #1E3A5F; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
                 <i data-lucide="user-check" style="width: 15px; height: 15px; color: #059669;"></i> <?= htmlspecialchars($nomCommercial) ?>
               </div>
+              <?php if (!empty($commercialTelephone)): ?>
+                <div style="font-size: 12px; color: #059669; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 5px;">
+                  <i data-lucide="phone" style="width: 12px; height: 12px;"></i> <?= htmlspecialchars($commercialTelephone) ?>
+                </div>
+              <?php endif; ?>
               <?php if (!empty($commercialMatricule)): ?>
-                <div style="margin-bottom: 10px;">
+                <div style="margin-bottom: 8px;">
                   <span style="font-size: 11px; color: #64748B; background: #FFFFFF; border: 1px solid #E2E8F0; padding: 2px 7px; border-radius: 4px; font-family: monospace; font-weight: 700;">
                     Code : <?= htmlspecialchars($commercialMatricule) ?>
                   </span>
                 </div>
+              <?php endif; ?>
+              <?php if ($canTransfer): ?>
+                <button type="button" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#modal-transfer-commercial" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; font-weight: 700; font-size: 11.5px; border-radius: 8px; padding: 6px 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-bottom: 10px; cursor: pointer; transition: all 0.2s ease;">
+                  <i data-lucide="refresh-cw" style="width: 13px; height: 13px;"></i> Réaffecter le commercial
+                </button>
               <?php endif; ?>
             </div>
             <div style="font-size: 11.5px; color: #475569; background: #FFFFFF; border: 1px solid #E2E8F0; padding: 6px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
@@ -588,12 +617,302 @@ $commercialMatricule = !empty($item['commercial_matricule']) ? $item['commercial
         <?php endif; ?>
       </div>
 
+      <!-- CARTE : HISTORIQUE DES AFFECTATIONS COMMERCIALES -->
+      <div class="card-premium" style="background: #FFFFFF; border-radius: 16px; padding: 26px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05); width: 100%; box-sizing: border-box; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid #F1F5F9; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 style="font-size: 15px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="history" style="width: 18px; height: 18px; color: #1E3A5F;"></i> Historique des Affectations Commerciales (<?= count($historyCommercial) ?>)
+            </h3>
+            <p style="font-size: 12px; color: #64748B; margin: 4px 0 0 0;">
+              Traçabilité des transferts de portefeuille. Les versements et commissions antérieurs demeurent strictement scellés au commercial de chaque période.
+            </p>
+          </div>
+          <?php if ($canTransfer): ?>
+            <button type="button" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#modal-transfer-commercial" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; font-weight: 700; border-radius: 8px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 6px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);">
+              <i data-lucide="user-plus" style="width: 14px; height: 14px;"></i> Nouvelle Réaffectation
+            </button>
+          <?php endif; ?>
+        </div>
+
+        <?php if (empty($historyCommercial)): ?>
+          <div style="text-align: center; padding: 36px 20px; color: #94A3B8; background: #F8FAFC; border-radius: 12px; border: 1px dashed #CBD5E1;">
+            <i data-lucide="shield-check" style="width: 36px; height: 36px; margin-bottom: 8px; opacity: 0.6; color: #059669;"></i>
+            <p style="font-size: 13.5px; font-weight: 600; color: #334155; margin: 0 0 4px 0;">Affectation initiale en cours</p>
+            <p style="font-size: 12px; margin: 0; color: #64748B;">Ce client est actuellement géré par <?= htmlspecialchars($nomCommercial) ?> sans transfert ultérieur enregistré.</p>
+          </div>
+        <?php else: ?>
+          <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background: #F8FAFC; border-bottom: 2px solid #E2E8F0;">
+                  <th style="padding: 12px 14px; text-align: left; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Commercial Responsable</th>
+                  <th style="padding: 12px 14px; text-align: left; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Période de Prise en Charge</th>
+                  <th style="padding: 12px 14px; text-align: center; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Durée</th>
+                  <th style="padding: 12px 14px; text-align: center; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Statut</th>
+                  <th style="padding: 12px 14px; text-align: left; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Zone</th>
+                  <th style="padding: 12px 14px; text-align: left; color: #475569; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Enregistré par</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($historyCommercial as $hc): ?>
+                  <?php
+                    $isActif = (($hc['statut_client_commercial'] ?? 'actif') === 'actif');
+                    $nomComm = trim(($hc['nom_commercial'] ?? '') . ' ' . ($hc['prenom_commercial'] ?? ''));
+                    if (empty($nomComm)) $nomComm = $hc['commercial_code'] ?? 'Inconnu';
+
+                    $dateDebut = !empty($hc['created_at_client_commercials']) ? new DateTime($hc['created_at_client_commercials']) : null;
+                    $dateFin = (!empty($hc['updated_at_client_commercials']) && !$isActif) ? new DateTime($hc['updated_at_client_commercials']) : null;
+
+                    // Calcul dynamique de la durée
+                    $dureeTxt = '-';
+                    if ($dateDebut) {
+                        $refDate = $dateFin ?: new DateTime();
+                        $diff = $dateDebut->diff($refDate);
+                        if ($diff->y > 0) {
+                            $dureeTxt = "{$diff->y} an(s)" . ($diff->m > 0 ? " {$diff->m} m" : '');
+                        } elseif ($diff->m > 0) {
+                            $dureeTxt = "{$diff->m} mois" . ($diff->d > 0 ? " {$diff->d} j" : '');
+                        } elseif ($diff->d > 0) {
+                            $dureeTxt = "{$diff->d} jour(s)";
+                        } else {
+                            $dureeTxt = "< 24h";
+                        }
+                    }
+
+                    $nomAdmin = trim(($hc['nom_admin'] ?? '') . ' ' . ($hc['prenom_admin'] ?? ''));
+                    if (empty($nomAdmin)) $nomAdmin = $hc['user_code'] ?? 'Système';
+                  ?>
+                  <tr style="border-bottom: 1px solid #F1F5F9; <?= $isActif ? 'background: #F0FDF4;' : '' ?> transition: background 0.2s;" onmouseover="this.style.background='<?= $isActif ? '#DCFCE7' : '#F8FAFC' ?>'" onmouseout="this.style.background='<?= $isActif ? '#F0FDF4' : 'transparent' ?>'">
+                    <td style="padding: 12px 14px;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 32px; height: 32px; border-radius: 8px; background: <?= $isActif ? '#DCFCE7; color: #15803D;' : '#F1F5F9; color: #64748B;' ?> display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px;">
+                          <?= htmlspecialchars(mb_strtoupper(mb_substr($nomComm, 0, 2))) ?>
+                        </div>
+                        <div>
+                          <strong style="color: #0F172A; font-size: 13px;"><?= htmlspecialchars($nomComm) ?></strong>
+                          <div style="font-size: 11px; color: #64748B; display: flex; align-items: center; gap: 6px; margin-top: 1px;">
+                            <?php if (!empty($hc['matricule_user'])): ?>
+                              <span style="font-family: monospace; background: #FFFFFF; border: 1px solid #E2E8F0; padding: 1px 4px; border-radius: 4px;"><?= htmlspecialchars($hc['matricule_user']) ?></span>
+                            <?php endif; ?>
+                            <?php if (!empty($hc['telephone_commercial'])): ?>
+                              <span><i data-lucide="phone" style="width: 10px; height: 10px; display: inline-block;"></i> <?= htmlspecialchars($hc['telephone_commercial']) ?></span>
+                            <?php endif; ?>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="padding: 12px 14px;">
+                      <div style="font-weight: 700; color: #1E3A5F; font-size: 12.5px;">
+                        Du <?= $dateDebut ? $dateDebut->format('d/m/Y à H:i') : '-' ?>
+                      </div>
+                      <div style="font-size: 11px; color: <?= $isActif ? '#059669' : '#64748B' ?>; font-weight: 600; margin-top: 2px;">
+                        <?= $isActif ? '● En cours d\'activité (Actif)' : 'Au ' . ($dateFin ? $dateFin->format('d/m/Y à H:i') : '-') ?>
+                      </div>
+                    </td>
+                    <td style="padding: 12px 14px; text-align: center;">
+                      <span style="background: #FFFFFF; border: 1px solid #E2E8F0; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 12px; color: #334155;">
+                        <?= $dureeTxt ?>
+                      </span>
+                    </td>
+                    <td style="padding: 12px 14px; text-align: center;">
+                      <?php if ($isActif): ?>
+                        <span class="badge" style="background: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                          <span style="width: 6px; height: 6px; border-radius: 50%; background: #059669; display: inline-block;"></span> Actif
+                        </span>
+                      <?php else: ?>
+                        <span class="badge" style="background: #F1F5F9; color: #64748B; border: 1px solid #E2E8F0; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 11px;">
+                          Clôturé
+                        </span>
+                      <?php endif; ?>
+                    </td>
+                    <td style="padding: 12px 14px; color: #475569; font-size: 12px;">
+                      <span style="display: inline-flex; align-items: center; gap: 4px;">
+                        <i data-lucide="map-pin" style="width: 12px; height: 12px; color: #2563EB;"></i>
+                        <?= htmlspecialchars($hc['libelle_zone'] ?? $item['libelle_zone'] ?? 'Zone client') ?>
+                      </span>
+                    </td>
+                    <td style="padding: 12px 14px; color: #334155; font-size: 12px;">
+                      <div style="font-weight: 700; color: #1E293B;"><?= htmlspecialchars($nomAdmin) ?></div>
+                      <span style="font-size: 11px; color: #94A3B8;">Opérateur système</span>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endif; ?>
+      </div>
+
     </div>
   </main>
 </div>
+
+<!-- MODAL DE TRANSFERT / RÉAFFECTATION DU CLIENT -->
+<?php if ($canTransfer): ?>
+<div class="modal fade" id="modal-transfer-commercial" tabindex="-1" aria-labelledby="modalTransferLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 540px;">
+    <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 40px rgba(15,23,42,0.2); overflow: hidden;">
+      
+      <!-- EN-TÊTE MODAL -->
+      <div class="modal-header" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; padding: 18px 22px; border: none;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="user-plus" style="width: 20px; height: 20px; color: #FFFFFF;"></i>
+          </div>
+          <div>
+            <h5 class="modal-title" id="modalTransferLabel" style="font-weight: 800; font-size: 16px; margin: 0; color: #FFFFFF;">
+              Réaffectation Commerciale
+            </h5>
+            <span style="font-size: 11.5px; color: #94A3B8;">Transfert de portefeuille sans mélange financier</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+
+      <!-- CORPS DU MODAL -->
+      <form id="form-transfer-commercial" method="POST" action="<?= RACINE ?>client/transferCommercial">
+        <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
+        <input type="hidden" name="client_code" value="<?= htmlspecialchars($item['code_client'] ?? '') ?>">
+
+        <div class="modal-body" style="padding: 22px;">
+
+          <!-- AVERTISSEMENT DE SÉPARATION FINANCIÈRE -->
+          <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-left: 4px solid #2563EB; border-radius: 10px; padding: 14px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <i data-lucide="shield-check" style="width: 20px; height: 20px; color: #2563EB; flex-shrink: 0; margin-top: 1px;"></i>
+              <div style="font-size: 12px; color: #1E3A5F; line-height: 1.45;">
+                <strong style="display: block; font-size: 12.5px; margin-bottom: 2px;">Règle d'Isolation des Versements & Commissions :</strong>
+                Les cotisations et commissions antérieures de l'ancien commercial demeurent <strong>totalement scellées</strong>. Le nouveau commercial encaissera et percevra ses commissions uniquement à compter de ce transfert.
+              </div>
+            </div>
+          </div>
+
+          <!-- CLIENT CONCERNÉ -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase;">Client concerné</span>
+              <div style="font-size: 14px; font-weight: 800; color: #0F172A;"><?= htmlspecialchars($nomComplet) ?></div>
+              <div style="font-size: 11px; font-family: monospace; color: #2563EB; font-weight: 700;"><?= htmlspecialchars($item['code_client'] ?? '-') ?></div>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase;">Commercial Actuel</span>
+              <div style="font-size: 13px; font-weight: 700; color: #059669;"><?= htmlspecialchars($nomCommercial) ?></div>
+            </div>
+          </div>
+
+          <!-- CHOIX DU NOUVEAU COMMERCIAL -->
+          <div style="margin-bottom: 18px;">
+            <label for="select-new-commercial" style="display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+              Sélectionner le Nouveau Commercial Référent <span style="color: #DC2626;">*</span>
+            </label>
+            <select name="commercial_code" id="select-new-commercial" class="form-select" required style="width: 100%; border-radius: 8px; border: 1.5px solid #CBD5E1; padding: 10px 12px; font-size: 13.5px; font-weight: 600;">
+              <option value="">-- Choisir un commercial --</option>
+              <?php foreach ($commerciaux as $comm): ?>
+                <?php 
+                  $cCode = $comm['code_user'];
+                  $cNom = trim($comm['nom_user'] . ' ' . ($comm['prenom_user'] ?? ''));
+                  $cTel = !empty($comm['telephone_user']) ? ' (' . $comm['telephone_user'] . ')' : '';
+                  $cCommPct = !empty($comm['commission']) ? ' - ' . $comm['commission'] . '%' : '';
+                  $isCurrent = ($cCode === ($activeCommercial['commercial_code'] ?? $item['user_code'] ?? ''));
+                ?>
+                <option value="<?= htmlspecialchars($cCode) ?>" <?= $isCurrent ? 'disabled' : '' ?>>
+                  <?= htmlspecialchars($cNom . $cTel . $cCommPct) ?><?= $isCurrent ? ' (Actuel)' : '' ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+
+          <!-- MOTIF / COMMENTAIRE -->
+          <div>
+            <label for="input-motif-transfer" style="display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+              Motif du transfert ou Note interne (Facultatif)
+            </label>
+            <input type="text" name="motif" id="input-motif-transfer" class="form-control" placeholder="Ex: Réorganisation de secteur, indisponibilité de l'ancien commercial..." style="width: 100%; border-radius: 8px; border: 1.5px solid #CBD5E1; padding: 10px 12px; font-size: 13px;">
+          </div>
+
+        </div>
+
+        <!-- PIED DU MODAL -->
+        <div class="modal-footer" style="background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 14px 22px; display: flex; justify-content: space-between;">
+          <button type="button" class="btn" data-bs-dismiss="modal" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; font-weight: 700; border-radius: 8px; padding: 9px 16px;">
+            Annuler
+          </button>
+          <button type="submit" id="btn-submit-transfer" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #FFFFFF; font-weight: 700; border-radius: 8px; padding: 9px 20px; border: none; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25); display: inline-flex; align-items: center; gap: 8px;">
+            <i data-lucide="check" style="width: 16px; height: 16px;"></i> Valider la Réaffectation
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <script>
 $(document).ready(function() { 
   if (window.lucide) lucide.createIcons(); 
+
+  $('#form-transfer-commercial').on('submit', function(e) {
+    e.preventDefault();
+    const $form = $(this);
+    const $btn = $('#btn-submit-transfer');
+    const newComm = $('#select-new-commercial').val();
+
+    if (!newComm) {
+      if (window.Swal) {
+        Swal.fire('Commercial requis', 'Veuillez sélectionner un commercial dans la liste.', 'warning');
+      } else {
+        alert('Veuillez sélectionner un commercial.');
+      }
+      return;
+    }
+
+    $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span> Transfert en cours...');
+
+    $.ajax({
+      url: $form.attr('action'),
+      method: 'POST',
+      data: $form.serialize(),
+      dataType: 'json',
+      success: function(res) {
+        if (res.status === 1 || res.status === 'success' || res.success) {
+          if (window.Swal) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Réaffectation réussie !',
+              text: res.message || 'Le client a été transféré avec succès au nouveau commercial.',
+              confirmButtonColor: '#059669'
+            }).then(function() {
+              window.location.reload();
+            });
+          } else {
+            alert(res.message || 'Transfert effectué avec succès.');
+            window.location.reload();
+          }
+        } else {
+          $btn.prop('disabled', false).html('<i data-lucide="check" style="width: 16px; height: 16px;"></i> Valider la Réaffectation');
+          if (window.lucide) lucide.createIcons();
+          if (window.Swal) {
+            Swal.fire('Erreur', res.message || 'Une erreur est survenue lors du transfert.', 'error');
+          } else {
+            alert(res.message || 'Erreur lors du transfert.');
+          }
+        }
+      },
+      error: function(xhr) {
+        $btn.prop('disabled', false).html('<i data-lucide="check" style="width: 16px; height: 16px;"></i> Valider la Réaffectation');
+        if (window.lucide) lucide.createIcons();
+        const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Une erreur de communication est survenue.';
+        if (window.Swal) {
+          Swal.fire('Erreur système', msg, 'error');
+        } else {
+          alert(msg);
+        }
+      }
+    });
+  });
 });
 </script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>
+

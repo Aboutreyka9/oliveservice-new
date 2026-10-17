@@ -601,16 +601,38 @@ $stats = $stats ?? [
             <span>Liste Complète des Clients</span>
           </h2>
         </div>
+
+        <!-- BARRE D'ACTIONS GROUPÉES (BULK ACTIONS) -->
+        <?php if (Context::can(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'GESTIONNAIRE_MANAGE_PACKS'])): ?>
+          <div id="bulk-actions-toolbar" style="display: none; background: #EFF6FF; border: 1.5px solid #BFDBFE; border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="width: 28px; height: 28px; border-radius: 8px; background: #DBEAFE; color: #1D4ED8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;" id="bulk-badge-count">0</span>
+              <span id="bulk-selected-count" style="font-weight: 800; color: #1E3A5F; font-size: 13.5px;">0 client(s) sélectionné(s)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" id="btn-uncheck-all" class="btn btn-sm" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; font-weight: 700; border-radius: 8px; padding: 7px 14px; font-size: 12.5px;">
+                Désélectionner tout
+              </button>
+              <button type="button" id="btn-open-bulk-transfer" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#modal-bulk-transfer" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; font-weight: 700; border-radius: 8px; padding: 7px 16px; font-size: 12.5px; border: none; box-shadow: 0 2px 6px rgba(15,23,42,0.25); display: inline-flex; align-items: center; gap: 6px;">
+                <i data-lucide="user-plus" style="width: 14px; height: 14px;"></i> Réaffecter la sélection à un commercial
+              </button>
+            </div>
+          </div>
+        <?php endif; ?>
+
         <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
           <table id="table-clients" class="table display nowrap">
             <thead>
               <tr>
-                <th style="padding: 12px; width: 45px;">N°</th>
+                <th style="padding: 12px; width: 45px; text-align: center;">
+                  <input type="checkbox" id="check-all-clients" style="cursor: pointer;" title="Tout sélectionner / désélectionner">
+                </th>
                 <th style="padding: 12px; width: 110px;">Code Client</th>
                 <th style="padding: 12px;">Abonné / Nom & Prénom</th>
                 <th style="padding: 12px;">Contact Téléphonique</th>
                 <th style="padding: 12px;">N° CNI</th>
                 <th style="padding: 12px;">Zone & Résidence</th>
+                <th style="padding: 12px;">Commercial Référent</th>
                 <th style="padding: 12px; text-align: center;">Souscription</th>
                 <th style="padding: 12px; text-align: center;">Statut</th>
                 <th style="padding: 12px; text-align: right;">Actions</th>
@@ -624,5 +646,102 @@ $stats = $stats ?? [
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/clients.js?v=2.2"></script>
+
+<!-- MODAL DE TRANSFERT EN MASSE (BULK TRANSFER) -->
+<?php if (Context::can(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'GESTIONNAIRE_MANAGE_PACKS'])): ?>
+<div class="modal fade" id="modal-bulk-transfer" tabindex="-1" aria-labelledby="modalBulkTransferLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+    <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 40px rgba(15,23,42,0.2); overflow: hidden;">
+      
+      <!-- EN-TÊTE -->
+      <div class="modal-header" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; padding: 18px 22px; border: none;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="users" style="width: 20px; height: 20px; color: #FFFFFF;"></i>
+          </div>
+          <div>
+            <h5 class="modal-title" id="modalBulkTransferLabel" style="font-weight: 800; font-size: 16px; margin: 0; color: #FFFFFF;">
+              Réaffectation en Masse
+            </h5>
+            <span style="font-size: 11.5px; color: #94A3B8;">Transfert groupé de clients vers un nouveau commercial</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+
+      <!-- FORMULAIRE -->
+      <form id="form-bulk-transfer" method="POST" action="<?= RACINE ?>client/bulkTransferCommercial">
+        <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
+
+        <div class="modal-body" style="padding: 22px;">
+
+          <!-- AVERTISSEMENT DE SÉPARATION FINANCIÈRE -->
+          <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-left: 4px solid #2563EB; border-radius: 10px; padding: 14px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <i data-lucide="shield-check" style="width: 20px; height: 20px; color: #2563EB; flex-shrink: 0; margin-top: 1px;"></i>
+              <div style="font-size: 12px; color: #1E3A5F; line-height: 1.45;">
+                <strong style="display: block; font-size: 12.5px; margin-bottom: 2px;">Intégrité Financière & Commissions :</strong>
+                Les versements, caisses et commissions des anciens commerciaux pour toutes les cotisations passées restent <strong>totalement scellés et intacts</strong>.
+              </div>
+            </div>
+          </div>
+
+          <!-- RÉSUMÉ DES SÉLECTIONS -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px 16px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase;">Volume à transférer</span>
+              <div style="font-size: 16px; font-weight: 800; color: #0F172A;" id="bulk-modal-count-text">0 client(s)</div>
+            </div>
+            <div style="font-size: 12px; color: #059669; font-weight: 700; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 4px 10px; border-radius: 6px;">
+              Prêt pour transfert
+            </div>
+          </div>
+
+          <!-- NOUVEAU COMMERCIAL CIBLE -->
+          <div style="margin-bottom: 18px;">
+            <label for="select-bulk-commercial" style="display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+              Commercial Référent Récepteur <span style="color: #DC2626;">*</span>
+            </label>
+            <select name="commercial_code" id="select-bulk-commercial" class="form-select" required style="width: 100%; border-radius: 8px; border: 1.5px solid #CBD5E1; padding: 10px 12px; font-size: 13.5px; font-weight: 600;">
+              <option value="">-- Sélectionner un commercial cible --</option>
+              <?php foreach (($commerciaux ?? []) as $comm): ?>
+                <?php 
+                  $cNom = trim($comm['nom_user'] . ' ' . ($comm['prenom_user'] ?? ''));
+                  $cTel = !empty($comm['telephone_user']) ? ' (' . $comm['telephone_user'] . ')' : '';
+                  $cCommPct = !empty($comm['commission']) ? ' - ' . $comm['commission'] . '%' : '';
+                ?>
+                <option value="<?= htmlspecialchars($comm['code_user']) ?>">
+                  <?= htmlspecialchars($cNom . $cTel . $cCommPct) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+
+          <!-- MOTIF / COMMENTAIRE -->
+          <div>
+            <label for="input-bulk-motif" style="display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+              Motif du transfert groupé (Facultatif)
+            </label>
+            <input type="text" name="motif" id="input-bulk-motif" class="form-control" placeholder="Ex: Réaffectation de portefeuille mensuelle..." style="width: 100%; border-radius: 8px; border: 1.5px solid #CBD5E1; padding: 10px 12px; font-size: 13px;">
+          </div>
+
+        </div>
+
+        <!-- PIED DU MODAL -->
+        <div class="modal-footer" style="background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 14px 22px; display: flex; justify-content: space-between;">
+          <button type="button" class="btn" data-bs-dismiss="modal" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; font-weight: 700; border-radius: 8px; padding: 9px 16px;">
+            Annuler
+          </button>
+          <button type="submit" id="btn-submit-bulk-transfer" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #FFFFFF; font-weight: 700; border-radius: 8px; padding: 9px 20px; border: none; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25); display: inline-flex; align-items: center; gap: 8px;">
+            <i data-lucide="check-check" style="width: 16px; height: 16px;"></i> Confirmer le Transfert Groupé
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<script src="<?= RACINE ?>public/assets/js/modules/clients.js?v=2.3"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>
