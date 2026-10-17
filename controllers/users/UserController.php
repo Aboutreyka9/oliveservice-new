@@ -471,7 +471,7 @@ class UserController extends BaseController
 
     public function details($details)
     {
-        $this->requirePermission('ADMIN_MANAGE_USERS');
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);
         try {
             $userId = $this->validator->decrypter($details);
             $userProfile = $this->model->getById($userId);
@@ -483,6 +483,7 @@ class UserController extends BaseController
             $primaryRole = !empty($userRoles) ? $userRoles[0] : null;
             $encryptedId = $this->validator->crypter($userId);
             
+            // Libellé de zone
             $zoneLabel = null;
             $zoneCodeVal = $userProfile['zone_code'] ?? $userProfile['zone_user'] ?? null;
             if (!empty($zoneCodeVal)) {
@@ -490,8 +491,157 @@ class UserController extends BaseController
                 $stmtZ->execute([$zoneCodeVal]);
                 $zoneLabel = $stmtZ->fetchColumn();
             }
-            $userProfile['libelle_zone'] = $zoneLabel ?: 'Globale';
+            $userProfile['libelle_zone'] = $zoneLabel ?: 'Zone non définie';
+
+            // Libellé de fonction
+            $fonctionLabel = null;
+            if (!empty($userProfile['fonction_code'])) {
+                $stmtF = $this->model->getCon()->prepare("SELECT libelle_fonction FROM fonctions WHERE code_fonction = ?");
+                $stmtF->execute([$userProfile['fonction_code']]);
+                $fonctionLabel = $stmtF->fetchColumn();
+            }
+            $userProfile['libelle_fonction'] = $fonctionLabel ?: 'Non définie';
+
+            // Détection si rôle Commercial
+            $isCommercial = false;
+            foreach ($userRoles as $ur) {
+                if (($ur['role_code'] ?? '') === 'ROLE_COMMERCIAL') {
+                    $isCommercial = true;
+                    break;
+                }
+            }
+
+            // Récupération du portefeuille de clients liés à cet utilisateur/commercial
+            $userCode = $userProfile['code_user'];
+            $etabCode = Context::etablissement();
+            $hasJoker = Context::hasJoker();
+
+            $sqlClients = "
+                SELECT c.*, z.libelle_zone,
+                       COALESCE(cc_act.statut_client_commercial, 'actif') as statut_affectation,
+                       cc_act.created_at_client_commercials as date_affectation,
+                       (SELECT COUNT(*) FROM souscriptions sub WHERE sub.client_code = c.code_client) as nb_souscriptions,
+                       (SELECT COALESCE(SUM(ccot.montant_cautisation_client), 0) 
+                        FROM cautisation_clients ccot 
+                        WHERE ccot.client_code = c.code_client 
+                          AND (ccot.statut_cautisation_client != 'annule' OR ccot.statut_cautisation_client IS NULL)
+                          AND (ccot.commercial_code = :uc1 OR (ccot.commercial_code IS NULL AND ccot.user_code = :uc2))
+                       ) as total_cotise_commercial,
+                       (SELECT COALESCE(SUM(ccot2.montant_cautisation_client), 0) 
+                        FROM cautisation_clients ccot2 
+                        WHERE ccot2.client_code = c.code_client 
+                          AND (ccot2.statut_cautisation_client != 'annule' OR ccot2.statut_cautisation_client IS NULL)
+                       ) as total_cotise_global
+                FROM clients c
+                LEFT JOIN zones z ON z.code_zone = c.zone_code
+                LEFT JOIN client_commercials cc_act ON cc_act.id_client_commercial = (
+                    SELECT cc_sub.id_client_commercial 
+                    FROM client_commercials cc_sub 
+                    WHERE cc_sub.client_code = c.code_client AND cc_sub.commercial_code = :uc3
+                    ORDER BY (cc_sub.statut_client_commercial = 'actif') DESC, cc_sub.id_client_commercial DESC 
+                    LIMIT 1
+                )
+                WHERE (
+                    cc_act.id_client_commercial IS NOT NULL
+                    OR (c.user_code = :uc4 AND NOT EXISTS (
+                        SELECT 1 FROM client_commercials cc_other 
+                        WHERE cc_other.client_code = c.code_client 
+                          AND cc_other.statut_client_commercial = 'actif' 
+                          AND cc_other.commercial_code != :uc5
+                    ))
+                )
+            ";
+            $paramsClients = [
+                ':uc1' => $userCode,
+                ':uc2' => $userCode,
+                ':uc3' => $userCode,
+                ':uc4' => $userCode,
+                ':uc5' => $userCode,
+            ];
+            if (!$hasJoker && !empty($etabCode)) {
+                $sqlClients .= " AND c.etablissement_code = :etabCode";
+                $paramsClients[':etabCode'] = $etabCode;
+            }
+            $sqlClients .= " GROUP BY c.id_client ORDER BY c.created_at_client DESC";
+
+            $stmtClients = $this->model->getCon()->prepare($sqlClients);
+            $stmtClients->execute($paramsClients);
+            $clients = $stmtClients->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            foreach ($clients as &$clientItem) {
+                $clientItem['encrypted_id'] = $this->validator->crypter($clientItem['id_client']);
+            }
+            unset($clientItem);
+
+            // Calcul des KPIs
+            $totalClients = count($clients);
+            $clientsActifs = 0;
+            $clientsInactifs = 0;
+            $clientsTransferes = 0;
+            $totalSouscriptions = 0;
+            $totalCotisations = 0;
+
+            foreach ($clients as $cl) {
+                $isActif = (($cl['statut_client'] ?? 'actif') === 'actif');
+                $isAffectationActive = (($cl['statut_affectation'] ?? 'actif') === 'actif');
+
+                if ($isAffectationActive) {
+                    if ($isActif) {
+                        $clientsActifs++;
+                    } else {
+                        $clientsInactifs++;
+                    }
+                } else {
+                    $clientsTransferes++;
+                }
+
+                $totalSouscriptions += (int)($cl['nb_souscriptions'] ?? 0);
+                $totalCotisations += (float)($cl['total_cotise_commercial'] ?? 0);
+            }
+
+            // Cumul direct des cotisations collectées par ce commercial
+            $stmtDirectCot = $this->model->getCon()->prepare("
+                SELECT COALESCE(SUM(montant_cautisation_client), 0) 
+                FROM cautisation_clients 
+                WHERE (commercial_code = ? OR (commercial_code IS NULL AND user_code = ?))
+                  AND (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL)
+            ");
+            $stmtDirectCot->execute([$userCode, $userCode]);
+            $directCotSum = (float)$stmtDirectCot->fetchColumn();
+            if ($directCotSum > $totalCotisations) {
+                $totalCotisations = $directCotSum;
+            }
+
+            // Cumul direct des souscriptions initiées
+            $stmtDirectSous = $this->model->getCon()->prepare("
+                SELECT COUNT(*) 
+                FROM souscriptions 
+                WHERE user_code = ? AND (statut_souscription != 'annule' OR statut_souscription IS NULL)
+            ");
+            $stmtDirectSous->execute([$userCode]);
+            $directSousCount = (int)$stmtDirectSous->fetchColumn();
+            if ($directSousCount > $totalSouscriptions) {
+                $totalSouscriptions = $directSousCount;
+            }
+
+            $commissionTaux = (isset($userProfile['commission']) && $userProfile['commission'] !== null && $userProfile['commission'] !== '') 
+                ? (float)$userProfile['commission'] 
+                : 0.0;
+            $commissionEstimee = ($totalCotisations * $commissionTaux) / 100;
+
+            $kpis = [
+                'total_clients' => $totalClients,
+                'clients_actifs' => $clientsActifs,
+                'clients_inactifs' => $clientsInactifs,
+                'clients_transferes' => $clientsTransferes,
+                'total_souscriptions' => $totalSouscriptions,
+                'total_cotisations' => $totalCotisations,
+                'commission_taux' => $commissionTaux,
+                'commission_estimee' => $commissionEstimee
+            ];
+
         } catch (Exception $e) {
+            error_log("UserController::details error: " . $e->getMessage());
             header('Location: ' . RACINE . 'user/list');
             exit();
         }
@@ -500,6 +650,9 @@ class UserController extends BaseController
             'user' => $userProfile,
             'role' => $primaryRole,
             'userRoles' => $userRoles,
+            'isCommercial' => $isCommercial,
+            'clients' => $clients,
+            'kpis' => $kpis,
             'encryptedId' => $encryptedId
         ]);
     }
