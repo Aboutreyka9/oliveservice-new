@@ -532,6 +532,233 @@ class UserController extends BaseController
         ]);
     }
 
+    public function recruterCommercial()
+    {
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);
+        $hasJoker = Context::hasJoker();
+        $userZoneCode = Context::zone();
+        $etabCode = Context::etablissement();
+
+        if ($hasJoker) {
+            $stmtZones = $this->model->getCon()->query("
+                SELECT code_zone, libelle_zone 
+                FROM zones 
+                WHERE statut_zone = 'actif' 
+                ORDER BY libelle_zone ASC
+            ");
+            $zones = $stmtZones ? $stmtZones->fetchAll(PDO::FETCH_ASSOC) : [];
+        } else {
+            $stmtZones = $this->model->getCon()->prepare("
+                SELECT code_zone, libelle_zone 
+                FROM zones 
+                WHERE etablissement_code = ? AND statut_zone = 'actif' 
+                ORDER BY libelle_zone ASC
+            ");
+            $stmtZones->execute([$etabCode]);
+            $zones = $stmtZones->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+
+        $this->loadView('../views/users/recruter_commercial.php', [
+            'zones'        => $zones,
+            'hasJoker'     => $hasJoker,
+            'userZoneCode' => $userZoneCode
+        ]);
+    }
+
+    public function addCommercial()
+    {
+        $this->requirePost(false);
+        $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);
+
+        if (!Validator::validateCsrfToken($_POST['csrf_token'] ?? '')) {
+            $this->error('Token CSRF invalide ou session expirée. Veuillez recharger la page.');
+            return;
+        }
+
+        $nom = trim($_POST['nom'] ?? '');
+        $prenom = trim($_POST['prenom'] ?? '');
+        $telephone = Validator::cleanPhone($_POST['telephone'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $sexe = in_array($_POST['sexe'] ?? '', ['M', 'F']) ? $_POST['sexe'] : 'M';
+        $commission = (isset($_POST['commission']) && $_POST['commission'] !== '') ? (float)$_POST['commission'] : 0.0;
+        $statut = ($_POST['statut'] ?? '') === 'inactif' ? 'inactif' : 'actif';
+        $rawPassword = !empty($_POST['password']) ? trim($_POST['password']) : ('COM' . rand(100000, 999999));
+
+        if (empty($nom)) {
+            $this->error('Le nom du commercial est obligatoire !');
+            return;
+        }
+        if (empty($prenom)) {
+            $this->error('Le prénom du commercial est obligatoire !');
+            return;
+        }
+        if (empty($email)) {
+            $this->error('L\'adresse email est obligatoire pour l\'activation du compte !');
+            return;
+        }
+
+        if (!empty($email)) {
+            $stmtCheckEmail = $this->model->getCon()->prepare("SELECT id_user FROM users WHERE email_user = ?");
+            $stmtCheckEmail->execute([$email]);
+            if ($stmtCheckEmail->fetch()) {
+                $this->error('Cette adresse email est déjà attribuée à un autre compte !');
+                return;
+            }
+        }
+
+        if (!empty($telephone)) {
+            $stmtCheckTel = $this->model->getCon()->prepare("SELECT id_user FROM users WHERE telephone_user = ?");
+            $stmtCheckTel->execute([$telephone]);
+            if ($stmtCheckTel->fetch()) {
+                $this->error('Ce numéro de téléphone est déjà attribué à un autre compte !');
+                return;
+            }
+        }
+
+        $etabCode = Context::etablissement();
+        if (empty($etabCode)) {
+            $this->error("Erreur d'insertion : Aucun établissement actif sélectionné dans la session.");
+            return;
+        }
+
+        // Récupération des zones sélectionnées (multi-sélection supportée)
+        $zonesInput = $_POST['zone_codes'] ?? ($_POST['zone_code'] ?? []);
+        if (!is_array($zonesInput)) {
+            $zonesInput = !empty($zonesInput) ? [$zonesInput] : [];
+        }
+        $zonesInput = array_values(array_unique(array_filter(array_map('trim', $zonesInput))));
+
+        $hasJoker = Context::hasJoker();
+        $userZone = Context::zone();
+
+        if (empty($zonesInput)) {
+            if (!$hasJoker && !empty($userZone)) {
+                $zonesInput = [$userZone];
+            } else {
+                $this->error('Veuillez affecter au moins une zone commerciale au commercial.');
+                return;
+            }
+        }
+
+        // Trouver dynamiquement la fonction commerciale si elle existe
+        $fonctionCode = null;
+        try {
+            $stmtF = $this->model->getCon()->prepare("
+                SELECT code_fonction FROM fonctions 
+                WHERE (libelle_fonction LIKE '%comercial%' OR libelle_fonction LIKE '%commercial%') 
+                AND (etablissement_code = ? OR etablissement_code IS NULL)
+                ORDER BY id_fonction ASC LIMIT 1
+            ");
+            $stmtF->execute([$etabCode]);
+            $fonctionCode = $stmtF->fetchColumn() ?: null;
+        } catch (Exception $e) {}
+
+        $code_user = $this->validator->generateCode('users', 'code_user', 'USR-', 8);
+        $maxId = (int)($this->model->getCon()->query("SELECT MAX(id_user) FROM users")->fetchColumn() ?: 0);
+        $id_user = $maxId + 1;
+        $matricule = 'COM-' . str_pad((string)$id_user, 3, '0', STR_PAD_LEFT);
+        $password = password_hash($rawPassword, PASSWORD_DEFAULT);
+        $activationToken = bin2hex(random_bytes(32));
+        $primaryZone = $zonesInput[0] ?? $userZone;
+
+        $userData = [
+            'id_user'            => $id_user,
+            'code_user'          => $code_user,
+            'matricule_user'     => $matricule,
+            'nom_user'           => $nom,
+            'prenom_user'        => $prenom,
+            'telephone_user'     => $telephone ?: null,
+            'email_user'         => $email,
+            'sexe_user'          => $sexe,
+            'password_user'      => $password,
+            'token_user'         => $activationToken,
+            'fonction_code'      => $fonctionCode,
+            'commission'         => $commission,
+            'zone_code'          => $primaryZone,
+            'etablissement_code' => $etabCode,
+            'statut_user'        => $statut,
+            'created_at_user'    => date('Y-m-d H:i:s')
+        ];
+
+        if ($this->model->create($userData)) {
+            // Attribution automatique du rôle ROLE_COMMERCIAL
+            $rolesData = [
+                'ROLE_COMMERCIAL' => [
+                    'create' => 1,
+                    'edit'   => 1,
+                    'show'   => 1,
+                    'delete' => 0
+                ]
+            ];
+            $this->model->syncUserRoles($code_user, $rolesData, [], $primaryZone);
+
+            // Insertion dans zone_commercials pour chaque secteur géographique
+            $currentUserCode = Context::user() ?: 'SYSTEM';
+            $stmtZC = $this->model->getCon()->prepare("
+                INSERT INTO zone_commercials 
+                (commercial_code, zone_code, user_code, statut_zone_commercial, created_at_zone_commercial, etablissement_code)
+                VALUES (?, ?, ?, 'actif', NOW(), ?)
+            ");
+            foreach ($zonesInput as $zCode) {
+                if (!empty($zCode)) {
+                    $stmtZC->execute([$code_user, $zCode, $currentUserCode, $etabCode]);
+                }
+            }
+
+            // Envoi de l'email d'accueil et d'accès
+            $emailSent = false;
+            $emailError = null;
+            if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                $baseUrl = (strpos(RACINE, 'http://') === 0 || strpos(RACINE, 'https://') === 0) 
+                    ? rtrim(RACINE, '/') . '/' 
+                    : ($protocol . '://' . $host . '/' . ltrim(RACINE, '/'));
+                $loginUrl = $baseUrl . 'user/connexion';
+
+                try {
+                    $mailRes = MailerService::sendTemplate(
+                        $email,
+                        "Olive Service - Recrutement Commercial & Identifiants d'Accès",
+                        "welcome_credentials",
+                        [
+                            'userNom'      => trim($nom . ' ' . $prenom),
+                            'userFonction' => 'Agent Commercial Terrain',
+                            'userZone'     => count($zonesInput) . ' zone(s) assignée(s)',
+                            'userEmail'    => $email,
+                            'userPassword' => $rawPassword,
+                            'loginUrl'     => $loginUrl
+                        ]
+                    );
+                    $emailSent = !empty($mailRes['status']);
+                    if (!$emailSent) {
+                        $emailError = $mailRes['message'] ?? "Erreur d'envoi du courriel";
+                    }
+                } catch (Exception $e) {
+                    $emailError = $e->getMessage();
+                }
+            }
+
+            $successMsg = "Commercial <strong>" . htmlspecialchars($nom . ' ' . $prenom) . "</strong> recruté avec succès !";
+            if ($emailSent) {
+                $successMsg .= " Ses identifiants ont été envoyés à <strong>" . htmlspecialchars($email) . "</strong>.";
+            }
+
+            $this->success($successMsg, [
+                'code_user'      => $code_user,
+                'matricule'      => $matricule,
+                'nom'            => trim($nom . ' ' . $prenom),
+                'password'       => $rawPassword,
+                'email_sent'     => $emailSent,
+                'email_error'    => $emailError,
+                'redirect'       => RACINE . 'user/gestionnaireList'
+            ]);
+        } else {
+            $this->error('Erreur technique lors de la création du compte commercial.');
+        }
+    }
+
+
     public function edition($details)
     {
         $this->requirePermission(['ADMIN_MANAGE_USERS', 'GESTIONNAIRE_MANAGE_PACKS']);

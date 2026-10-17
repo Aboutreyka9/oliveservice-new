@@ -28,6 +28,8 @@ $route->addRoute('/user/tresorerieList', ['UserController', 'tresorerieList']);
 $route->addRoute('/user/apiTresorerieList', ['UserController', 'apiTresorerieList']);
 $route->addRoute('/user/gestionnaireList', ['UserController', 'gestionnaireList']);
 $route->addRoute('/user/apiGestionnaireList', ['UserController', 'apiGestionnaireList']);
+$route->addRoute('/user/recruterCommercial', ['UserController', 'recruterCommercial']);
+$route->addRoute('/user/addCommercial', ['UserController', 'addCommercial']);
 
 // -------------------------------------------------------------
 // Module: Etablissements & Fonctions

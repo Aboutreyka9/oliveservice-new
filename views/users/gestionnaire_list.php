@@ -28,7 +28,7 @@
           </a>
           <?php endif; ?>
           <?php if (Context::can('ADMIN_MANAGE_USERS') || Context::can('GESTIONNAIRE_MANAGE_PACKS')): ?>
-          <a href="<?= RACINE ?>user/formulaire" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); text-decoration: none; cursor: pointer;">
+          <a href="<?= RACINE ?>user/recruterCommercial" class="btn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; font-weight: 800; border-radius: 10px; padding: 12px 22px; font-size: 14px; border: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); text-decoration: none; cursor: pointer;">
             <i data-lucide="user-plus" style="width: 18px; height: 18px;"></i> Recruter un Commercial
           </a>
           <?php endif; ?>
