@@ -342,7 +342,7 @@
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
             <div class="nav-section-items" id="sec-recrutement">
-                <a href="<?= RACINE ?>user/formulaire" class="nav-item sub <?= strpos($currentUri, '/user/formulaire') !== false ? 'active' : '' ?>" data-title="Nouveau Commercial">
+                <a href="<?= RACINE ?>user/recruterCommercial" class="nav-item sub <?= strpos($currentUri, '/user/recruterCommercial') !== false ? 'active' : '' ?>" data-title="Nouveau Commercial">
                     <i data-lucide="user-plus"></i> <span>Recruter un Commercial</span>
                 </a>
                 <a href="<?= RACINE ?>user/gestionnaireList" class="nav-item sub <?= (strpos($currentUri, '/user/gestionnaireList') !== false) ? 'active' : '' ?>" data-title="Liste des Commerciaux">
