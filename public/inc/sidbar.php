@@ -256,10 +256,10 @@
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
             <div class="nav-section-items" id="sec-commercial">
-                <a href="<?= RACINE ?>client/list" class="nav-item sub <?= strpos($currentUri, '/client/') !== false ? 'active' : '' ?>" data-title="Mes Clients">
+                <a href="<?= RACINE ?>client/list" class="nav-item sub <?= (Context::isCommercial() && strpos($currentUri, '/client/') !== false) ? 'active' : '' ?>" data-title="Mes Clients">
                     <i data-lucide="users"></i> <span>Mes Clients</span>
                 </a>
-                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= strpos($currentUri, '/souscription/list') !== false ? 'active' : '' ?>" data-title="Mes Souscriptions">
+                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= (Context::isCommercial() && strpos($currentUri, '/souscription/list') !== false) ? 'active' : '' ?>" data-title="Mes Souscriptions">
                     <i data-lucide="file-text"></i> <span>Mes Souscriptions</span>
                 </a>
                 <a href="<?= RACINE ?>souscription/wizard" class="nav-item sub <?= strpos($currentUri, '/souscription/wizard') !== false ? 'active' : '' ?>" data-title="Nouvelle Souscription">
@@ -352,6 +352,26 @@
         </div>
         <?php endif; ?>
 
+        <!-- === MODULE CLIENTS : GESTION DES CLIENTS & SOUSCRIPTIONS === -->
+        <?php if ($canAccess(['GESTIONNAIRE_VIEW_ALL_CLIENTS', 'GESTIONNAIRE_VIEW_ALL_SOUSCRIPTIONS', 'ADMIN_MANAGE_USERS', 'FINANCE_VIEW_ALL_COTISATIONS']) && !Context::isCommercial()): ?>
+        <div class="nav-section">
+            <div class="sidebar-accordion-toggle" data-bs-target="#sec-clients" aria-expanded="false">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="users" style="width: 16px; height: 16px; color: #0284C7;"></i> <span>Portefeuille Clients</span>
+                </div>
+                <i data-lucide="chevron-down" class="chevron-icon"></i>
+            </div>
+            <div class="nav-section-items" id="sec-clients">
+                <a href="<?= RACINE ?>client/list" class="nav-item sub <?= (strpos($currentUri, '/client/') !== false && strpos($currentUri, '/client_commercial/') === false) ? 'active' : '' ?>" data-title="Liste clients">
+                    <i data-lucide="users"></i> <span>Liste clients</span>
+                </a>
+                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= (strpos($currentUri, '/souscription/') !== false) ? 'active' : '' ?>" data-title="Liste souscriptions">
+                    <i data-lucide="file-text"></i> <span>Liste souscriptions</span>
+                </a>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- === MODULE FINANCE : FINANCES & CAISSE CENTRALE === -->
         <?php if ($canAccess(['FINANCE_VIEW_ALL_COTISATIONS', 'FINANCE_VALIDATE_VERSEMENT', 'FINANCE_MANAGE_DEPENSES'])): ?>
         <div class="nav-section">
@@ -362,12 +382,6 @@
                 <i data-lucide="chevron-down" class="chevron-icon"></i>
             </div>
             <div class="nav-section-items" id="sec-finance">
-                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= strpos($currentUri, '/souscription/list') !== false ? 'active' : '' ?>" data-title="Liste souscriptions">
-                    <i data-lucide="file-text"></i> <span>Liste souscriptions</span>
-                </a>
-                <a href="<?= RACINE ?>client/list" class="nav-item sub <?= strpos($currentUri, '/client/list') !== false ? 'active' : '' ?>" data-title="Liste clients">
-                    <i data-lucide="users"></i> <span>Liste clients</span>
-                </a>
                 <a href="<?= RACINE ?>cotisation/list" class="nav-item sub <?= strpos($currentUri, '/cotisation/list') !== false ? 'active' : '' ?>" data-title="Suivi des Cotisations">
                     <i data-lucide="search"></i> <span>Suivi Cotisations</span>
                 </a>
