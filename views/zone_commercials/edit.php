@@ -1,5 +1,8 @@
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
 <?php 
+$item = $item ?? [];
+$commerciaux = $commerciaux ?? [];
+$zones = $zones ?? [];
 $isEdit = !empty($item['id_zone_commercial']);
 $title = $isEdit ? 'Éditer l\'Affectation Zone' : 'Nouvelle Affectation Commercial / Zone';
 ?>
@@ -15,6 +18,7 @@ $title = $isEdit ? 'Éditer l\'Affectation Zone' : 'Nouvelle Affectation Commerc
       <div class="card" style="background: #FFFFFF; border-radius: 12px; padding: 24px; border: 1px solid #E2E8F0; max-width: 600px;">
         <form id="form-zc" action="<?= RACINE ?>zone_commercial/<?= $isEdit ? 'edit' : 'add' ?>" method="POST">
           <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
+          <input type="hidden" name="user_code" value="<?= htmlspecialchars(Context::user() ?? '') ?>">
           <?php if ($isEdit): ?>
             <input type="hidden" name="id_zone_commercial" value="<?= $item['id_zone_commercial'] ?>">
           <?php endif; ?>
