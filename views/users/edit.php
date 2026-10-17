@@ -124,7 +124,7 @@ $title = $isEdit ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur';
               </div>
 
               <div class="form-group" style="width: 100%; box-sizing: border-box;">
-                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Taux de Commission (%) <small style="color: #64748B; font-weight: 500;">(Optionnel, NULL par défaut)</small></label>
+                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Taux de Commission (%) <small style="color: #64748B; font-weight: 500;"></small></label>
                 <input type="number" step="0.01" min="0" max="100" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0F172A; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC;" name="commission" value="<?= htmlspecialchars($user['commission'] ?? '') ?>" placeholder="Ex: 5 ou laisser vide (NULL)">
               </div>
 
