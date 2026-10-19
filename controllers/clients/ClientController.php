@@ -71,6 +71,27 @@ class ClientController extends BaseController
             $cotParams[] = $userCode;
         }
 
+        // Total des contrats de souscription réels dans le périmètre
+        $sqlSous = "
+            SELECT COUNT(*) as total_souscriptions
+            FROM souscriptions sub
+            WHERE sub.etablissement_code = ?
+        ";
+        $sousParams = [$etabCode];
+        if (!empty($zoneCode)) {
+            $sqlSous .= " AND sub.zone_code = ?";
+            $sousParams[] = $zoneCode;
+        }
+        if (!empty($anneeCode)) {
+            $sqlSous .= " AND sub.annee_code = ?";
+            $sousParams[] = $anneeCode;
+        }
+        if (Context::isCommercial()) {
+            $sqlSous .= " AND (sub.user_code = ? OR EXISTS (SELECT 1 FROM client_commercials cc_sub WHERE cc_sub.client_code = sub.client_code AND cc_sub.commercial_code = ? AND cc_sub.statut_client_commercial = 'actif'))";
+            $sousParams[] = $userCode;
+            $sousParams[] = $userCode;
+        }
+
         try {
             $stmt = $this->model->getCon()->prepare($sql);
             $stmt->execute($statsParams);
@@ -80,10 +101,15 @@ class ClientController extends BaseController
             $stmtCot->execute($cotParams);
             $resCot = $stmtCot->fetch(PDO::FETCH_ASSOC) ?: [];
 
+            $stmtSous = $this->model->getCon()->prepare($sqlSous);
+            $stmtSous->execute($sousParams);
+            $resSous = $stmtSous->fetch(PDO::FETCH_ASSOC) ?: [];
+
             $total = (int)($res['total_clients'] ?? 0);
             $actifs = (int)($res['clients_actifs'] ?? 0);
             $inactifs = (int)($res['clients_inactifs'] ?? 0);
             $souscripteurs = (int)($res['clients_souscripteurs'] ?? 0);
+            $totalSouscriptions = (int)($resSous['total_souscriptions'] ?? 0);
             $nouveaux = (int)($res['nouveaux_ce_mois'] ?? 0);
             $totalCotise = (float)($resCot['total_cotise'] ?? 0);
             $tauxEngagement = $total > 0 ? round(($souscripteurs / $total) * 100, 1) : 0;
@@ -94,6 +120,7 @@ class ClientController extends BaseController
                 'clients_actifs' => $actifs,
                 'clients_inactifs' => $inactifs,
                 'clients_souscripteurs' => $souscripteurs,
+                'total_souscriptions' => $totalSouscriptions,
                 'nouveaux_ce_mois' => $nouveaux,
                 'total_cotise' => $totalCotise,
                 'taux_engagement' => $tauxEngagement,
@@ -106,6 +133,7 @@ class ClientController extends BaseController
                 'clients_actifs' => 0,
                 'clients_inactifs' => 0,
                 'clients_souscripteurs' => 0,
+                'total_souscriptions' => 0,
                 'nouveaux_ce_mois' => 0,
                 'total_cotise' => 0,
                 'taux_engagement' => 0,
@@ -205,6 +233,7 @@ class ClientController extends BaseController
         $totalActifs = 0;
         $totalInactifs = 0;
         $totalSouscripteurs = 0;
+        $totalSouscriptions = 0;
         $cumulCotise = 0;
 
         foreach ($clients as $c) {
@@ -218,6 +247,7 @@ class ClientController extends BaseController
 
             $nbSous = (int)($c['nb_souscriptions'] ?? 0);
             if ($nbSous > 0) $totalSouscripteurs++;
+            $totalSouscriptions += $nbSous;
 
             $cotise = (float)($c['total_cotise'] ?? 0);
             $cumulCotise += $cotise;
@@ -254,6 +284,7 @@ class ClientController extends BaseController
                 'clients_actifs' => $totalActifs,
                 'clients_inactifs' => $totalInactifs,
                 'clients_souscripteurs' => $totalSouscripteurs,
+                'total_souscriptions' => $totalSouscriptions,
                 'total_cotise' => $cumulCotise,
                 'taux_engagement' => $totalClients > 0 ? round(($totalSouscripteurs / $totalClients) * 100, 1) : 0,
                 'taux_actifs' => $totalClients > 0 ? round(($totalActifs / $totalClients) * 100, 1) : 0

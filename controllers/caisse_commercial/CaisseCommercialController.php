@@ -61,14 +61,20 @@ class CaisseCommercialController extends BaseController
         $date = $_GET['date'] ?? ($_POST['date'] ?? date('Y-m-d'));
         $db = $this->model->getCon();
 
-        $stmt = $db->prepare("
-            SELECT mode_paiement, SUM(montant_paiement) as sum_mode, COUNT(*) as count_mode
-            FROM paiements
-            WHERE DATE(date_paiement) = ? AND statut_paiement != 'annule'
-            GROUP BY mode_paiement
-        ");
-        $stmt->execute([$date]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $sql = "
+            SELECT mode_paiement, SUM(montant_cautisation_client) as sum_mode, COUNT(*) as count_mode
+            FROM cautisation_clients
+            WHERE DATE(date_cautisation) = ? AND (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL)
+        ";
+        $p = [$date];
+        $c = [];
+        Context::applyTripleFilter('', $c, $p, true, false);
+        if (!empty($c)) $sql .= " AND " . implode(' AND ', $c);
+        $sql .= " GROUP BY mode_paiement";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($p);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $totalEspeces = 0;
         $totalMobileMoney = 0;

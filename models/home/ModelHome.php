@@ -68,7 +68,8 @@ class ModelHome extends BaseModel
             }
 
             if (Context::isCommercial()) {
-                $sqlClients .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.user_code = ? AND sub.etablissement_code = ? AND sub.annee_code = ?))";
+                $sqlClients .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = c.code_client AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif') OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.user_code = ? AND sub.etablissement_code = ? AND sub.annee_code = ?))";
+                $pClients[] = Context::user();
                 $pClients[] = Context::user();
                 $pClients[] = Context::user();
                 $pClients[] = Context::etablissement();

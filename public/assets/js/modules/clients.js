@@ -297,6 +297,7 @@ $(function () {
       $('#kpi-clients-actifs').text(formatNum(stats.clients_actifs));
       $('#kpi-taux-actifs').text((stats.taux_actifs || 0) + '%');
       $('#kpi-clients-souscripteurs').text(formatNum(stats.clients_souscripteurs));
+      $('#kpi-total-souscriptions').text(formatNum(stats.total_souscriptions));
       $('#kpi-taux-engagement').text((stats.taux_engagement || 0) + '%');
       $('#kpi-total-cotise').html(formatFCFA(stats.total_cotise));
 

@@ -40,9 +40,10 @@
               <i data-lucide="file-text" style="width: 22px; height: 22px;"></i>
             </div>
           </div>
-          <div style="display: flex; gap: 8px; font-size: 11px; font-weight: 700;">
+          <div style="display: flex; gap: 8px; font-size: 11px; font-weight: 700; align-items: center; flex-wrap: wrap;">
             <span style="background: #EFF6FF; color: #1E3A5F; padding: 3px 10px; border-radius: 12px; border: 1px solid #BFDBFE;">En cours: <?= $stats['total_encours_count'] ?? 0 ?></span>
             <span style="background: #DCFCE7; color: #15803D; padding: 3px 10px; border-radius: 12px; border: 1px solid #BBF7D0;">Soldées: <?= $stats['total_solde_count'] ?? 0 ?></span>
+            <span style="background: #F1F5F9; color: #475569; padding: 3px 10px; border-radius: 12px; border: 1px solid #CBD5E1;">Sur <?= $stats['total_clients_souscripteurs'] ?? 0 ?> abonné(s)</span>
           </div>
         </div>
 

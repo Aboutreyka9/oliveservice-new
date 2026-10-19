@@ -41,9 +41,11 @@ class SouscriptionController extends BaseController
 
         $resteARecouvrer = max(0, $totalEngage - $totalCotise);
         $tauxRecouvrement = $totalEngage > 0 ? round(($totalCotise / $totalEngage) * 100, 1) : 0;
+        $clientsDistincts = count(array_unique(array_filter(array_column($items, 'client_code'))));
 
         $stats = [
             'total_souscriptions' => $totalSouscriptions,
+            'total_clients_souscripteurs' => $clientsDistincts,
             'total_engage' => $totalEngage,
             'total_cotise' => $totalCotise,
             'reste_a_recouvrer' => $resteARecouvrer,

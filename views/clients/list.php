@@ -5,6 +5,7 @@ $stats = $stats ?? [
     'clients_actifs' => 0,
     'clients_inactifs' => 0,
     'clients_souscripteurs' => 0,
+    'total_souscriptions' => 0,
     'nouveaux_ce_mois' => 0,
     'total_cotise' => 0,
     'taux_engagement' => 0,
@@ -527,22 +528,25 @@ $stats = $stats ?? [
           </div>
         </div>
 
-        <!-- KPI 3 : CLIENTS SOUSCRIPTEURS (ENGAGÉS) -->
+        <!-- KPI 3 : CLIENTS SOUSCRIPTEURS (ENGAGÉS) & CONTRATS -->
         <div class="cli-kpi-card" style="--kpi-accent: linear-gradient(90deg, #2563EB, #1D4ED8); --kpi-bg-icon: #EEF2FF; --kpi-color-icon: #2563EB;">
           <div class="cli-kpi-header">
-            <span class="cli-kpi-title">Souscripteurs Packs</span>
+            <span class="cli-kpi-title">Abonnés Souscripteurs</span>
             <div class="cli-kpi-icon">
-              <i data-lucide="file-check" style="width: 20px; height: 20px;"></i>
+              <i data-lucide="user-check" style="width: 20px; height: 20px;"></i>
             </div>
           </div>
-          <div class="cli-kpi-val" id="kpi-clients-souscripteurs" style="color: #2563EB;">
-            <?= number_format($stats['clients_souscripteurs'] ?? 0, 0, ',', ' ') ?>
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <div class="cli-kpi-val" id="kpi-clients-souscripteurs" style="color: #2563EB;">
+              <?= number_format($stats['clients_souscripteurs'] ?? 0, 0, ',', ' ') ?>
+            </div>
+            <span style="font-size: 13px; font-weight: 700; color: #64748B;">abonnés</span>
           </div>
           <div class="cli-kpi-footer">
             <span class="cli-kpi-badge" style="background: #EEF2FF; color: #2563EB;">
-              Taux engagement : <span id="kpi-taux-engagement"><?= $stats['taux_engagement'] ?? 0 ?>%</span>
+              <i data-lucide="file-text" style="width: 12px; height: 12px;"></i> <span id="kpi-total-souscriptions"><?= $stats['total_souscriptions'] ?? 0 ?></span> contrat(s) actif(s)
             </span>
-            <span style="font-size: 11px; color: #94A3B8;">Avec contrat actif</span>
+            <span style="font-size: 11px; color: #94A3B8;"><span id="kpi-taux-engagement"><?= $stats['taux_engagement'] ?? 0 ?>%</span> engagés</span>
           </div>
         </div>
 
@@ -633,7 +637,7 @@ $stats = $stats ?? [
                 <th style="padding: 12px;">N° CNI</th>
                 <th style="padding: 12px;">Zone & Résidence</th>
                 <th style="padding: 12px;">Commercial Référent</th>
-                <th style="padding: 12px; text-align: center;">Souscription</th>
+                <th style="padding: 12px; text-align: center;">Souscriptions (Contrats)</th>
                 <th style="padding: 12px; text-align: center;">Statut</th>
                 <th style="padding: 12px; text-align: right;">Actions</th>
               </tr>
