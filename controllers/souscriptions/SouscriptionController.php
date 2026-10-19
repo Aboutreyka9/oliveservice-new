@@ -260,6 +260,128 @@ class SouscriptionController extends BaseController
         }
     }
 
+    public function annuler()
+    {
+        $this->requirePost(false);
+        if (!Context::isAdmin() && !$this->hasPermission(['GESTIONNAIRE_EDIT_SOUSCRIPTION', 'ADMIN_MANAGE_USERS'])) {
+            $this->renderForbidden("Vous ne disposez pas des autorisations nécessaires pour annuler cette souscription.");
+            return;
+        }
+
+        if (!Validator::validateCsrfToken($_POST['csrf_token'] ?? '')) {
+            $this->error('Token CSRF invalide ou session expirée.');
+            return;
+        }
+
+        $idRaw = trim($_POST['id'] ?? '');
+        $codeSouscription = trim($_POST['code_souscription'] ?? '');
+
+        $id = null;
+        if (!empty($idRaw)) {
+            try {
+                $id = is_numeric($idRaw) ? (int)$idRaw : (int)$this->validator->decrypter($idRaw);
+            } catch (Exception $e) {
+                $id = null;
+            }
+        }
+
+        $stmt = $this->model->getCon()->prepare("SELECT * FROM souscriptions WHERE id_souscription = ? OR code_souscription = ? LIMIT 1");
+        $stmt->execute([$id ?: 0, $codeSouscription ?: '']);
+        $souscription = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$souscription) {
+            $this->error('Souscription introuvable.');
+            return;
+        }
+
+        $etabCode = Context::etablissement();
+        if (!Context::isSuperAdmin() && !empty($etabCode) && ($souscription['etablissement_code'] ?? '') !== $etabCode) {
+            $this->error('Vous n\'avez pas accès à cette souscription.');
+            return;
+        }
+
+        if (($souscription['statut_souscription'] ?? '') === 'annule') {
+            $this->error('Cette souscription est déjà annulée.');
+            return;
+        }
+
+        $stmtUpd = $this->model->getCon()->prepare("
+            UPDATE souscriptions 
+            SET statut_souscription = 'annule', updated_at_souscription = NOW() 
+            WHERE id_souscription = ?
+        ");
+        $success = $stmtUpd->execute([$souscription['id_souscription']]);
+
+        if ($success) {
+            $this->success('La souscription a été annulée avec succès.', ['reload' => true]);
+        } else {
+            $this->error('Erreur technique lors de l\'annulation de la souscription.');
+        }
+    }
+
+    public function reconduire()
+    {
+        $this->requirePost(false);
+        if (!Context::isAdmin() && !$this->hasPermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_EDIT_SOUSCRIPTION', 'ADMIN_MANAGE_USERS'])) {
+            $this->renderForbidden("Vous ne disposez pas des autorisations nécessaires pour reconduire cette souscription.");
+            return;
+        }
+
+        if (!Validator::validateCsrfToken($_POST['csrf_token'] ?? '')) {
+            $this->error('Token CSRF invalide ou session expirée.');
+            return;
+        }
+
+        $idRaw = trim($_POST['id'] ?? '');
+        $codeSouscription = trim($_POST['code_souscription'] ?? '');
+
+        $id = null;
+        if (!empty($idRaw)) {
+            try {
+                $id = is_numeric($idRaw) ? (int)$idRaw : (int)$this->validator->decrypter($idRaw);
+            } catch (Exception $e) {
+                $id = null;
+            }
+        }
+
+        $stmt = $this->model->getCon()->prepare("SELECT * FROM souscriptions WHERE id_souscription = ? OR code_souscription = ? LIMIT 1");
+        $stmt->execute([$id ?: 0, $codeSouscription ?: '']);
+        $souscription = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$souscription) {
+            $this->error('Souscription introuvable.');
+            return;
+        }
+
+        $etabCode = Context::etablissement();
+        if (!Context::isSuperAdmin() && !empty($etabCode) && ($souscription['etablissement_code'] ?? '') !== $etabCode) {
+            $this->error('Vous n\'avez pas accès à cette souscription.');
+            return;
+        }
+
+        if (($souscription['statut_souscription'] ?? '') === 'annule') {
+            $this->error('Impossible de reconduire une souscription déjà annulée.');
+            return;
+        }
+
+        $stmtUpd = $this->model->getCon()->prepare("
+            UPDATE souscriptions 
+            SET statut_souscription = 'reconduite', updated_at_souscription = NOW() 
+            WHERE id_souscription = ?
+        ");
+        $success = $stmtUpd->execute([$souscription['id_souscription']]);
+
+        if ($success) {
+            $redirectUrl = RACINE . 'souscription/ressouscription?client_code=' . urlencode($souscription['client_code']);
+            $this->success('La souscription a été marquée comme reconduite avec succès.', [
+                'reload' => true,
+                'redirect' => $redirectUrl
+            ]);
+        } else {
+            $this->error('Erreur technique lors de la reconduction de la souscription.');
+        }
+    }
+
     public function details($details)
     {
         $this->requirePermission(['COMMERCIAL_VIEW_OWN_SOUSCRIPTIONS', 'GESTIONNAIRE_VIEW_ALL_SOUSCRIPTIONS']);

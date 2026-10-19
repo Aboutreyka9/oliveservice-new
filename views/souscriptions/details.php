@@ -6,6 +6,8 @@ $packSouscrit = $packSouscrit ?? [];
 $allPacks = $allPacks ?? [];
 $cotisations = $cotisations ?? [];
 $caisseOuverte = $caisseOuverte ?? false;
+$encryptedId = $encryptedId ?? '';
+$csrfToken = Validator::generateCsrfToken();
 
 $totalCotise = (float)($item['montant_total_cotise'] ?? 0);
 $totalPrevu = (float)($item['montant_total_prevu'] ?? ($item['totale_souscription'] ?? 0));
@@ -38,7 +40,7 @@ $libelleSession = $item['libelle_session'] ?? '-';
           <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Détails contractuels, packs souscrits et suivi des encaissements terrain</p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION') && $statut !== 'solde' && ($soldeRestant > 0 || $joursRestants > 0)): ?>
+          <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION') && $statut !== 'solde' && $statut !== 'annule' && ($soldeRestant > 0 || $joursRestants > 0)): ?>
           <button type="button" class="btn" onclick="openPaymentModal()" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #FFF; border: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); cursor: pointer;">
             <i data-lucide="wallet" style="width: 18px; height: 18px;"></i> Payer une Cotisation
           </button>
@@ -48,7 +50,17 @@ $libelleSession = $item['libelle_session'] ?? '-';
             <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i> Situation
           </a>
           <?php endif; ?>
-          <?php if (Context::can('GESTIONNAIRE_EDIT_SOUSCRIPTION')): ?>
+          <?php if ($statut !== 'annule' && $statut !== 'reconduite' && (Context::can('COMMERCIAL_ADD_SOUSCRIPTION') || Context::can('GESTIONNAIRE_EDIT_SOUSCRIPTION'))): ?>
+          <button type="button" class="btn" onclick="openReconduireModal()" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #FFF; border: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25); cursor: pointer;">
+            <i data-lucide="refresh-cw" style="width: 18px; height: 18px;"></i> Reconduire
+          </button>
+          <?php endif; ?>
+          <?php if ($statut !== 'annule' && (Context::can('GESTIONNAIRE_EDIT_SOUSCRIPTION') || Context::isAdmin())): ?>
+          <button type="button" class="btn" onclick="openAnnulerModal()" style="background: #FEE2E2; border: 1px solid #FECACA; color: #DC2626; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; cursor: pointer; transition: all 0.2s ease;">
+            <i data-lucide="x-circle" style="width: 18px; height: 18px;"></i> Annuler
+          </button>
+          <?php endif; ?>
+          <?php if (Context::can('GESTIONNAIRE_EDIT_SOUSCRIPTION') && $statut !== 'annule'): ?>
           <a href="<?= RACINE ?>souscription/edition/<?= $encryptedId ?>" class="btn" style="background: #1E3A5F; border-color: #1E3A5F; color: #FFF; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; text-decoration: none;">
             <i data-lucide="edit-3" style="width: 18px; height: 18px;"></i> Modifier Contrat
           </a>
@@ -90,6 +102,10 @@ $libelleSession = $item['libelle_session'] ?? '-';
             <?php elseif ($statut === 'reconduite'): ?>
               <span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(245, 158, 11, 0.2); color: #FBBF24; font-weight: 800; font-size: 13px; padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(251, 191, 36, 0.4);">
                 <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Contrat Reconduit
+              </span>
+            <?php elseif ($statut === 'annule'): ?>
+              <span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(239, 68, 68, 0.2); color: #F87171; font-weight: 800; font-size: 13px; padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(248, 113, 113, 0.4);">
+                <i data-lucide="x-circle" style="width: 16px; height: 16px;"></i> Contrat Annulé
               </span>
             <?php else: ?>
               <span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.2); color: #38BDF8; font-weight: 800; font-size: 13px; padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.4);">
@@ -448,11 +464,123 @@ $libelleSession = $item['libelle_session'] ?? '-';
   </div>
 </div>
 
+<!-- Modal: Annuler le Contrat -->
+<div class="modal-overlay" id="annulerModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 16px;">
+  <div style="background: #FFFFFF; border-radius: 16px; width: 100%; max-width: 540px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; display: flex; flex-direction: column;">
+    <div class="modal-header" style="background: #1E3A5F; color: white; border: none; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #EF4444;">
+      <h5 class="modal-title" style="font-size: 18px; font-weight: 700; margin: 0; color: white; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="alert-triangle" style="width: 20px; height: 20px; color: #F87171;"></i> Annulation du Contrat
+      </h5>
+      <button type="button" onclick="closeAnnulerModal()" style="background: none; border: none; color: white; opacity: 0.8; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px;">
+        <i data-lucide="x" style="width: 20px; height: 20px; color: white;"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" style="padding: 24px;">
+      <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-start;">
+        <i data-lucide="alert-octagon" style="width: 22px; height: 22px; color: #DC2626; flex-shrink: 0; margin-top: 2px;"></i>
+        <div style="font-size: 13px; color: #991B1B; line-height: 1.5;">
+          <strong>Attention : Cette action est irréversible !</strong><br>
+          Le statut du contrat passera à <strong style="color: #7F1D1D;">Annulé</strong>. Les futures cotisations seront définitivement bloquées pour cette souscription.
+        </div>
+      </div>
+
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+          <div>
+            <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">Client</span>
+            <strong style="color: #0F172A;"><?= htmlspecialchars($nomClient) ?></strong>
+          </div>
+          <div>
+            <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">N° Contrat</span>
+            <code style="background: #EFF6FF; padding: 2px 6px; border-radius: 4px; color: #1E3A5F; font-weight: 700;"><?= htmlspecialchars($codeSouscription) ?></code>
+          </div>
+          <div>
+            <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">Total Cotisé</span>
+            <strong style="color: #059669;"><?= number_format($totalCotise, 0, ',', ' ') ?> FCFA</strong>
+          </div>
+          <div>
+            <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">Solde Restant</span>
+            <strong style="color: <?= $soldeRestant > 0 ? '#DC2626' : '#059669' ?>;"><?= number_format($soldeRestant, 0, ',', ' ') ?> FCFA</strong>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 16px; border-top: 1px solid #E2E8F0;">
+        <button type="button" class="btn" onclick="closeAnnulerModal()" style="background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; border-radius: 8px; padding: 10px 20px; font-weight: 700; cursor: pointer;">
+          Non, Conserver
+        </button>
+        <button type="button" class="btn" id="btnConfirmAnnuler" style="background: #DC2626; color: white; border: none; border-radius: 8px; padding: 10px 24px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);">
+          <i data-lucide="x-circle" style="width: 18px; height: 18px;"></i> Confirmer l'annulation
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Reconduire le Contrat -->
+<div class="modal-overlay" id="reconduireModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 16px;">
+  <div style="background: #FFFFFF; border-radius: 16px; width: 100%; max-width: 560px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; display: flex; flex-direction: column;">
+    <div class="modal-header" style="background: #1E3A5F; color: white; border: none; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #F59E0B;">
+      <h5 class="modal-title" style="font-size: 18px; font-weight: 700; margin: 0; color: white; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="refresh-cw" style="width: 20px; height: 20px; color: #FBBF24;"></i> Reconduction du Contrat
+      </h5>
+      <button type="button" onclick="closeReconduireModal()" style="background: none; border: none; color: white; opacity: 0.8; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px;">
+        <i data-lucide="x" style="width: 20px; height: 20px; color: white;"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" style="padding: 24px;">
+      <div style="background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-start;">
+        <i data-lucide="info" style="width: 22px; height: 22px; color: #D97706; flex-shrink: 0; margin-top: 2px;"></i>
+        <div style="font-size: 13px; color: #92400E; line-height: 1.5;">
+          La reconduction marque le contrat actuel avec le statut <strong>Reconduit</strong> et permet d'initier un nouveau contrat pour ce même souscripteur.
+        </div>
+      </div>
+
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+          <div>
+            <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">Client</span>
+            <strong style="color: #0F172A;"><?= htmlspecialchars($nomClient) ?></strong>
+          </div>
+          <div>
+            <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">N° Contrat</span>
+            <code style="background: #EFF6FF; padding: 2px 6px; border-radius: 4px; color: #1E3A5F; font-weight: 700;"><?= htmlspecialchars($codeSouscription) ?></code>
+          </div>
+          <div>
+            <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">Total Cotisé</span>
+            <strong style="color: #059669;"><?= number_format($totalCotise, 0, ',', ' ') ?> FCFA</strong>
+          </div>
+          <div>
+            <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">Montant Prévu</span>
+            <strong style="color: #1E3A5F;"><?= number_format($totalPrevu, 0, ',', ' ') ?> FCFA</strong>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button type="button" id="btnConfirmReconduireAndNew" class="btn" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #FFF; border: none; border-radius: 8px; padding: 12px 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);">
+          <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Marquer Reconduit & Ouvrir Nouveau Contrat
+        </button>
+        <button type="button" id="btnConfirmReconduireOnly" class="btn" style="background: #F8FAFC; border: 1px solid #CBD5E1; color: #334155; border-radius: 8px; padding: 10px 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+          <i data-lucide="check" style="width: 16px; height: 16px;"></i> Marquer comme Reconduit uniquement
+        </button>
+        <button type="button" onclick="closeReconduireModal()" class="btn" style="background: transparent; border: none; color: #64748B; font-size: 13px; font-weight: 600; padding: 6px; cursor: pointer;">
+          Annuler l'opération
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const PRIX_COTISATION  = <?= $prixCotisationJournaliere ?>;
 const MONTANT_RESTANT  = <?= $soldeRestant ?>;
 const JOURS_RESTANTS   = <?= $joursRestants ?>;
 const CODE_SOUSCRIPTION = '<?= htmlspecialchars($codeSouscription) ?>';
+const ENCRYPTED_ID     = '<?= htmlspecialchars($encryptedId) ?>';
+const CSRF_TOKEN       = '<?= htmlspecialchars($csrfToken) ?>';
 const CAISSE_OUVERTE   = <?= $caisseOuverte ? 'true' : 'false' ?>;
 
 function openPaymentModal() {
@@ -481,6 +609,48 @@ function closePaymentModal() {
 document.getElementById('paymentModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
         closePaymentModal();
+    }
+});
+
+function openAnnulerModal() {
+    const modal = document.getElementById('annulerModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        if (window.lucide) window.lucide.createIcons();
+    }
+}
+
+function closeAnnulerModal() {
+    const modal = document.getElementById('annulerModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+document.getElementById('annulerModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAnnulerModal();
+    }
+});
+
+function openReconduireModal() {
+    const modal = document.getElementById('reconduireModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        if (window.lucide) window.lucide.createIcons();
+    }
+}
+
+function closeReconduireModal() {
+    const modal = document.getElementById('reconduireModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+document.getElementById('reconduireModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeReconduireModal();
     }
 });
 
@@ -608,6 +778,105 @@ $(document).ready(function() {
                 else alert(errStr);
             }
         });
+    });
+
+    // Confirmation Annulation
+    $('#btnConfirmAnnuler').on('click', function() {
+        const btn = $(this);
+        btn.prop('disabled', true).html('<i data-lucide="loader-2" class="spinner-border spinner-border-sm"></i> Annulation...');
+
+        $.ajax({
+            url: '<?= RACINE ?>souscription/annuler',
+            type: 'POST',
+            data: {
+                csrf_token: CSRF_TOKEN,
+                id: ENCRYPTED_ID,
+                code_souscription: CODE_SOUSCRIPTION
+            },
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            dataType: 'json',
+            success: function(result) {
+                if (result.status === 1) {
+                    closeAnnulerModal();
+                    if (window.toastr) toastr.success(result.message || 'Souscription annulée avec succès.', 'Succès');
+                    else alert(result.message || 'Souscription annulée avec succès.');
+                    setTimeout(function() { location.reload(); }, 1000);
+                } else {
+                    btn.prop('disabled', false).html('<i data-lucide="x-circle" style="width: 18px; height: 18px;"></i> Confirmer l\'annulation');
+                    if (window.lucide) lucide.createIcons();
+                    if (window.toastr) toastr.error(result.message || 'Erreur lors de l\'annulation.', 'Erreur');
+                    else alert(result.message || 'Erreur lors de l\'annulation.');
+                }
+            },
+            error: function(xhr) {
+                btn.prop('disabled', false).html('<i data-lucide="x-circle" style="width: 18px; height: 18px;"></i> Confirmer l\'annulation');
+                if (window.lucide) lucide.createIcons();
+                let errMsg = 'Erreur serveur lors de l\'annulation.';
+                try {
+                    const parsed = JSON.parse(xhr.responseText);
+                    if (parsed.message) errMsg = parsed.message;
+                } catch(e) {}
+                if (window.toastr) toastr.error(errMsg, 'Erreur');
+                else alert(errMsg);
+            }
+        });
+    });
+
+    // Traitement Reconduction
+    function executeReconduction(btn, redirectAfter) {
+        const origHtml = btn.html();
+        btn.prop('disabled', true).html('<i data-lucide="loader-2" class="spinner-border spinner-border-sm"></i> Traitement...');
+
+        $.ajax({
+            url: '<?= RACINE ?>souscription/reconduire',
+            type: 'POST',
+            data: {
+                csrf_token: CSRF_TOKEN,
+                id: ENCRYPTED_ID,
+                code_souscription: CODE_SOUSCRIPTION
+            },
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            dataType: 'json',
+            success: function(result) {
+                if (result.status === 1) {
+                    closeReconduireModal();
+                    if (window.toastr) toastr.success(result.message || 'Souscription reconduite avec succès.', 'Succès');
+                    else alert(result.message || 'Souscription reconduite avec succès.');
+                    
+                    setTimeout(function() {
+                        if (redirectAfter && result.redirect) {
+                            window.location.href = result.redirect;
+                        } else {
+                            location.reload();
+                        }
+                    }, 1000);
+                } else {
+                    btn.prop('disabled', false).html(origHtml);
+                    if (window.lucide) lucide.createIcons();
+                    if (window.toastr) toastr.error(result.message || 'Erreur lors de la reconduction.', 'Erreur');
+                    else alert(result.message || 'Erreur lors de la reconduction.');
+                }
+            },
+            error: function(xhr) {
+                btn.prop('disabled', false).html(origHtml);
+                if (window.lucide) lucide.createIcons();
+                let errMsg = 'Erreur serveur lors de la reconduction.';
+                try {
+                    const parsed = JSON.parse(xhr.responseText);
+                    if (parsed.message) errMsg = parsed.message;
+                } catch(e) {}
+                if (window.toastr) toastr.error(errMsg, 'Erreur');
+                else alert(errMsg);
+            }
+        });
+    }
+
+    $('#btnConfirmReconduireAndNew').on('click', function() {
+        executeReconduction($(this), true);
+    });
+
+    $('#btnConfirmReconduireOnly').on('click', function() {
+        executeReconduction($(this), false);
     });
 });
 </script>
