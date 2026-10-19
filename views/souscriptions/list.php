@@ -164,6 +164,9 @@
           <button type="button" class="btn btn-sm btn-filter-status" data-status="Reconduite" style="background: #F1F5F9; color: #64748B; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: none; font-size: 12px;">
             Reconduites
           </button>
+          <button type="button" class="btn btn-sm btn-filter-status" data-status="Annulée" style="background: #F1F5F9; color: #64748B; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: none; font-size: 12px;">
+            Annulées
+          </button>
         </div>
       </div>
 
