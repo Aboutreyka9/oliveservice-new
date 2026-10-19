@@ -5,6 +5,56 @@
     <?php require_once __DIR__ . '/../../public/inc/nav.php'; ?>
     <div class="content-wrapper" style="padding: 24px; width: 100%; max-width: 100%; box-sizing: border-box;">
 
+      <style>
+      .btn-action-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #E2E8F0;
+        background: #FFFFFF;
+        color: #475569;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .btn-action-icon:hover {
+        background: #F1F5F9;
+        color: #1E3A5F;
+        border-color: #94A3B8;
+        transform: translateY(-1px);
+      }
+      .btn-action-icon.primary {
+        background: #1E3A5F;
+        border-color: #1E3A5F;
+        color: #FFFFFF;
+      }
+      .btn-action-icon.primary:hover {
+        background: #152B47;
+        color: #FFFFFF;
+        box-shadow: 0 2px 6px rgba(30, 58, 95, 0.25);
+      }
+      .btn-action-icon.success {
+        background: #ECFDF5;
+        border-color: #A7F3D0;
+        color: #059669;
+      }
+      .btn-action-icon.success:hover {
+        background: #059669;
+        border-color: #059669;
+        color: #FFFFFF;
+        box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+      }
+      .sous-actions-wrap {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+      }
+      </style>
+
       <!-- EN-TÊTE DE PAGE -->
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
         <div>
@@ -143,5 +193,5 @@
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/souscriptions.js?v=1.2"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/souscriptions.js?v=1.3"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

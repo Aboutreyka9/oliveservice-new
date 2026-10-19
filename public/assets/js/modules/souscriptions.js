@@ -83,7 +83,7 @@ $(function () {
         { data: 'date_souscription', defaultContent: '-', className: 'text-center' },
         {
           data: null,
-          width: '240px',
+          width: '90px',
           orderable: false,
           className: 'text-end',
           render: function (d) {
@@ -91,15 +91,17 @@ $(function () {
             const canCollect = window.AppConfig && window.AppConfig.can ? window.AppConfig.can('COMMERCIAL_COLLECT_COTISATION') : false;
 
             const situationBtn = canCollect ? `
-              <a href="${racine}cautisation-payment/situation/${d.code_souscription}" class="btn btn-sm" style="background:#10B981; border-color:#10B981; color:#FFF; font-weight:700; border-radius:6px; padding:5px 10px; margin-right:4px;" title="Situation des versements">
-                <i data-lucide="credit-card" style="width:13px;height:13px; display:inline-block; vertical-align:middle;"></i> Situation
+              <a href="${racine}cautisation-payment/situation/${d.code_souscription}" class="btn-action-icon success" title="Situation des versements">
+                <i data-lucide="credit-card" style="width:15px;height:15px;"></i>
               </a>` : '';
 
             return `
-              ${situationBtn}
-              <a href="${racine}souscription/details/${editId}" class="btn btn-sm" style="background:#1E3A5F; border-color:#1E3A5F; color:#FFF; font-weight:700; border-radius:6px; padding:5px 8px;" title="Détails complets">
-                <i data-lucide="eye" style="width:13px;height:13px; display:inline-block; vertical-align:middle;"></i> Détails
-              </a>
+              <div class="sous-actions-wrap">
+                ${situationBtn}
+                <a href="${racine}souscription/details/${editId}" class="btn-action-icon primary" title="Consulter la souscription">
+                  <i data-lucide="eye" style="width:15px;height:15px;"></i>
+                </a>
+              </div>
             `;
           }
         }
