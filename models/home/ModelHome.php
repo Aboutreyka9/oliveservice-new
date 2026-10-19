@@ -68,12 +68,15 @@ class ModelHome extends BaseModel
             }
 
             if (Context::isCommercial()) {
-                $sqlClients .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = c.code_client AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif') OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.user_code = ? AND sub.etablissement_code = ? AND sub.annee_code = ?))";
+                $sqlClients .= " AND (
+                    EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = c.code_client AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif')
+                    OR (
+                        NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = c.code_client)
+                        AND c.user_code = ?
+                    )
+                )";
                 $pClients[] = Context::user();
                 $pClients[] = Context::user();
-                $pClients[] = Context::user();
-                $pClients[] = Context::etablissement();
-                $pClients[] = Context::annee();
             } elseif (Context::isGestionnaire() && Context::zone()) {
                 $sqlClients .= " AND (c.zone_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.zone_code = ? AND sub.etablissement_code = ? AND sub.annee_code = ?))";
                 $pClients[] = Context::zone();

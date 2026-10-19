@@ -18,11 +18,15 @@ class ClientController extends BaseController
         $params = [$etabCode];
 
         if (Context::isCommercial()) {
-            $whereClause .= " AND (EXISTS (SELECT 1 FROM client_commercials cc_st WHERE cc_st.client_code = c.code_client AND cc_st.commercial_code = ? AND cc_st.statut_client_commercial = 'actif') OR c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.user_code = ? AND sub.etablissement_code = ?))";
+            $whereClause .= " AND (
+                EXISTS (SELECT 1 FROM client_commercials cc_st WHERE cc_st.client_code = c.code_client AND cc_st.commercial_code = ? AND cc_st.statut_client_commercial = 'actif')
+                OR (
+                    NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = c.code_client)
+                    AND c.user_code = ?
+                )
+            )";
             $params[] = $userCode;
             $params[] = $userCode;
-            $params[] = $userCode;
-            $params[] = $etabCode;
         } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
             $whereClause .= " AND (c.zone_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.zone_code = ? AND sub.etablissement_code = ?))";
             $params[] = $zoneCode;
@@ -32,10 +36,6 @@ class ClientController extends BaseController
 
         $subSousExists = "SELECT 1 FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.etablissement_code = c.etablissement_code";
         $subExistsParams = [];
-        if (Context::isCommercial()) {
-            $subSousExists .= " AND sub.user_code = ?";
-            $subExistsParams[] = $userCode;
-        }
 
         $sql = "
             SELECT 
@@ -53,6 +53,7 @@ class ClientController extends BaseController
         $sqlCot = "
             SELECT COALESCE(SUM(cc.montant_cautisation_client), 0) as total_cotise
             FROM cautisation_clients cc
+            JOIN clients c ON c.code_client = cc.client_code
             WHERE cc.etablissement_code = ?
               AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)
         ";
@@ -66,7 +67,13 @@ class ClientController extends BaseController
             $cotParams[] = $anneeCode;
         }
         if (Context::isCommercial()) {
-            $sqlCot .= " AND (cc.user_code = ? OR cc.commercial_code = ?)";
+            $sqlCot .= " AND (
+                EXISTS (SELECT 1 FROM client_commercials cc_st WHERE cc_st.client_code = c.code_client AND cc_st.commercial_code = ? AND cc_st.statut_client_commercial = 'actif')
+                OR (
+                    NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = c.code_client)
+                    AND c.user_code = ?
+                )
+            )";
             $cotParams[] = $userCode;
             $cotParams[] = $userCode;
         }
@@ -75,6 +82,7 @@ class ClientController extends BaseController
         $sqlSous = "
             SELECT COUNT(*) as total_souscriptions
             FROM souscriptions sub
+            JOIN clients c ON c.code_client = sub.client_code
             WHERE sub.etablissement_code = ?
         ";
         $sousParams = [$etabCode];
@@ -87,7 +95,13 @@ class ClientController extends BaseController
             $sousParams[] = $anneeCode;
         }
         if (Context::isCommercial()) {
-            $sqlSous .= " AND (sub.user_code = ? OR EXISTS (SELECT 1 FROM client_commercials cc_sub WHERE cc_sub.client_code = sub.client_code AND cc_sub.commercial_code = ? AND cc_sub.statut_client_commercial = 'actif'))";
+            $sqlSous .= " AND (
+                EXISTS (SELECT 1 FROM client_commercials cc_st WHERE cc_st.client_code = c.code_client AND cc_st.commercial_code = ? AND cc_st.statut_client_commercial = 'actif')
+                OR (
+                    NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = c.code_client)
+                    AND c.user_code = ?
+                )
+            )";
             $sousParams[] = $userCode;
             $sousParams[] = $userCode;
         }
@@ -177,25 +191,20 @@ class ClientController extends BaseController
 
         $subSousSql = "SELECT COUNT(*) FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.etablissement_code = c.etablissement_code";
         $subSousParams = [];
-        if (Context::isCommercial()) {
-            $subSousSql .= " AND sub.user_code = ?";
-            $subSousParams[] = $userCode;
-        }
 
         $subCotSql = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients cc 
                       WHERE cc.client_code = c.code_client 
                         AND cc.etablissement_code = c.etablissement_code 
                         AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)";
         $subCotParams = [];
-        if (Context::isCommercial()) {
-            $subCotSql .= " AND (cc.user_code = ? OR cc.commercial_code = ?)";
-            $subCotParams[] = $userCode;
-            $subCotParams[] = $userCode;
-        }
 
         $sql = "
             SELECT c.*, z.libelle_zone,
-                   COALESCE(cc_act.commercial_code, c.user_code) as active_commercial_code,
+                   (CASE 
+                       WHEN cc_act.commercial_code IS NOT NULL THEN cc_act.commercial_code
+                       WHEN NOT EXISTS (SELECT 1 FROM client_commercials cc_all WHERE cc_all.client_code = c.code_client) THEN c.user_code
+                       ELSE NULL
+                   END) as active_commercial_code,
                    TRIM(CONCAT(COALESCE(u_comm.nom_user, ''), ' ', COALESCE(u_comm.prenom_user, ''))) as nom_commercial,
                    u_comm.telephone_user as telephone_commercial,
                    ({$subSousSql}) as nb_souscriptions,
@@ -203,18 +212,26 @@ class ClientController extends BaseController
             FROM clients c
             LEFT JOIN zones z ON z.code_zone = c.zone_code
             LEFT JOIN client_commercials cc_act ON cc_act.client_code = c.code_client AND cc_act.statut_client_commercial = 'actif'
-            LEFT JOIN users u_comm ON u_comm.code_user = COALESCE(cc_act.commercial_code, c.user_code)
+            LEFT JOIN users u_comm ON u_comm.code_user = (CASE 
+                       WHEN cc_act.commercial_code IS NOT NULL THEN cc_act.commercial_code
+                       WHEN NOT EXISTS (SELECT 1 FROM client_commercials cc_all WHERE cc_all.client_code = c.code_client) THEN c.user_code
+                       ELSE NULL
+                   END)
             WHERE c.etablissement_code = ?
         ";
         $params = array_merge($subSousParams, $subCotParams, [$etabCode]);
 
         // Application du filtrage strict selon le rôle RBAC (Context)
         if (Context::isCommercial()) {
-            $sql .= " AND (cc_act.commercial_code = ? OR (cc_act.id_client_commercial IS NULL AND c.user_code = ?) OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.user_code = ? AND sub2.etablissement_code = ?))";
+            $sql .= " AND (
+                cc_act.commercial_code = ?
+                OR (
+                    NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = c.code_client)
+                    AND c.user_code = ?
+                )
+            )";
             $params[] = $userCode;
             $params[] = $userCode;
-            $params[] = $userCode;
-            $params[] = $etabCode;
         } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
             $sql .= " AND (c.zone_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.zone_code = ? AND sub2.etablissement_code = ?))";
             $params[] = $zoneCode;
@@ -267,7 +284,7 @@ class ClientController extends BaseController
                 'nom_complet' => $nomComplet,
                 'initiales' => $inits,
                 'active_commercial_code' => $c['active_commercial_code'] ?? '',
-                'nom_commercial' => !empty(trim($c['nom_commercial'] ?? '')) ? trim($c['nom_commercial']) : (!empty($c['user_code']) ? $c['user_code'] : 'Non assigné'),
+                'nom_commercial' => !empty(trim($c['nom_commercial'] ?? '')) ? trim($c['nom_commercial']) : (!empty($c['active_commercial_code']) ? $c['active_commercial_code'] : 'Non assigné'),
                 'telephone_commercial' => $c['telephone_commercial'] ?? '',
                 'date_creation' => !empty($c['created_at_client']) ? date('d/m/Y', strtotime($c['created_at_client'])) : '-',
                 'nb_souscriptions' => $nbSous,
@@ -486,6 +503,24 @@ class ClientController extends BaseController
             if (!$item) {
                 $this->renderNotFound("Le client demandé est introuvable.");
                 return;
+            }
+
+            // Contrôle d'accès strict pour les commerciaux selon la règle d'attribution
+            if (Context::isCommercial()) {
+                $userCode = Context::user();
+                $stmtOwnership = $this->model->getCon()->prepare("
+                    SELECT 1 FROM clients c 
+                    WHERE c.id_client = ? 
+                      AND (
+                          EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = c.code_client AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif')
+                          OR (NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = c.code_client) AND c.user_code = ?)
+                      )
+                ");
+                $stmtOwnership->execute([$id, $userCode, $userCode]);
+                if (!$stmtOwnership->fetchColumn()) {
+                    $this->renderNotFound("Vous n'avez pas l'autorisation d'accéder à la fiche de ce client.");
+                    return;
+                }
             }
 
             $etabCode = Context::etablissement();
