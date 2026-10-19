@@ -376,9 +376,23 @@ class SouscriptionController extends BaseController
         $modelCat = new ModelCategoriePack();
         $categories = $modelCat->getAll();
 
+        $commerciaux = [];
+        if (!Context::isCommercial()) {
+            $stmtComms = $this->model->getCon()->prepare("
+                SELECT u.code_user, u.nom_user, u.prenom_user, u.telephone_user, u.matricule_user
+                FROM users u
+                INNER JOIN user_roles ur ON ur.user_code = u.code_user AND ur.role_code = 'ROLE_COMMERCIAL'
+                WHERE u.statut_user = 'actif' AND (u.etablissement_code = ? OR ? = 1)
+                ORDER BY u.nom_user ASC, u.prenom_user ASC
+            ");
+            $stmtComms->execute([$etabCode, Context::hasJoker() ? 1 : 0]);
+            $commerciaux = $stmtComms->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+
         $this->loadView('../views/souscriptions/wizard.php', [
             'sessions' => $sessions,
-            'categories' => $categories
+            'categories' => $categories,
+            'commerciaux' => $commerciaux
         ]);
     }
 
@@ -551,6 +565,7 @@ class SouscriptionController extends BaseController
         $emailClient = trim($data['email_client'] ?? '');
         $sexeClient = trim($data['sexe_client'] ?? '');
         $lieuClient = trim($data['lieu_residence_client'] ?? '');
+        $professionClient = trim($data['profession_client'] ?? '');
         $sessionCode = $data['session_code'] ?? '';
         $zoneCode = $data['zone_code'] ?? '';
 
@@ -575,6 +590,9 @@ class SouscriptionController extends BaseController
             $this->error("Erreur d'enregistrement : La zone, l'année d'exercice, l'utilisateur connecté et l'établissement sont obligatoires et ne peuvent pas être null.");
             return;
         }
+
+        // Détermination du commercial de rattachement
+        $targetCommercial = Context::isCommercial() ? $userCode : (!empty($data['commercial_code']) ? trim($data['commercial_code']) : $userCode);
 
         $rawPacks = $data['packs'] ?? '[]';
         $packCodes = is_array($rawPacks) ? $rawPacks : json_decode($rawPacks, true);
@@ -623,6 +641,18 @@ class SouscriptionController extends BaseController
                 $modelClient = new ModelClient();
                 $modelClient->update($updateFields, (int)$existingClient['id_client']);
             }
+
+            // Vérifier si le client existant a déjà une affectation active dans client_commercials, sinon l'initialiser
+            try {
+                $modelCC = new ModelClientCommercial();
+                $activeAssignment = $modelCC->getActiveCommercial($clientCode);
+                if (!$activeAssignment) {
+                    $commToAssign = !empty($existingClient['user_code']) ? $existingClient['user_code'] : $targetCommercial;
+                    $modelCC->assignClient($clientCode, $commToAssign, $userCode, $etabCode, $zoneCode);
+                }
+            } catch (Exception $e) {
+                error_log("[SouscriptionController::wizardSubmit] client_commercials existing check: " . $e->getMessage());
+            }
         } else {
             // NOUVEAU CLIENT : Création d'une fiche client unique
             $clientCode = $this->validator->generateCode('clients', 'code_client', 'CLI-', 8);
@@ -642,7 +672,7 @@ class SouscriptionController extends BaseController
                 'profession_client' => $professionClient,
                 'statut_client' => 'actif',
                 'created_at_client' => date('Y-m-d H:i:s'),
-                'user_code' => $userCode,
+                'user_code' => $targetCommercial,
                 'etablissement_code' => $etabCode,
                 'zone_code' => $zoneCode
             ];
@@ -650,6 +680,14 @@ class SouscriptionController extends BaseController
             if (!$modelClient->create($clientData)) {
                 $this->error('Erreur lors de la création de la fiche client.');
                 return;
+            }
+
+            // Attribution officielle dans la table client_commercials
+            try {
+                $modelCC = new ModelClientCommercial();
+                $modelCC->assignClient($clientCode, $targetCommercial, $userCode, $etabCode, $zoneCode);
+            } catch (Exception $e) {
+                error_log("[SouscriptionController::wizardSubmit] client_commercials assignClient error: " . $e->getMessage());
             }
         }
 
@@ -694,7 +732,7 @@ class SouscriptionController extends BaseController
             'montant_total_cotise' => 0,
             'statut_distribution' => 'En attente',
             'statut_souscription' => 'valide',
-            'user_code' => $userCode,
+            'user_code' => $targetCommercial,
             'etablissement_code' => $etabCode,
             'annee_code' => $anneeCode,
             'created_at_souscription' => date('Y-m-d H:i:s')

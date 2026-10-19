@@ -1,4 +1,7 @@
-<?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
+<?php 
+require_once __DIR__ . '/../../public/inc/header.php'; 
+$commerciaux = $commerciaux ?? [];
+?>
 <div class="app-layout">
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
   <main class="main-content">
@@ -101,6 +104,22 @@
                   </label>
                   <input type="text" name="profession_client" id="profession_client" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" placeholder="Ex: Commerçant">
                 </div>
+
+                <?php if (!Context::isCommercial() && !empty($commerciaux)): ?>
+                <div class="form-group" style="width: 100%; box-sizing: border-box;">
+                  <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                    Commercial Référent <small style="color: #64748B;">(Optionnel - vous par défaut)</small>
+                  </label>
+                  <select name="commercial_code" id="select-commercial" class="form-control select2" style="width: 100%; box-sizing: border-box;">
+                    <option value="">-- Attribuer au commercial --</option>
+                    <?php foreach ($commerciaux as $com): ?>
+                      <option value="<?= htmlspecialchars($com['code_user']) ?>">
+                        <?= htmlspecialchars(trim($com['nom_user'] . ' ' . ($com['prenom_user'] ?? ''))) ?> (<?= htmlspecialchars($com['telephone_user'] ?? '') ?>)
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <?php endif; ?>
               </div>
             </div>
 
@@ -242,6 +261,14 @@
                       <span id="recap-profession" style="font-size: 13px; font-weight: 700; color: #F8FAFC;">-</span>
                     </div>
                   </div>
+
+                  <div id="recap-commercial-box" style="display: none; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 10px 14px; align-items: center; gap: 10px;">
+                    <i data-lucide="user-check" style="width: 18px; height: 18px; color: #38BDF8; flex-shrink: 0;"></i>
+                    <div>
+                      <span style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 700;">Commercial</span>
+                      <span id="recap-commercial" style="font-size: 13px; font-weight: 700; color: #F8FAFC;">-</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -282,6 +309,7 @@
             <input type="hidden" name="sexe_client" id="hidden-sexe_client">
             <input type="hidden" name="lieu_residence_client" id="hidden-lieu_residence_client">
             <input type="hidden" name="profession_client" id="hidden-profession_client">
+            <input type="hidden" name="commercial_code" id="hidden-commercial_code">
             <input type="hidden" name="zone_code" id="hidden-zone_code" value="">
             <input type="hidden" name="session_code" id="hidden-session_code" value="">
             <input type="hidden" name="packs" id="hidden-packs" value="">
@@ -469,6 +497,14 @@ function renderRecap() {
   $('#recap-email').text($('#email_client').val().trim() || '-');
   $('#recap-profession').text($('#profession_client').val().trim() || '-');
 
+  if ($('#select-commercial').length && $('#select-commercial').val()) {
+    var commTxt = $('#select-commercial option:selected').text().trim();
+    $('#recap-commercial').text(commTxt);
+    $('#recap-commercial-box').css('display', 'flex');
+  } else {
+    $('#recap-commercial-box').hide();
+  }
+
   var tbody = $('#recap-packs-body');
   tbody.empty();
   var totalCotisJour = 0;
@@ -638,6 +674,10 @@ $(document).ready(function() {
     $('#hidden-email_client').val($('#email_client').val().trim());
     $('#hidden-sexe_client').val($('#sexe_client').val());
     $('#hidden-lieu_residence_client').val($('#lieu_residence_client').val().trim());
+    $('#hidden-profession_client').val($('#profession_client').val().trim());
+    if ($('#select-commercial').length) {
+      $('#hidden-commercial_code').val($('#select-commercial').val() || '');
+    }
     var selectedSessionZone = $('#filter-session option:selected').data('zone') || '<?= Context::zone() ?>';
     $('#hidden-zone_code').val(selectedSessionZone);
     $('#hidden-session_code').val($('#filter-session').val() || '');
