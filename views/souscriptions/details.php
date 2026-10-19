@@ -50,12 +50,12 @@ $libelleSession = $item['libelle_session'] ?? '-';
             <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i> Situation
           </a>
           <?php endif; ?>
-          <?php if ($statut !== 'annule' && $statut !== 'reconduite' && (Context::can('COMMERCIAL_ADD_SOUSCRIPTION') || Context::can('GESTIONNAIRE_EDIT_SOUSCRIPTION'))): ?>
+          <?php if ($statut !== 'annule' && $statut !== 'reconduite' && Context::can(['COMMERCIAL_RECONDUIRE_SOUSCRIPTION', 'GESTIONNAIRE_RECONDUIRE_SOUSCRIPTION'])): ?>
           <button type="button" class="btn" onclick="openReconduireModal()" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #FFF; border: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25); cursor: pointer;">
             <i data-lucide="refresh-cw" style="width: 18px; height: 18px;"></i> Reconduire
           </button>
           <?php endif; ?>
-          <?php if ($statut !== 'annule' && (Context::can('GESTIONNAIRE_EDIT_SOUSCRIPTION') || Context::isAdmin())): ?>
+          <?php if ($statut !== 'annule' && Context::can('GESTIONNAIRE_ANNULER_SOUSCRIPTION')): ?>
           <button type="button" class="btn" onclick="openAnnulerModal()" style="background: #FEE2E2; border: 1px solid #FECACA; color: #DC2626; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; cursor: pointer; transition: all 0.2s ease;">
             <i data-lucide="x-circle" style="width: 18px; height: 18px;"></i> Annuler
           </button>

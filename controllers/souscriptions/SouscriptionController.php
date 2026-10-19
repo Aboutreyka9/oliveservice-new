@@ -263,8 +263,8 @@ class SouscriptionController extends BaseController
     public function annuler()
     {
         $this->requirePost(false);
-        if (!Context::isAdmin() && !$this->hasPermission(['GESTIONNAIRE_EDIT_SOUSCRIPTION', 'ADMIN_MANAGE_USERS'])) {
-            $this->renderForbidden("Vous ne disposez pas des autorisations nécessaires pour annuler cette souscription.");
+        if (!Context::isAdmin() && !$this->hasPermission('GESTIONNAIRE_ANNULER_SOUSCRIPTION')) {
+            $this->renderForbidden("Vous ne disposez pas de l'autorisation requise [GESTIONNAIRE_ANNULER_SOUSCRIPTION] pour annuler cette souscription.");
             return;
         }
 
@@ -322,7 +322,7 @@ class SouscriptionController extends BaseController
     public function reconduire()
     {
         $this->requirePost(false);
-        if (!Context::isAdmin() && !$this->hasPermission(['COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_EDIT_SOUSCRIPTION', 'ADMIN_MANAGE_USERS'])) {
+        if (!Context::isAdmin() && !$this->hasPermission(['COMMERCIAL_RECONDUIRE_SOUSCRIPTION', 'GESTIONNAIRE_RECONDUIRE_SOUSCRIPTION'])) {
             $this->renderForbidden("Vous ne disposez pas des autorisations nécessaires pour reconduire cette souscription.");
             return;
         }
