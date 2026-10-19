@@ -36,10 +36,13 @@ $(function () {
       const $preview = $('#bulk-selected-preview');
       $preview.empty();
       let shown = 0;
-      selectedClients.forEach((nom, code) => {
+      selectedClients.forEach((info, code) => {
+        const nom = (typeof info === 'object' && info !== null) ? (info.nom || code) : (info || code);
+        const commNom = (typeof info === 'object' && info !== null && info.commercialNom) ? info.commercialNom : '';
+        const titleAttr = commNom ? `title="Commercial actuel : ${commNom}"` : '';
         if (shown < 25) {
           $preview.append(`
-            <span style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+            <span ${titleAttr} style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
               <i data-lucide="user" style="width: 10px; height: 10px;"></i> ${nom} <span style="font-size: 10px; color: #64748B; font-family: monospace;">(${code})</span>
             </span>
           `);
@@ -59,6 +62,52 @@ $(function () {
       $('#check-all-clients').prop('checked', false);
       $('#bulk-selected-preview').empty();
     }
+  }
+
+  // Actualise dynamiquement les options du select commercial récepteur selon les clients sélectionnés
+  function refreshBulkCommercialSelect() {
+    const $select = $('#select-bulk-commercial');
+    const totalSelected = selectedClients.size;
+    if (totalSelected === 0) return;
+
+    // Compter le nombre de clients affectés à chaque commercial
+    const counts = {};
+    selectedClients.forEach((info) => {
+      const cCode = (typeof info === 'object' && info !== null) ? (info.commercial || '') : '';
+      if (cCode) {
+        counts[cCode] = (counts[cCode] || 0) + 1;
+      }
+    });
+
+    $select.find('option').each(function () {
+      const val = $(this).val();
+      if (!val) return; // Ne pas modifier l'option vide
+
+      let origText = $(this).attr('data-original-text');
+      if (!origText) {
+        origText = $(this).text().replace(/\s*\((Actuel|Actuel pour [^)]+)\)$/, '').trim();
+        $(this).attr('data-original-text', origText);
+      }
+
+      const count = counts[val] || 0;
+
+      if (count === totalSelected) {
+        // Tous les clients sélectionnés appartiennent déjà à ce commercial -> Désactivation
+        $(this).prop('disabled', true);
+        $(this).text(origText + ' (Actuel)');
+        if ($select.val() === val) {
+          $select.val('');
+        }
+      } else if (count > 0) {
+        // Une partie seulement des clients sélectionnés appartient à ce commercial
+        $(this).prop('disabled', false);
+        $(this).text(origText + ' (Actuel pour ' + count + '/' + totalSelected + ')');
+      } else {
+        // Aucun des clients sélectionnés n'appartient à ce commercial
+        $(this).prop('disabled', false);
+        $(this).text(origText);
+      }
+    });
   }
 
   // Filtre personnalisé pour DataTables
@@ -95,9 +144,11 @@ $(function () {
           render: (d, type, row) => {
             const code = row.code_client || '';
             const isChecked = selectedClients.has(code) ? 'checked' : '';
+            const commCode = row.active_commercial_code || '';
+            const commNom = row.nom_commercial || '';
             return `
               <div style="display: flex; align-items: center; justify-content: center;">
-                <input type="checkbox" class="client-bulk-cb" value="${code}" data-nom="${row.nom_complet || code}" ${isChecked} style="cursor: pointer; width: 16px; height: 16px; accent-color: #1E3A5F;">
+                <input type="checkbox" class="client-bulk-cb" value="${code}" data-nom="${row.nom_complet || code}" data-commercial="${commCode}" data-commercial-nom="${commNom}" ${isChecked} style="cursor: pointer; width: 16px; height: 16px; accent-color: #1E3A5F;">
               </div>
             `;
           }
@@ -342,8 +393,10 @@ $(function () {
     $(document).on('change', '.client-bulk-cb', function () {
       const code = $(this).val();
       const nom = $(this).data('nom') || code;
+      const commercial = $(this).data('commercial') || '';
+      const commercialNom = $(this).data('commercial-nom') || '';
       if ($(this).is(':checked')) {
-        selectedClients.set(code, nom);
+        selectedClients.set(code, { nom: nom, commercial: commercial, commercialNom: commercialNom });
       } else {
         selectedClients.delete(code);
       }
@@ -355,9 +408,11 @@ $(function () {
       $('.client-bulk-cb').each(function () {
         const code = $(this).val();
         const nom = $(this).data('nom') || code;
+        const commercial = $(this).data('commercial') || '';
+        const commercialNom = $(this).data('commercial-nom') || '';
         $(this).prop('checked', isChecked);
         if (isChecked) {
-          selectedClients.set(code, nom);
+          selectedClients.set(code, { nom: nom, commercial: commercial, commercialNom: commercialNom });
         } else {
           selectedClients.delete(code);
         }
@@ -383,6 +438,9 @@ $(function () {
         }
         return;
       }
+      // Actualiser l'état désactivé / libellé des commerciaux selon les clients sélectionnés
+      refreshBulkCommercialSelect();
+
       const $modal = $('#modal-bulk-transfer');
       $modal.fadeIn(200).css('display', 'flex');
       if (window.lucide) lucide.createIcons();
@@ -426,6 +484,16 @@ $(function () {
           Swal.fire('Commercial requis', 'Veuillez sélectionner le commercial récepteur.', 'warning');
         } else {
           alert('Veuillez sélectionner un commercial.');
+        }
+        return;
+      }
+
+      const $selectedOption = $('#select-bulk-commercial option:selected');
+      if ($selectedOption.is(':disabled')) {
+        if (window.Swal) {
+          Swal.fire('Sélection non autorisée', 'Le commercial sélectionné gère déjà tous les clients sélectionnés.', 'warning');
+        } else {
+          alert('Ce commercial gère déjà tous les clients sélectionnés.');
         }
         return;
       }

@@ -714,7 +714,7 @@ $stats = $stats ?? [
                 $cTel = !empty($comm['telephone_user']) ? ' (' . $comm['telephone_user'] . ')' : '';
                 $cCommPct = !empty($comm['commission']) ? ' - ' . $comm['commission'] . '%' : '';
               ?>
-              <option value="<?= htmlspecialchars($comm['code_user']) ?>">
+              <option value="<?= htmlspecialchars($comm['code_user']) ?>" data-original-text="<?= htmlspecialchars($cNom . $cTel . $cCommPct) ?>">
                 <?= htmlspecialchars($cNom . $cTel . $cCommPct) ?>
               </option>
             <?php endforeach; ?>

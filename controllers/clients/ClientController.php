@@ -750,6 +750,28 @@ class ClientController extends BaseController
         }
 
         $modelClientComm = new ModelClientCommercial();
+
+        // Vérification : si tous les clients sélectionnés appartiennent déjà à ce commercial
+        $allAlreadyAssigned = true;
+        foreach ($clientCodes as $cCode) {
+            $activeComm = $modelClientComm->getActiveCommercial($cCode);
+            $currCommCode = $activeComm['commercial_code'] ?? '';
+            if (empty($currCommCode)) {
+                $stmtCl = $this->model->getCon()->prepare("SELECT user_code FROM clients WHERE code_client = ? LIMIT 1");
+                $stmtCl->execute([$cCode]);
+                $currCommCode = $stmtCl->fetchColumn() ?: '';
+            }
+            if ($currCommCode !== $newCommercialCode) {
+                $allAlreadyAssigned = false;
+                break;
+            }
+        }
+
+        if ($allAlreadyAssigned) {
+            $this->error('Tous les clients sélectionnés sont déjà affectés à ce commercial.');
+            return;
+        }
+
         $res = $modelClientComm->assignMultipleClients($clientCodes, $newCommercialCode, $adminCode, $etabCode);
 
         $nomNouveau = trim($newComm['nom_user'] . ' ' . $newComm['prenom_user']);
