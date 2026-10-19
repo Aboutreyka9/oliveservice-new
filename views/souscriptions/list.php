@@ -143,5 +143,5 @@
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/souscriptions.js?v=1.1"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/souscriptions.js?v=1.2"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>
