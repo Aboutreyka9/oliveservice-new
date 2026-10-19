@@ -48,7 +48,22 @@ class ModelSouscription extends BaseModel
             }
 
             if (!empty($userCode)) {
-                $sql .= " AND s.user_code = ?";
+                $sql .= " AND (
+                    EXISTS (
+                        SELECT 1 FROM client_commercials cc_st 
+                        WHERE cc_st.client_code = s.client_code 
+                          AND cc_st.commercial_code = ? 
+                          AND cc_st.statut_client_commercial = 'actif'
+                    )
+                    OR (
+                        NOT EXISTS (
+                            SELECT 1 FROM client_commercials cc_any 
+                            WHERE cc_any.client_code = s.client_code
+                        )
+                        AND c.user_code = ?
+                    )
+                )";
+                $params[] = $userCode;
                 $params[] = $userCode;
             }
 

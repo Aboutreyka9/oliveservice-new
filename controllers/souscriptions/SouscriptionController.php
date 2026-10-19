@@ -271,9 +271,21 @@ class SouscriptionController extends BaseController
                 return;
             }
 
-            if (Context::isCommercial() && $item['user_code'] !== Context::user()) {
-                $this->renderForbidden("Vous n'êtes pas autorisé à consulter cette souscription.");
-                return;
+            if (Context::isCommercial()) {
+                $userCode = Context::user();
+                $stmtCheckClient = $this->model->getCon()->prepare("
+                    SELECT 1 FROM clients c 
+                    WHERE c.code_client = ? 
+                      AND (
+                          EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = c.code_client AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif')
+                          OR (NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = c.code_client) AND c.user_code = ?)
+                      )
+                ");
+                $stmtCheckClient->execute([$item['client_code'], $userCode, $userCode]);
+                if (!$stmtCheckClient->fetchColumn()) {
+                    $this->renderForbidden("Vous n'êtes pas autorisé à consulter cette souscription.");
+                    return;
+                }
             }
 
             $packSouscrit = $this->model->getPackSouscrit($item['code_souscription']);
@@ -785,7 +797,13 @@ class SouscriptionController extends BaseController
             $paramsC[] = $etabCode;
         }
         if (Context::isCommercial()) {
-            $sqlClients .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.user_code = ?))";
+            $sqlClients .= " AND (
+                EXISTS (SELECT 1 FROM client_commercials cc_st WHERE cc_st.client_code = c.code_client AND cc_st.commercial_code = ? AND cc_st.statut_client_commercial = 'actif')
+                OR (
+                    NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = c.code_client)
+                    AND c.user_code = ?
+                )
+            )";
             $paramsC[] = Context::user();
             $paramsC[] = Context::user();
         }
@@ -858,7 +876,13 @@ class SouscriptionController extends BaseController
         }
 
         if (Context::isCommercial()) {
-            $sql .= " AND (c.user_code = ? OR EXISTS (SELECT 1 FROM souscriptions sub2 WHERE sub2.client_code = c.code_client AND sub2.user_code = ?))";
+            $sql .= " AND (
+                EXISTS (SELECT 1 FROM client_commercials cc_st WHERE cc_st.client_code = c.code_client AND cc_st.commercial_code = ? AND cc_st.statut_client_commercial = 'actif')
+                OR (
+                    NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = c.code_client)
+                    AND c.user_code = ?
+                )
+            )";
             $params[] = $userCode;
             $params[] = $userCode;
         } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
@@ -947,6 +971,23 @@ class SouscriptionController extends BaseController
         if (!$clientExist) {
             $this->error('Client introuvable ou non autorisé.');
             return;
+        }
+
+        // Vérification stricte d'appartenance du client pour les commerciaux
+        if (Context::isCommercial()) {
+            $stmtCheckOwn = $db->prepare("
+                SELECT 1 FROM clients c 
+                WHERE c.code_client = ? AND c.etablissement_code = ?
+                  AND (
+                      EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = c.code_client AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif')
+                      OR (NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = c.code_client) AND c.user_code = ?)
+                  )
+            ");
+            $stmtCheckOwn->execute([$clientCode, $etabCode, $userCode, $userCode]);
+            if (!$stmtCheckOwn->fetchColumn()) {
+                $this->error('Vous ne pouvez souscrire que pour les clients de votre portefeuille actif.');
+                return;
+            }
         }
 
         // 2. Déterminer la zone de la session

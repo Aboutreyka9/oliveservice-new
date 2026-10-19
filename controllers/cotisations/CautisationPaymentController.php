@@ -43,13 +43,21 @@ class CautisationPaymentController extends BaseController
         $params = [$etabCode, $zoneCode, $anneeCode];
 
         if (Context::isCommercial()) {
-            $sql .= " AND (c.user_code = ? OR s.user_code = ? OR EXISTS (
-                SELECT 1 FROM client_commercials cc 
-                WHERE cc.client_code = c.code_client 
-                  AND cc.commercial_code = ? 
-                  AND cc.statut_client_commercial = 'actif'
-            ))";
-            $params[] = $userCode;
+            $sql .= " AND (
+                EXISTS (
+                    SELECT 1 FROM client_commercials cc 
+                    WHERE cc.client_code = c.code_client 
+                      AND cc.commercial_code = ? 
+                      AND cc.statut_client_commercial = 'actif'
+                )
+                OR (
+                    NOT EXISTS (
+                        SELECT 1 FROM client_commercials cc_any 
+                        WHERE cc_any.client_code = c.code_client
+                    )
+                    AND c.user_code = ?
+                )
+            )";
             $params[] = $userCode;
             $params[] = $userCode;
         } elseif (Context::isGestionnaire() && !empty($zoneCode)) {
@@ -421,12 +429,21 @@ class CautisationPaymentController extends BaseController
         $paramsBase = [$etabCode, $zoneCode, $anneeCode, $etabCode, $zoneCode, $anneeCode];
         if (Context::isCommercial()) {
             $commercialCode = Context::user() ?? '';
-            $sql .= " AND (s.user_code = ? OR EXISTS (
-                SELECT 1 FROM client_commercials cc 
-                WHERE cc.client_code = s.client_code 
-                  AND cc.commercial_code = ? 
-                  AND cc.statut_client_commercial = 'actif'
-            ))";
+            $sql .= " AND (
+                EXISTS (
+                    SELECT 1 FROM client_commercials cc 
+                    WHERE cc.client_code = s.client_code 
+                      AND cc.commercial_code = ? 
+                      AND cc.statut_client_commercial = 'actif'
+                )
+                OR (
+                    NOT EXISTS (
+                        SELECT 1 FROM client_commercials cc_any 
+                        WHERE cc_any.client_code = s.client_code
+                    )
+                    AND c.user_code = ?
+                )
+            )";
             $paramsBase[] = $commercialCode;
             $paramsBase[] = $commercialCode;
         }
@@ -496,14 +513,22 @@ class CautisationPaymentController extends BaseController
 
         if (Context::isCommercial()) {
             $commercialCode = Context::user() ?? '';
-            $sql .= " AND (s.user_code = ? OR s.zone_code = ? OR EXISTS (
-                SELECT 1 FROM client_commercials cc 
-                WHERE cc.client_code = s.client_code 
-                  AND cc.commercial_code = ? 
-                  AND cc.statut_client_commercial = 'actif'
-            ))";
+            $sql .= " AND (
+                EXISTS (
+                    SELECT 1 FROM client_commercials cc 
+                    WHERE cc.client_code = s.client_code 
+                      AND cc.commercial_code = ? 
+                      AND cc.statut_client_commercial = 'actif'
+                )
+                OR (
+                    NOT EXISTS (
+                        SELECT 1 FROM client_commercials cc_any 
+                        WHERE cc_any.client_code = s.client_code
+                    )
+                    AND c.user_code = ?
+                )
+            )";
             $params[] = $commercialCode;
-            $params[] = Context::zone();
             $params[] = $commercialCode;
         }
 

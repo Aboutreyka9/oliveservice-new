@@ -99,16 +99,32 @@ class ModelHome extends BaseModel
             $totalArticles = $this->safeCount($db, "SELECT COUNT(*) FROM articles WHERE statut_article = 'actif'");
 
             // ── 3. Souscriptions ──────────────────────────────────────────────
-            $sqlSouscr = "SELECT COUNT(*) FROM souscriptions WHERE statut_souscription IN ('valide', 'reconduite')";
+            $sqlSouscr = "SELECT COUNT(*) FROM souscriptions sub JOIN clients c ON c.code_client = sub.client_code WHERE sub.statut_souscription IN ('valide', 'reconduite')";
             $pSouscr = []; $condsSouscr = [];
-            Context::applyTripleFilter('', $condsSouscr, $pSouscr, true);
+            Context::applyTripleFilter('sub', $condsSouscr, $pSouscr, false);
             if (!empty($condsSouscr)) $sqlSouscr .= " AND " . implode(' AND ', $condsSouscr);
+            if (Context::isCommercial()) {
+                $sqlSouscr .= " AND (
+                    EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = sub.client_code AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif')
+                    OR (NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = sub.client_code) AND c.user_code = ?)
+                )";
+                $pSouscr[] = Context::user();
+                $pSouscr[] = Context::user();
+            }
             $totalSouscriptions = $this->safeCount($db, $sqlSouscr, $pSouscr);
 
-            $sqlSoldees = "SELECT COUNT(*) FROM souscriptions WHERE statut_souscription = 'solde'";
+            $sqlSoldees = "SELECT COUNT(*) FROM souscriptions sub JOIN clients c ON c.code_client = sub.client_code WHERE sub.statut_souscription = 'solde'";
             $pSoldees = []; $condsSoldees = [];
-            Context::applyTripleFilter('', $condsSoldees, $pSoldees, true);
+            Context::applyTripleFilter('sub', $condsSoldees, $pSoldees, false);
             if (!empty($condsSoldees)) $sqlSoldees .= " AND " . implode(' AND ', $condsSoldees);
+            if (Context::isCommercial()) {
+                $sqlSoldees .= " AND (
+                    EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = sub.client_code AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif')
+                    OR (NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = sub.client_code) AND c.user_code = ?)
+                )";
+                $pSoldees[] = Context::user();
+                $pSoldees[] = Context::user();
+            }
             $totalSouscriptionsSoldees = $this->safeCount($db, $sqlSoldees, $pSoldees);
 
             // ── 4. Cotisations ────────────────────────────────────────────────
