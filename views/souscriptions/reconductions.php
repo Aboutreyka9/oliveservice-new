@@ -340,69 +340,120 @@
 </div>
 
 <!-- MODAL RAPIDE DE RECONDUCTION -->
-<div class="modal fade" id="modal-reconduire-contrat" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius: 16px; border: 1px solid #E2E8F0; overflow: hidden;">
-      <div class="modal-header" style="background: #1E3A5F; color: #FFFFFF; padding: 18px 24px;">
-        <h5 class="modal-title" style="font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px;">
-          <i data-lucide="refresh-cw" style="width: 20px; height: 20px;"></i>
-          Reconduire le Contrat
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+<div class="modal-overlay" id="modal-reconduire-contrat" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(5px); padding: 16px; box-sizing: border-box;">
+  <div class="modal-card" style="background: #FFFFFF; border-radius: 16px; width: 100%; max-width: 580px; max-height: calc(100vh - 40px); box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35); overflow: hidden; display: flex; flex-direction: column; border: 1px solid #E2E8F0; margin: auto;">
+    
+    <!-- EN-TÊTE MODALE -->
+    <div class="modal-header" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: #FFFFFF; border: none; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #F59E0B; flex-shrink: 0;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); display: flex; align-items: center; justify-content: center;">
+          <i data-lucide="refresh-cw" style="width: 20px; height: 20px; color: #FBBF24;"></i>
+        </div>
+        <div>
+          <h5 class="modal-title" style="font-size: 16px; font-weight: 800; margin: 0; color: #FFFFFF; line-height: 1.2;">
+            Reconduction du Contrat
+          </h5>
+          <span style="font-size: 11px; color: #94A3B8; font-weight: 500;">
+            Report et réengagement pour une nouvelle session
+          </span>
+        </div>
       </div>
-      <form id="form-modal-reconduire" method="POST" action="<?= RACINE ?>souscription/reconduire">
-        <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
-        <input type="hidden" name="id" id="recon-modal-id" value="">
-        <input type="hidden" name="code_souscription" id="recon-modal-code" value="">
-
-        <div class="modal-body" style="padding: 24px;">
-          <div style="background: #F8FAFC; border-radius: 12px; padding: 14px 18px; border: 1px solid #E2E8F0; margin-bottom: 20px;">
-            <div style="font-size: 11px; text-transform: uppercase; font-weight: 800; color: #64748B; margin-bottom: 4px;">Contrat à reconduire</div>
-            <div style="font-size: 16px; font-weight: 800; color: #1E3A5F;" id="recon-modal-code-display">-</div>
-            <div style="font-size: 13px; color: #334155; font-weight: 600;" id="recon-modal-client-display">-</div>
-          </div>
-
-          <p style="font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 16px;">
-            Cette action marquera ce contrat comme <strong>reconduit</strong> et vous permettra d'engager immédiatement la nouvelle période de souscription pour ce client.
-          </p>
-
-          <?php if (!empty($sessions)): ?>
-          <div style="margin-bottom: 16px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
-              Session Cible Proposée (Optionnel)
-            </label>
-            <select name="target_session_code" id="target-session-code" class="form-control" style="border-radius: 8px; border: 1px solid #CBD5E1; padding: 8px 12px; font-size: 13px;">
-              <option value="">-- Conserver la session par défaut ou choisir plus tard --</option>
-              <?php foreach ($sessions as $sess): ?>
-                <option value="<?= htmlspecialchars($sess['code_session']) ?>">
-                  <?= htmlspecialchars($sess['libelle_session']) ?> (<?= (int)$sess['nombre_jour_session'] ?> jours)
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <?php endif; ?>
-
-          <div style="margin-bottom: 10px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
-              Note ou motif de la reconduction (Optionnel)
-            </label>
-            <textarea name="notes" id="recon-notes" class="form-control" rows="2" placeholder="Ex: Reconduction demandée par le client pour la nouvelle session..." style="border-radius: 8px; border: 1px solid #CBD5E1; font-size: 13px;"></textarea>
-          </div>
-        </div>
-
-        <div class="modal-footer" style="background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 14px 24px; display: flex; justify-content: space-between;">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="font-weight: 700; font-size: 13px; border-radius: 8px;">
-            Annuler
-          </button>
-          <button type="submit" id="btn-confirm-reconduire" class="btn" style="background: linear-gradient(135deg, #D97706 0%, #B45309 100%); color: #FFFFFF; font-weight: 800; font-size: 13px; border-radius: 8px; padding: 8px 20px; box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);">
-            <i data-lucide="refresh-cw" style="width: 15px; height: 15px; display: inline-block; vertical-align: middle; margin-right: 4px;"></i>
-            Confirmer la Reconduction
-          </button>
-        </div>
-      </form>
+      <button type="button" class="btn-modal-close" style="background: rgba(255,255,255,0.12); border: none; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; transition: background 0.2s;" title="Fermer">
+        <i data-lucide="x" style="width: 18px; height: 18px; color: #FFFFFF;"></i>
+      </button>
     </div>
+
+    <!-- CORPS MODALE -->
+    <form id="form-modal-reconduire" method="POST" action="<?= RACINE ?>souscription/reconduire" style="display: flex; flex-direction: column; flex: 1; min-height: 0; margin: 0;">
+      <input type="hidden" name="csrf_token" value="<?= Validator::generateCsrfToken() ?>">
+      <input type="hidden" name="id" id="recon-modal-id" value="">
+      <input type="hidden" name="code_souscription" id="recon-modal-code" value="">
+
+      <div class="modal-body" style="padding: 24px; overflow-y: auto; flex: 1; min-height: 0;">
+
+        <!-- CARTOUCHE INFO CONTRAT -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #E2E8F0;">
+            <div>
+              <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Contrat Sélectionné</span>
+              <span id="recon-modal-code-display" style="font-family: monospace; font-size: 15px; font-weight: 800; color: #1E3A5F; background: #EFF6FF; padding: 3px 8px; border-radius: 6px; border: 1px solid #BFDBFE;">-</span>
+            </div>
+            <div style="text-align: right;">
+              <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Statut Actuel</span>
+              <span id="recon-modal-statut-display" style="font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px; background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0;">Éligible</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 13px;">
+            <div>
+              <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">Client</span>
+              <strong id="recon-modal-client-display" style="color: #0F172A; font-size: 13px; display: block;">-</strong>
+              <small id="recon-modal-phone-display" style="color: #64748B; display: block; font-size: 11px;">-</small>
+            </div>
+            <div>
+              <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">Session en cours</span>
+              <strong id="recon-modal-session-display" style="color: #1E3A5F; font-size: 13px;">-</strong>
+            </div>
+            <div>
+              <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">Total Cotisé</span>
+              <strong id="recon-modal-cotise-display" style="color: #059669; font-size: 14px;">-</strong>
+            </div>
+            <div>
+              <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">Montant Prévu</span>
+              <strong id="recon-modal-total-display" style="color: #1E3A5F; font-size: 14px;">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- EXPLICATION RECONDUCTION -->
+        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-start;">
+          <i data-lucide="info" style="width: 20px; height: 20px; color: #D97706; flex-shrink: 0; margin-top: 2px;"></i>
+          <div style="font-size: 12px; color: #92400E; line-height: 1.5;">
+            Cette opération marque le contrat courant comme <strong>Reconduit</strong> et vous permet d'engager immédiatement la nouvelle souscription de ce client pour la session suivante.
+          </div>
+        </div>
+
+        <!-- SÉLECTION DE LA NOUVELLE SESSION (OPTIONNELLE) -->
+        <?php if (!empty($sessions)): ?>
+        <div style="margin-bottom: 18px;">
+          <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+            Session cible pour le nouvel engagement (Optionnel)
+          </label>
+          <select name="target_session_code" id="target-session-code" class="form-control" style="width: 100%; border-radius: 8px; border: 1px solid #CBD5E1; padding: 10px 12px; font-size: 13px; background: #FFFFFF;">
+            <option value="">-- Conserver le choix ultérieur ou choisir la session --</option>
+            <?php foreach ($sessions as $sess): ?>
+              <option value="<?= htmlspecialchars($sess['code_session']) ?>">
+                <?= htmlspecialchars($sess['libelle_session']) ?> (<?= (int)$sess['nombre_jour_session'] ?> jours)
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <?php endif; ?>
+
+        <!-- MOTIF / NOTES -->
+        <div style="margin-bottom: 10px;">
+          <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+            Note ou motif de la reconduction (Optionnel)
+          </label>
+          <textarea name="notes" id="recon-notes" class="form-control" rows="2" placeholder="Ex: Reconduction demandée par le client pour la session suivante..." style="width: 100%; border-radius: 8px; border: 1px solid #CBD5E1; padding: 10px 12px; font-size: 13px; box-sizing: border-box;"></textarea>
+        </div>
+
+      </div>
+
+      <!-- PIED DE MODALE -->
+      <div class="modal-footer" style="flex-shrink: 0; background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-modal-close" style="background: #FFFFFF; color: #475569; font-weight: 700; border-radius: 8px; padding: 10px 18px; border: 1px solid #CBD5E1; font-size: 13px; cursor: pointer; transition: all 0.2s;">
+          Annuler
+        </button>
+        <button type="submit" id="btn-confirm-reconduire" class="btn" style="background: linear-gradient(135deg, #D97706 0%, #B45309 100%); color: #FFFFFF; font-weight: 800; font-size: 13px; border-radius: 8px; padding: 10px 22px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3); transition: all 0.2s;">
+          <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+          Confirmer la Reconduction
+        </button>
+      </div>
+
+    </form>
   </div>
 </div>
 
-<script src="<?= RACINE ?>public/assets/js/modules/reconductions.js?v=1.0"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/reconductions.js?v=1.1"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

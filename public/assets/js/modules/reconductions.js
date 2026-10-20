@@ -121,6 +121,11 @@ $(function () {
                   data-id="${d.id_souscription}" 
                   data-code="${d.code_souscription}" 
                   data-client="${(d.nom_client_complet || '').replace(/"/g, '&quot;')}"
+                  data-phone="${(d.telephone_client || '').replace(/"/g, '&quot;')}"
+                  data-session="${(d.libelle_session || '').replace(/"/g, '&quot;')}"
+                  data-cotise="${Number(d.montant_total_cotise || 0).toLocaleString('fr-FR')} FCFA"
+                  data-total="${Number(d.totale_souscription || 0).toLocaleString('fr-FR')} FCFA"
+                  data-statut="${d.reconduction_status || 'Éligible'}"
                   title="Reconduire ce contrat">
                   <i data-lucide="refresh-cw" style="width:15px;height:15px;"></i>
                 </button>`;
@@ -199,23 +204,53 @@ $(function () {
       }, false);
     });
 
+    // Gestion de la modale de reconduction
+    const $modalRecon = $('#modal-reconduire-contrat');
+
     // Déclenchement de la modale de reconduction
     $(document).on('click', '.btn-trigger-reconduire', function () {
-      const id = $(this).data('id');
-      const code = $(this).data('code');
-      const client = $(this).data('client');
+      const btn = $(this);
+      const id = btn.data('id');
+      const code = btn.data('code') || '-';
+      const client = btn.data('client') || '-';
+      const phone = btn.data('phone') || '';
+      const session = btn.data('session') || '-';
+      const cotise = btn.data('cotise') || '0 FCFA';
+      const total = btn.data('total') || '0 FCFA';
+      const statut = btn.data('statut') || 'Éligible';
 
       $('#recon-modal-id').val(id);
       $('#recon-modal-code').val(code);
       $('#recon-modal-code-display').text(code);
       $('#recon-modal-client-display').text(client);
+      $('#recon-modal-phone-display').text(phone ? 'Tél : ' + phone : '');
+      $('#recon-modal-session-display').text(session);
+      $('#recon-modal-cotise-display').text(cotise);
+      $('#recon-modal-total-display').text(total);
+      $('#recon-modal-statut-display').text(statut);
       $('#recon-notes').val('');
+      $('#target-session-code').val('');
 
-      const modalEl = document.getElementById('modal-reconduire-contrat');
-      if (modalEl && typeof bootstrap !== 'undefined') {
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-        if (window.lucide) lucide.createIcons();
+      $modalRecon.css('display', 'flex').hide().fadeIn(180);
+      if (window.lucide) lucide.createIcons();
+    });
+
+    // Fermeture de la modale via bouton fermer ou annuler
+    $(document).on('click', '.btn-modal-close', function () {
+      $modalRecon.fadeOut(150);
+    });
+
+    // Fermeture en cliquant sur l'overlay extérieur
+    $modalRecon.on('click', function (e) {
+      if ($(e.target).is($modalRecon)) {
+        $modalRecon.fadeOut(150);
+      }
+    });
+
+    // Fermeture avec la touche Échap
+    $(document).on('keydown', function (e) {
+      if (e.key === 'Escape' && $modalRecon.is(':visible')) {
+        $modalRecon.fadeOut(150);
       }
     });
 
@@ -234,13 +269,8 @@ $(function () {
         data: formData,
         dataType: 'json',
         success: function (res) {
-          $btn.prop('disabled', false).html('<i data-lucide="refresh-cw" style="width: 15px; height: 15px; display: inline-block; vertical-align: middle; margin-right: 4px;"></i> Confirmer la Reconduction');
-          
-          const modalEl = document.getElementById('modal-reconduire-contrat');
-          if (modalEl && typeof bootstrap !== 'undefined') {
-            const modalInstance = bootstrap.Modal.getInstance(modalEl);
-            if (modalInstance) modalInstance.hide();
-          }
+          $btn.prop('disabled', false).html('<i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Confirmer la Reconduction');
+          $modalRecon.fadeOut(150);
 
           if (res.status === 'success') {
             if (typeof Swal !== 'undefined') {
