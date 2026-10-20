@@ -99,53 +99,90 @@ class ModelHome extends BaseModel
             $totalArticles = $this->safeCount($db, "SELECT COUNT(*) FROM articles WHERE statut_article = 'actif'");
 
             // ── 3. Souscriptions ──────────────────────────────────────────────
-            $sqlSouscr = "SELECT COUNT(*) FROM souscriptions sub JOIN clients c ON c.code_client = sub.client_code WHERE sub.statut_souscription IN ('valide', 'reconduite')";
-            $pSouscr = []; $condsSouscr = [];
-            Context::applyTripleFilter('sub', $condsSouscr, $pSouscr, false);
-            if (!empty($condsSouscr)) $sqlSouscr .= " AND " . implode(' AND ', $condsSouscr);
-            if (Context::isCommercial()) {
-                $sqlSouscr .= " AND (
-                    EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = sub.client_code AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif')
-                    OR (NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = sub.client_code) AND c.user_code = ?)
-                )";
-                $pSouscr[] = Context::user();
-                $pSouscr[] = Context::user();
-            }
-            $totalSouscriptions = $this->safeCount($db, $sqlSouscr, $pSouscr);
+            $buildSubQuery = function(string $statutCondition = "") {
+                $sql = "SELECT COUNT(*) FROM souscriptions sub JOIN clients c ON c.code_client = sub.client_code WHERE 1=1";
+                if ($statutCondition !== '') {
+                    $sql .= " AND " . $statutCondition;
+                }
+                $params = [];
+                $conds = [];
+                Context::applyTripleFilter('sub', $conds, $params, false);
+                if (!empty($conds)) {
+                    $sql .= " AND " . implode(' AND ', $conds);
+                }
+                if (Context::isCommercial()) {
+                    $sql .= " AND (
+                        EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = sub.client_code AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif')
+                        OR (NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = sub.client_code) AND c.user_code = ?)
+                    )";
+                    $params[] = Context::user();
+                    $params[] = Context::user();
+                }
+                return [$sql, $params];
+            };
 
-            $sqlSoldees = "SELECT COUNT(*) FROM souscriptions sub JOIN clients c ON c.code_client = sub.client_code WHERE sub.statut_souscription = 'solde'";
-            $pSoldees = []; $condsSoldees = [];
-            Context::applyTripleFilter('sub', $condsSoldees, $pSoldees, false);
-            if (!empty($condsSoldees)) $sqlSoldees .= " AND " . implode(' AND ', $condsSoldees);
-            if (Context::isCommercial()) {
-                $sqlSoldees .= " AND (
-                    EXISTS (SELECT 1 FROM client_commercials cc WHERE cc.client_code = sub.client_code AND cc.commercial_code = ? AND cc.statut_client_commercial = 'actif')
-                    OR (NOT EXISTS (SELECT 1 FROM client_commercials cc_any WHERE cc_any.client_code = sub.client_code) AND c.user_code = ?)
-                )";
-                $pSoldees[] = Context::user();
-                $pSoldees[] = Context::user();
-            }
-            $totalSouscriptionsSoldees = $this->safeCount($db, $sqlSoldees, $pSoldees);
+            // Souscriptions du portefeuille actif (non annulées)
+            [$sqlAll, $pAll] = $buildSubQuery("sub.statut_souscription != 'annule'");
+            $totalSouscriptions = $this->safeCount($db, $sqlAll, $pAll);
+
+            // Souscriptions globales totales (tous statuts confondus)
+            [$sqlTotalGlobal, $pTotalGlobal] = $buildSubQuery("");
+            $totalSouscriptionsGlobal = $this->safeCount($db, $sqlTotalGlobal, $pTotalGlobal);
+
+            // Souscriptions en cours / actives
+            [$sqlVal, $pVal] = $buildSubQuery("sub.statut_souscription = 'valide'");
+            $totalSouscriptionsValides = $this->safeCount($db, $sqlVal, $pVal);
+
+            // Souscriptions soldées
+            [$sqlSolde, $pSolde] = $buildSubQuery("sub.statut_souscription = 'solde'");
+            $totalSouscriptionsSoldees = $this->safeCount($db, $sqlSolde, $pSolde);
+
+            // Souscriptions reconduites
+            [$sqlRecond, $pRecond] = $buildSubQuery("sub.statut_souscription = 'reconduite'");
+            $totalSouscriptionsReconduites = $this->safeCount($db, $sqlRecond, $pRecond);
+
+            // Souscriptions annulées
+            [$sqlAnnule, $pAnnule] = $buildSubQuery("sub.statut_souscription = 'annule'");
+            $totalSouscriptionsAnnulees = $this->safeCount($db, $sqlAnnule, $pAnnule);
 
             // ── 4. Cotisations ────────────────────────────────────────────────
             // Cotisations Validées (Prises en compte dans le CA et le Solde Net)
-            $sqlCotisVal = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE statut_cautisation_client = 'valide'";
+            // Uniquement pour les souscriptions valides ou soldées
+            $sqlCotisVal = "
+                SELECT COALESCE(SUM(cc.montant_cautisation_client), 0) 
+                FROM cautisation_clients cc
+                JOIN souscriptions sub ON sub.code_souscription = cc.souscription_code AND sub.etablissement_code = cc.etablissement_code
+                WHERE cc.statut_cautisation_client = 'valide'
+                  AND LOWER(TRIM(sub.statut_souscription)) IN ('valide', 'solde')
+            ";
             $pCotisVal = []; $condsCotisVal = [];
-            Context::applyTripleFilter('', $condsCotisVal, $pCotisVal, true, false);
+            Context::applyTripleFilter('cc', $condsCotisVal, $pCotisVal, true, false);
             if (!empty($condsCotisVal)) $sqlCotisVal .= " AND " . implode(' AND ', $condsCotisVal);
             $totalCotisationsValidees = $this->safeSum($db, $sqlCotisVal, $pCotisVal);
 
-            // Cotisations En Attente de Validation
-            $sqlCotisAtt = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE (statut_cautisation_client = 'en_attente' OR statut_cautisation_client IS NULL OR statut_cautisation_client = '')";
+            // Cotisations En Attente de Validation (sur souscriptions valides ou soldées)
+            $sqlCotisAtt = "
+                SELECT COALESCE(SUM(cc.montant_cautisation_client), 0) 
+                FROM cautisation_clients cc
+                JOIN souscriptions sub ON sub.code_souscription = cc.souscription_code AND sub.etablissement_code = cc.etablissement_code
+                WHERE (cc.statut_cautisation_client = 'en_attente' OR cc.statut_cautisation_client IS NULL OR cc.statut_cautisation_client = '')
+                  AND LOWER(TRIM(sub.statut_souscription)) IN ('valide', 'solde')
+            ";
             $pCotisAtt = []; $condsCotisAtt = [];
-            Context::applyTripleFilter('', $condsCotisAtt, $pCotisAtt, true, false);
+            Context::applyTripleFilter('cc', $condsCotisAtt, $pCotisAtt, true, false);
             if (!empty($condsCotisAtt)) $sqlCotisAtt .= " AND " . implode(' AND ', $condsCotisAtt);
             $totalCotisationsEnAttente = $this->safeSum($db, $sqlCotisAtt, $pCotisAtt);
 
-            // Total Général des Encaissements (Toutes cotisations non annulées)
-            $sqlCotisAll = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL)";
+            // Total Général des Encaissements (Toutes cotisations non annulées sur souscriptions valides ou soldées)
+            $sqlCotisAll = "
+                SELECT COALESCE(SUM(cc.montant_cautisation_client), 0) 
+                FROM cautisation_clients cc
+                JOIN souscriptions sub ON sub.code_souscription = cc.souscription_code AND sub.etablissement_code = cc.etablissement_code
+                WHERE (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)
+                  AND LOWER(TRIM(sub.statut_souscription)) IN ('valide', 'solde')
+            ";
             $pCotisAll = []; $condsCotisAll = [];
-            Context::applyTripleFilter('', $condsCotisAll, $pCotisAll, true, false);
+            Context::applyTripleFilter('cc', $condsCotisAll, $pCotisAll, true, false);
             if (!empty($condsCotisAll)) $sqlCotisAll .= " AND " . implode(' AND ', $condsCotisAll);
             $totalCotisationsGlobales = $this->safeSum($db, $sqlCotisAll, $pCotisAll);
 
@@ -262,46 +299,62 @@ class ModelHome extends BaseModel
             if (!empty($condsAttAnn)) $sqlAttAnn .= " AND " . implode(' AND ', $condsAttAnn);
             $montantAttenduAnnee = $this->safeSum($db, $sqlAttAnn, $pAttAnn);
 
-            // Total encaisse aujourd'hui (pour valider si l'objectif du jour est atteint)
-            $sqlCotisToday = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients WHERE DATE(COALESCE(date_cautisation, created_at_cautisation_client)) = CURDATE() AND (statut_cautisation_client != 'annule' OR statut_cautisation_client IS NULL)";
+            // Total encaisse aujourd'hui (pour valider si l'objectif du jour est atteint sur souscriptions valides ou soldées)
+            $sqlCotisToday = "
+                SELECT COALESCE(SUM(cc.montant_cautisation_client), 0) 
+                FROM cautisation_clients cc
+                JOIN souscriptions sub ON sub.code_souscription = cc.souscription_code AND sub.etablissement_code = cc.etablissement_code
+                WHERE DATE(COALESCE(cc.date_cautisation, cc.created_at_cautisation_client)) = CURDATE() 
+                  AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)
+                  AND LOWER(TRIM(sub.statut_souscription)) IN ('valide', 'solde')
+            ";
             $pCotisToday = []; $condsCotisToday = [];
-            Context::applyTripleFilter('', $condsCotisToday, $pCotisToday, true, false);
+            Context::applyTripleFilter('cc', $condsCotisToday, $pCotisToday, true, false);
             if (!empty($condsCotisToday)) $sqlCotisToday .= " AND " . implode(' AND ', $condsCotisToday);
             $totalCotisationsAujourdhui = $this->safeSum($db, $sqlCotisToday, $pCotisToday);
 
             return [
-                'annee_code'                  => $anneeCode,
-                'total_clients'               => $totalClients,
-                'total_packs'                 => $totalPacks,
-                'total_souscriptions'         => $totalSouscriptions,
-                'total_souscriptions_soldees' => $totalSouscriptionsSoldees,
-                'total_articles'              => $totalArticles,
-                'total_cotisations'           => $totalCotisations,
-                'total_cotisations_validees'  => $totalCotisationsValidees,
-                'total_cotisations_en_attente'=> $totalCotisationsEnAttente,
-                'total_paiements'             => $totalPaiements,
-                'ca_encaisse'                 => $caEncaisse,
-                'total_versements'            => $totalVersements,
-                'total_versements_en_attente' => $totalVersementsEnAttente,
-                'total_depenses'              => $totalDepenses,
-                'total_distributions'         => $totalDistributions,
-                'total_distributions_validees'=> $totalDistributionsValidees,
-                'solde_net'                   => $soldeNet,
-                'total_users'                 => $totalUsers,
-                'total_commerciaux'           => $totalCommerciaux,
-                'total_categories'            => $totalCategories,
-                'total_sessions'              => $totalSessions,
-                'montant_attendu_journee'     => $montantAttenduJournee,
-                'montant_attendu_annee'       => $montantAttenduAnnee,
-                'total_cotisations_aujourdhui'=> $totalCotisationsAujourdhui,
+                'annee_code'                      => $anneeCode,
+                'total_clients'                   => $totalClients,
+                'total_packs'                     => $totalPacks,
+                'total_souscriptions'             => $totalSouscriptions,
+                'total_souscriptions_global'      => $totalSouscriptionsGlobal,
+                'total_souscriptions_valides'     => $totalSouscriptionsValides,
+                'total_souscriptions_soldees'     => $totalSouscriptionsSoldees,
+                'total_souscriptions_reconduites' => $totalSouscriptionsReconduites,
+                'total_souscriptions_annulees'    => $totalSouscriptionsAnnulees,
+                'total_articles'                  => $totalArticles,
+                'total_cotisations'               => $totalCotisations,
+                'total_cotisations_validees'      => $totalCotisationsValidees,
+                'total_cotisations_en_attente'    => $totalCotisationsEnAttente,
+                'total_cotisations_globales'      => $totalCotisationsGlobales,
+                'total_paiements'                 => $totalPaiements,
+                'ca_encaisse'                     => $caEncaisse,
+                'total_versements'                => $totalVersements,
+                'total_versements_en_attente'     => $totalVersementsEnAttente,
+                'total_depenses'                  => $totalDepenses,
+                'total_distributions'             => $totalDistributions,
+                'total_distributions_validees'    => $totalDistributionsValidees,
+                'solde_net'                       => $soldeNet,
+                'total_users'                     => $totalUsers,
+                'total_commerciaux'               => $totalCommerciaux,
+                'total_categories'                => $totalCategories,
+                'total_sessions'                  => $totalSessions,
+                'montant_attendu_journee'         => $montantAttenduJournee,
+                'montant_attendu_annee'           => $montantAttenduAnnee,
+                'total_cotisations_aujourdhui'    => $totalCotisationsAujourdhui,
             ];
 
         } catch (\Exception $e) {
             error_log('ModelHome::getStats fatal error: ' . $e->getMessage());
             return [
                 'annee_code' => $anneeCode, 'total_clients' => 0, 'total_packs' => 0,
-                'total_souscriptions' => 0, 'total_souscriptions_soldees' => 0,
-                'total_articles' => 0, 'total_cotisations' => 0, 'total_paiements' => 0,
+                'total_souscriptions' => 0, 'total_souscriptions_global' => 0,
+                'total_souscriptions_valides' => 0, 'total_souscriptions_soldees' => 0,
+                'total_souscriptions_reconduites' => 0, 'total_souscriptions_annulees' => 0,
+                'total_articles' => 0, 'total_cotisations' => 0,
+                'total_cotisations_validees' => 0, 'total_cotisations_en_attente' => 0,
+                'total_cotisations_globales' => 0, 'total_paiements' => 0,
                 'ca_encaisse' => 0, 'total_versements' => 0, 'total_versements_en_attente' => 0,
                 'total_depenses' => 0, 'total_distributions' => 0,
                 'total_distributions_validees' => 0, 'solde_net' => 0,
@@ -313,16 +366,15 @@ class ModelHome extends BaseModel
         }
     }
 
-
     public function getRecentCotisations(int $limit = 5): array
     {
         try {
             $db = $this->pdo->getCon();
             $sql = "SELECT c.*, cl.nom_client, cl.telephone_client, s.code_souscription
                     FROM cautisation_clients c
-                    LEFT JOIN souscriptions s ON s.code_souscription = c.souscription_code
-                    LEFT JOIN clients cl ON cl.code_client = s.client_code
-                    WHERE 1=1";
+                    JOIN souscriptions s ON s.code_souscription = c.souscription_code AND s.etablissement_code = c.etablissement_code
+                    JOIN clients cl ON cl.code_client = s.client_code
+                    WHERE s.statut_souscription IN ('valide', 'solde')";
             $params = [];
             $conds = [];
             Context::applyTripleFilter('c', $conds, $params, true, false);

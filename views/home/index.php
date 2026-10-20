@@ -423,6 +423,11 @@ $isAdmin = Context::isSuperAdmin();
               <i data-lucide="user-plus" style="width: 17px; height: 17px;"></i> Nouvelle Souscription
             </a>
           <?php endif; ?>
+          <?php if ($isCommercial || $isAdmin || $isGestionnaire): ?>
+            <a href="<?= RACINE ?>souscription/reconductions" class="action-btn-pill" style="background: linear-gradient(135deg, #D97706 0%, #B45309 100%); color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.2);">
+              <i data-lucide="refresh-cw" style="width: 17px; height: 17px;"></i> Reconductions
+            </a>
+          <?php endif; ?>
           <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION')): ?>
             <a href="<?= RACINE ?>cautisation-payment/search-form" class="action-btn-pill btn-pill-success">
               <i data-lucide="coins" style="width: 17px; height: 17px;"></i> Encaisser Cotisation
@@ -477,16 +482,29 @@ $isAdmin = Context::isSuperAdmin();
             </div>
           </div>
 
-          <!-- KPI Commercial 2 : Mes Souscriptions -->
+          <!-- KPI Commercial 2 : Mes Souscriptions Actives -->
           <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #8B5CF6, #6D28D9); --kpi-bg-icon: #FAF5FF; --kpi-color-icon: #7E22CE;">
             <div class="kpi-header">
-              <span class="kpi-title">Mes Souscriptions</span>
+              <span class="kpi-title">Mes Souscriptions Actives</span>
               <div class="kpi-icon-wrapper"><i data-lucide="file-text" style="width: 22px; height: 22px;"></i></div>
             </div>
-            <div class="kpi-value" style="color: #7E22CE;"><?= number_format($stats['total_souscriptions'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-value" style="color: #7E22CE;"><?= number_format($stats['total_souscriptions_valides'] ?? ($stats['total_souscriptions'] ?? 0), 0, ',', ' ') ?></div>
             <div class="kpi-footer">
-              <span>Contrats souscrits</span>
+              <span>Souscriptions en cours</span>
               <span class="kpi-tag" style="background: #FAF5FF; color: #7E22CE;">En cours</span>
+            </div>
+          </div>
+
+          <!-- KPI Commercial 2b : Mes Souscriptions Reconduites -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #F59E0B, #D97706); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;">
+            <div class="kpi-header">
+              <span class="kpi-title">Souscriptions Reconduites</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="refresh-cw" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #D97706;"><?= number_format($stats['total_souscriptions_reconduites'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-footer">
+              <span>Souscriptions renouvelées</span>
+              <a href="<?= RACINE ?>souscription/reconductions" class="kpi-tag" style="background: #FFFBEB; color: #D97706; text-decoration: none;">Consulter &rarr;</a>
             </div>
           </div>
 
@@ -532,12 +550,12 @@ $isAdmin = Context::isSuperAdmin();
           <!-- KPI Commercial 6 : Souscriptions Soldées -->
           <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #14B8A6, #0F766E); --kpi-bg-icon: #F0FDFA; --kpi-color-icon: #0D9488;">
             <div class="kpi-header">
-              <span class="kpi-title">Mes Contrats Soldés</span>
+              <span class="kpi-title">Mes Souscriptions Soldées</span>
               <div class="kpi-icon-wrapper"><i data-lucide="sparkles" style="width: 22px; height: 22px;"></i></div>
             </div>
             <div class="kpi-value" style="color: #0D9488;"><?= number_format($stats['total_souscriptions_soldees'] ?? 0, 0, ',', ' ') ?></div>
             <div class="kpi-footer">
-              <span>Prêts pour distribution pack</span>
+              <span>Prêtes pour distribution pack</span>
               <span class="kpi-tag" style="background: #F0FDFA; color: #0D9488;">Objectif</span>
             </div>
           </div>
@@ -593,7 +611,7 @@ $isAdmin = Context::isSuperAdmin();
             </div>
           </div>
 
-          <!-- KPI Gestionnaire 2 : Souscriptions Solidaires -->
+          <!-- KPI Gestionnaire 2 : Total Souscriptions -->
           <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #3B82F6, #1D4ED8); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #2563EB;">
             <div class="kpi-header">
               <span class="kpi-title">Total Souscriptions</span>
@@ -601,20 +619,33 @@ $isAdmin = Context::isSuperAdmin();
             </div>
             <div class="kpi-value"><?= number_format($stats['total_souscriptions'] ?? 0, 0, ',', ' ') ?></div>
             <div class="kpi-footer">
-              <span>Engagements souscrits</span>
-              <span class="kpi-tag" style="background: #EFF6FF; color: #1D4ED8;">Global</span>
+              <span>En cours : <?= (int)($stats['total_souscriptions_valides'] ?? 0) ?></span>
+              <span class="kpi-tag" style="background: #EFF6FF; color: #1D4ED8;">Portefeuille</span>
             </div>
           </div>
 
-          <!-- KPI Gestionnaire 3 : Contrats Soldés Prêts à Livrer -->
+          <!-- KPI Gestionnaire 2b : Souscriptions Reconduites -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #F59E0B, #D97706); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;">
+            <div class="kpi-header">
+              <span class="kpi-title">Souscriptions Reconduites</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="refresh-cw" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #D97706;"><?= number_format($stats['total_souscriptions_reconduites'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-footer">
+              <span>Souscriptions renouvelées</span>
+              <a href="<?= RACINE ?>souscription/reconductions" class="kpi-tag" style="background: #FFFBEB; color: #D97706; text-decoration: none;">Gérer &rarr;</a>
+            </div>
+          </div>
+
+          <!-- KPI Gestionnaire 3 : Souscriptions Soldées Prêtes à Livrer -->
           <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #14B8A6, #0F766E); --kpi-bg-icon: #F0FDFA; --kpi-color-icon: #0D9488;">
             <div class="kpi-header">
-              <span class="kpi-title">Contrats Fully Soldés</span>
+              <span class="kpi-title">Souscriptions Soldées</span>
               <div class="kpi-icon-wrapper"><i data-lucide="circle-check-big" style="width: 22px; height: 22px;"></i></div>
             </div>
             <div class="kpi-value" style="color: #0D9488;"><?= number_format($stats['total_souscriptions_soldees'] ?? 0, 0, ',', ' ') ?></div>
             <div class="kpi-footer">
-              <span>Prêts pour distribution</span>
+              <span>Prêtes pour distribution</span>
               <span class="kpi-tag" style="background: #F0FDFA; color: #0D9488;">Éligibles remise</span>
             </div>
           </div>
@@ -842,13 +873,39 @@ $isAdmin = Context::isSuperAdmin();
           <!-- KPI 5 : Souscriptions Soldées -->
           <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #14B8A6, #0F766E); --kpi-bg-icon: #F0FDFA; --kpi-color-icon: #0D9488;">
             <div class="kpi-header">
-              <span class="kpi-title">Contrats Soldés</span>
+              <span class="kpi-title">Souscriptions Soldées</span>
               <div class="kpi-icon-wrapper"><i data-lucide="circle-check-big" style="width: 22px; height: 22px;"></i></div>
             </div>
             <div class="kpi-value" style="color: #0D9488;"><?= number_format($stats['total_souscriptions_soldees'] ?? 0, 0, ',', ' ') ?> <span style="font-size: 14px; color: #64748B; font-weight: 600;">/ <?= number_format($stats['total_souscriptions'] ?? 0, 0, ',', ' ') ?></span></div>
             <div class="kpi-footer">
-              <span>Prêts pour distribution</span>
-              <span class="kpi-tag" style="background: #F0FDFA; color: #0D9488;">Finalisés</span>
+              <span>Prêtes pour distribution</span>
+              <span class="kpi-tag" style="background: #F0FDFA; color: #0D9488;">Finalisées</span>
+            </div>
+          </div>
+
+          <!-- KPI 5b : Souscriptions Reconduites -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #F59E0B, #D97706); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;">
+            <div class="kpi-header">
+              <span class="kpi-title">Souscriptions Reconduites</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="refresh-cw" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #D97706;"><?= number_format($stats['total_souscriptions_reconduites'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-footer">
+              <span>Souscriptions renouvelées</span>
+              <a href="<?= RACINE ?>souscription/reconductions" class="kpi-tag" style="background: #FFFBEB; color: #D97706; text-decoration: none;">Consulter &rarr;</a>
+            </div>
+          </div>
+
+          <!-- KPI 5c : Souscriptions Annulées -->
+          <div class="kpi-card" style="--kpi-accent: linear-gradient(90deg, #991B1B, #7F1D1D); --kpi-bg-icon: #FEF2F2; --kpi-color-icon: #991B1B;">
+            <div class="kpi-header">
+              <span class="kpi-title">Souscriptions Annulées</span>
+              <div class="kpi-icon-wrapper"><i data-lucide="ban" style="width: 22px; height: 22px;"></i></div>
+            </div>
+            <div class="kpi-value" style="color: #991B1B;"><?= number_format($stats['total_souscriptions_annulees'] ?? 0, 0, ',', ' ') ?></div>
+            <div class="kpi-footer">
+              <span>Souscriptions résiliées</span>
+              <a href="<?= RACINE ?>souscription/list?statut=annule" class="kpi-tag" style="background: #FEF2F2; color: #991B1B; text-decoration: none;">Registre &rarr;</a>
             </div>
           </div>
 
@@ -944,6 +1001,22 @@ $isAdmin = Context::isSuperAdmin();
               <div class="quick-action-content">
                 <div class="quick-action-icon" style="background: #ECFDF5; color: #047857;"><i data-lucide="file-text" style="width: 22px; height: 22px;"></i></div>
                 <div><strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Souscriptions</strong><small style="color: #64748B;">Suivi souscriptions</small></div>
+              </div>
+              <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
+            </a>
+
+            <a href="<?= RACINE ?>souscription/reconductions" class="quick-action-card">
+              <div class="quick-action-content">
+                <div class="quick-action-icon" style="background: #FFFBEB; color: #D97706;"><i data-lucide="refresh-cw" style="width: 22px; height: 22px;"></i></div>
+                <div><strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Reconductions</strong><small style="color: #64748B;">Renouveler souscriptions</small></div>
+              </div>
+              <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
+            </a>
+
+            <a href="<?= RACINE ?>souscription/list?statut=annule" class="quick-action-card">
+              <div class="quick-action-content">
+                <div class="quick-action-icon" style="background: #FEF2F2; color: #DC2626;"><i data-lucide="ban" style="width: 22px; height: 22px;"></i></div>
+                <div><strong style="color: #0F172A; font-size: 14px; display: block; font-weight: 700;">Souscriptions Annulées</strong><small style="color: #64748B;">Registre des annulations</small></div>
               </div>
               <i data-lucide="chevron-right" class="quick-action-arrow" style="width: 18px; height: 18px;"></i>
             </a>
