@@ -259,8 +259,11 @@
                 <a href="<?= RACINE ?>client/list" class="nav-item sub <?= (Context::isCommercial() && strpos($currentUri, '/client/') !== false) ? 'active' : '' ?>" data-title="Mes Clients">
                     <i data-lucide="users"></i> <span>Mes Clients</span>
                 </a>
-                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= (Context::isCommercial() && strpos($currentUri, '/souscription/list') !== false) ? 'active' : '' ?>" data-title="Mes Souscriptions">
+                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= (Context::isCommercial() && strpos($currentUri, '/souscription/list') !== false && strpos($currentUri, '/souscription/reconductions') === false) ? 'active' : '' ?>" data-title="Mes Souscriptions">
                     <i data-lucide="file-text"></i> <span>Mes Souscriptions</span>
+                </a>
+                <a href="<?= RACINE ?>souscription/reconductions" class="nav-item sub <?= (Context::isCommercial() && strpos($currentUri, '/souscription/reconductions') !== false) ? 'active' : '' ?>" data-title="Reconductions">
+                    <i data-lucide="refresh-cw"></i> <span>Reconductions</span>
                 </a>
                 <a href="<?= RACINE ?>souscription/wizard" class="nav-item sub <?= strpos($currentUri, '/souscription/wizard') !== false ? 'active' : '' ?>" data-title="Nouvelle Souscription">
                     <i data-lucide="file-plus"></i> <span>Nouvelle Souscription</span>
@@ -365,8 +368,11 @@
                 <a href="<?= RACINE ?>client/list" class="nav-item sub <?= (strpos($currentUri, '/client/') !== false && strpos($currentUri, '/client_commercial/') === false) ? 'active' : '' ?>" data-title="Liste clients">
                     <i data-lucide="users"></i> <span>Liste clients</span>
                 </a>
-                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= (strpos($currentUri, '/souscription/') !== false && strpos($_SERVER['REQUEST_URI'] ?? '', 'annule') === false) ? 'active' : '' ?>" data-title="Liste souscriptions">
+                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= (strpos($currentUri, '/souscription/list') !== false && strpos($_SERVER['REQUEST_URI'] ?? '', 'annule') === false && strpos($currentUri, '/souscription/reconductions') === false) ? 'active' : '' ?>" data-title="Liste souscriptions">
                     <i data-lucide="file-text"></i> <span>Liste souscriptions</span>
+                </a>
+                <a href="<?= RACINE ?>souscription/reconductions" class="nav-item sub <?= (strpos($currentUri, '/souscription/reconductions') !== false) ? 'active' : '' ?>" data-title="Reconductions">
+                    <i data-lucide="refresh-cw"></i> <span>Reconductions</span>
                 </a>
                 <a href="<?= RACINE ?>souscription/list?statut=annule" class="nav-item sub <?= (strpos($_SERVER['REQUEST_URI'] ?? '', 'annule') !== false) ? 'active' : '' ?>" data-title="Souscriptions Annulées">
                     <i data-lucide="ban"></i> <span>Souscriptions annulées</span>

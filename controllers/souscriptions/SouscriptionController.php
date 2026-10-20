@@ -376,7 +376,7 @@ class SouscriptionController extends BaseController
     public function reconduire()
     {
         $this->requirePost(false);
-        if (!Context::isAdmin() && !$this->hasPermission(['COMMERCIAL_RECONDUIRE_SOUSCRIPTION', 'GESTIONNAIRE_RECONDUIRE_SOUSCRIPTION'])) {
+        if (!Context::isAdmin() && !$this->hasPermission(['COMMERCIAL_RECONDUIRE_SOUSCRIPTION', 'GESTIONNAIRE_RECONDUIRE_SOUSCRIPTION', 'COMMERCIAL_ADD_SOUSCRIPTION', 'GESTIONNAIRE_EDIT_SOUSCRIPTION', 'MAIN_ACCESS'])) {
             $this->renderForbidden("Vous ne disposez pas des autorisations nécessaires pour reconduire cette souscription.");
             return;
         }
@@ -434,6 +434,166 @@ class SouscriptionController extends BaseController
         } else {
             $this->error('Erreur technique lors de la reconduction de la souscription.');
         }
+    }
+
+    public function reconductions()
+    {
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_SOUSCRIPTIONS', 'GESTIONNAIRE_VIEW_ALL_SOUSCRIPTIONS']);
+
+        $userScopeFilter = Context::isCommercial() ? Context::user() : null;
+        $zoneScopeFilter = Context::isGestionnaire() ? Context::zone() : null;
+        $anneeScopeFilter = Context::annee();
+
+        $items = $this->model->getAllWithDetails($userScopeFilter, $zoneScopeFilter, $anneeScopeFilter);
+
+        $totalReconduiteCount = 0;
+        $totalReconduiteEngage = 0;
+        $totalReconduiteCotise = 0;
+
+        $totalEligibleCount = 0;
+        $totalEligibleEngage = 0;
+        $totalEligibleCotise = 0;
+
+        $clientsReconduits = [];
+        $clientsEligibles = [];
+
+        foreach ($items as $s) {
+            $sumPrixCotisation = (float)($s['sum_prix_cotisation_pack'] ?? 0);
+            $nombreJourSession = (int)($s['nombre_jour_session'] ?? 0);
+            $totaleSouscription = (float)($s['totale_souscription'] ?? ($sumPrixCotisation * $nombreJourSession));
+            $montantCotise = (float)($s['montant_total_cotise'] ?? 0);
+            $statut = strtolower(trim($s['statut_souscription'] ?? 'valide'));
+            $clientCode = $s['client_code'] ?? '';
+
+            if (in_array($statut, ['reconduite', 'reconduit'])) {
+                $totalReconduiteCount++;
+                $totalReconduiteEngage += $totaleSouscription;
+                $totalReconduiteCotise += $montantCotise;
+                if (!empty($clientCode)) {
+                    $clientsReconduits[$clientCode] = true;
+                }
+            } elseif (in_array($statut, ['solde', 'soldee', 'soldée']) || ($statut === 'valide' && $montantCotise >= $totaleSouscription && $totaleSouscription > 0)) {
+                $totalEligibleCount++;
+                $totalEligibleEngage += $totaleSouscription;
+                $totalEligibleCotise += $montantCotise;
+                if (!empty($clientCode)) {
+                    $clientsEligibles[$clientCode] = true;
+                }
+            }
+        }
+
+        $tauxReconduiteRecouvrement = $totalReconduiteEngage > 0 
+            ? round(($totalReconduiteCotise / $totalReconduiteEngage) * 100, 1) 
+            : 0;
+
+        $stats = [
+            'total_reconduite_count' => $totalReconduiteCount,
+            'total_reconduite_engage' => $totalReconduiteEngage,
+            'total_reconduite_cotise' => $totalReconduiteCotise,
+            'taux_reconduite_recouvrement' => $tauxReconduiteRecouvrement,
+            'clients_reconduits_count' => count($clientsReconduits),
+            'total_eligible_count' => $totalEligibleCount,
+            'total_eligible_engage' => $totalEligibleEngage,
+            'total_eligible_cotise' => $totalEligibleCotise,
+            'clients_eligibles_count' => count($clientsEligibles),
+            'total_tous_count' => count($items)
+        ];
+
+        // Liste des sessions pour la reconduction / affectation future
+        $sessions = [];
+        try {
+            $stmtSess = $this->model->getCon()->prepare("
+                SELECT code_session, libelle_session, date_debut_session, date_fin_session, nombre_jour_session 
+                FROM sessions 
+                WHERE etablissement_code = ? AND annee_code = ?
+                ORDER BY created_at_session DESC
+            ");
+            $stmtSess->execute([Context::etablissement(), Context::annee()]);
+            $sessions = $stmtSess->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            $sessions = [];
+        }
+
+        $this->loadView('../views/souscriptions/reconductions.php', [
+            'stats' => $stats,
+            'sessions' => $sessions
+        ]);
+    }
+
+    public function apiReconductions()
+    {
+        $this->requirePermission(['COMMERCIAL_VIEW_OWN_SOUSCRIPTIONS', 'GESTIONNAIRE_VIEW_ALL_SOUSCRIPTIONS']);
+
+        $userScopeFilter = Context::isCommercial() ? Context::user() : null;
+        $zoneScopeFilter = Context::isGestionnaire() ? Context::zone() : null;
+        $anneeScopeFilter = Context::annee();
+
+        $items = $this->model->getAllWithDetails($userScopeFilter, $zoneScopeFilter, $anneeScopeFilter);
+
+        $grouped = [];
+        foreach ($items as $s) {
+            $code = $s['code_souscription'];
+            if (!isset($grouped[$code])) {
+                $grouped[$code] = $s;
+                $grouped[$code]['packs'] = [];
+            }
+            if (!empty($s['libelle_pack'])) {
+                $grouped[$code]['packs'][] = $s['libelle_pack'];
+            }
+        }
+
+        $data = [];
+        foreach ($grouped as $s) {
+            $id = $s['id_souscription'];
+            $idCrypte = $this->validator->crypter($id);
+
+            $sumPrixCotisation = (float)($s['sum_prix_cotisation_pack'] ?? 0);
+            $nombreJourSession = (int)($s['nombre_jour_session'] ?? 0);
+            $totaleSouscription = (float)($s['totale_souscription'] ?? ($sumPrixCotisation * $nombreJourSession));
+            $montantCotise = (float)($s['montant_total_cotise'] ?? 0);
+            $soldeRestant = max(0, $totaleSouscription - $montantCotise);
+            $joursRestants = max(0, $nombreJourSession - (int)($s['nombre_jour_cotise'] ?? 0));
+            $statut = strtolower(trim($s['statut_souscription'] ?? 'valide'));
+
+            $isReconduite = in_array($statut, ['reconduite', 'reconduit']);
+            $isSolde = in_array($statut, ['solde', 'soldee', 'soldée']);
+            $isAnnule = in_array($statut, ['annule', 'annulé', 'annulee', 'annulée']);
+            $isEligible = ($isSolde || ($statut === 'valide' && $soldeRestant <= 0 && $totaleSouscription > 0)) && !$isReconduite && !$isAnnule;
+
+            $nbPacks = count($s['packs'] ?? []);
+            if ($nbPacks > 1) {
+                $packLabel = $s['packs'][0] . ' <small style="color:#64748B;">+' . ($nbPacks - 1) . ' autre(s)</small>';
+            } elseif ($nbPacks === 1) {
+                $packLabel = $s['packs'][0];
+            } else {
+                $packLabel = '-';
+            }
+
+            $data[] = array_merge($s, [
+                'id' => $id,
+                'editId' => $idCrypte,
+                'is_reconduite' => $isReconduite,
+                'is_eligible' => $isEligible,
+                'reconduction_status' => $isReconduite ? 'Reconduite' : ($isEligible ? 'Éligible' : ($isAnnule ? 'Annulée' : 'En cours')),
+                'nom_client_complet' => trim($s['nom_client'] ?? ''),
+                'telephone_client' => trim($s['telephone_client'] ?? ''),
+                'date_souscription' => isset($s['created_at_souscription']) && !empty($s['created_at_souscription'])
+                    ? date('d-m-Y', strtotime($s['created_at_souscription']))
+                    : '-',
+                'date_reconduction' => isset($s['updated_at_souscription']) && !empty($s['updated_at_souscription']) && $isReconduite
+                    ? date('d-m-Y', strtotime($s['updated_at_souscription']))
+                    : '-',
+                'libelle_pack' => $packLabel,
+                'nombre_packs' => $nbPacks,
+                'sum_prix_cotisation_pack' => $sumPrixCotisation,
+                'totale_souscription' => $totaleSouscription,
+                'solde_restant' => $soldeRestant,
+                'jours_restants' => $joursRestants,
+                'progression' => $nombreJourSession > 0 ? round((($s['nombre_jour_cotise'] ?? 0) / $nombreJourSession) * 100) : 0
+            ]);
+        }
+
+        $this->json(['data' => $data]);
     }
 
     public function details($details)
