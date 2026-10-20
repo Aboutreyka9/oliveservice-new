@@ -63,6 +63,7 @@ $route->addRoute('/annee/apiList', ['AnneeController', 'apiList']);
 $route->addRoute('/annee/add', ['AnneeController', 'add']);
 $route->addRoute('/annee/edit', ['AnneeController', 'edit']);
 $route->addRoute('/annee/changer', ['AnneeController', 'changer']);
+$route->addRoute('/annee/switchSession', ['AnneeController', 'switchSession']);
 $route->addRoute('/annee/details/{param}', ['AnneeController', 'details']);
 $route->addRoute('/annee/edition/{param}', ['AnneeController', 'edition']);
 $route->addRoute('/annee/formulaire', ['AnneeController', 'formulaire']);

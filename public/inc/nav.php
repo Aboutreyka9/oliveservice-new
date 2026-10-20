@@ -1,6 +1,35 @@
 <?php
-  // Récupération des années académiques pour le sélecteur rapide
-  $activeAnneeLibelle = $_SESSION['annee_active_libelle'] ?? '2025-2026';
+  // Récupération des années (en cours / active et clôturées) pour le sélecteur rapide de session
+  $currentSessionAnneeCode = Context::annee();
+  $navAnnees = [];
+  try {
+      $dbNav = (new Database())->getCon();
+      $sqlNav = "SELECT code_annee, libelle_annee, statut_annee 
+                 FROM annees 
+                 WHERE statut_annee IN ('actif', 'cloture')";
+      $paramsNav = [];
+      $etabNav = Context::etablissement();
+      if (!empty($etabNav)) {
+          $sqlNav .= " AND (etablissement_code = ? OR etablissement_code IS NULL OR etablissement_code = '')";
+          $paramsNav[] = $etabNav;
+      }
+      $sqlNav .= " ORDER BY (statut_annee = 'actif') DESC, date_debut_annee DESC, id_annee DESC";
+      $stmtNav = $dbNav->prepare($sqlNav);
+      $stmtNav->execute($paramsNav);
+      $navAnnees = $stmtNav->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  } catch (\Throwable $e) {
+      $navAnnees = [];
+  }
+
+  $currentAnneeStatut = 'actif';
+  $currentAnneeLibelle = $_SESSION['annee_active_libelle'] ?? 'Exercice';
+  foreach ($navAnnees as $na) {
+      if ($na['code_annee'] === $currentSessionAnneeCode) {
+          $currentAnneeStatut = $na['statut_annee'];
+          $currentAnneeLibelle = $na['libelle_annee'];
+          break;
+      }
+  }
 ?>
 <?php if (!empty($_SESSION['flash_success'])): ?>
   <script>
@@ -67,6 +96,30 @@
         </div>
     </div>
     <div class="topbar-actions">
+        <!-- SÉLECTEUR D'ANNÉE / EXERCICE CONTEXTUEL -->
+        <div class="nav-year-switcher-wrap" style="position: relative; display: flex; align-items: center;">
+            <div style="display: inline-flex; align-items: center; gap: 7px; background: <?= $currentAnneeStatut === 'actif' ? '#F0FDF4' : '#F8FAFC' ?>; border: 1.5px solid <?= $currentAnneeStatut === 'actif' ? '#86EFAC' : '#CBD5E1' ?>; border-radius: 10px; padding: 4px 10px; height: 36px; box-sizing: border-box; transition: all 0.2s ease;" title="<?= $currentAnneeStatut === 'actif' ? 'Exercice actif courant' : 'Exercice clôturé (Archives)' ?>">
+                <i data-lucide="<?= $currentAnneeStatut === 'actif' ? 'calendar-check' : 'archive' ?>" style="width: 16px; height: 16px; color: <?= $currentAnneeStatut === 'actif' ? '#059669' : '#64748B' ?>; flex-shrink: 0;"></i>
+                <select id="navYearSwitcher" style="border: none; background: transparent; font-size: 13px; font-weight: 700; color: #0F172A; outline: none; cursor: pointer; padding: 0 4px 0 0; line-height: 1;">
+                    <?php if (empty($navAnnees)): ?>
+                        <option value="<?= htmlspecialchars($currentSessionAnneeCode) ?>">
+                            <?= htmlspecialchars($currentAnneeLibelle) ?>
+                        </option>
+                    <?php else: ?>
+                        <?php foreach ($navAnnees as $na): ?>
+                            <?php 
+                                $isSel = ($na['code_annee'] === $currentSessionAnneeCode);
+                                $isActifOpt = ($na['statut_annee'] === 'actif');
+                                $label = ($isActifOpt ? '🟢 ' : '📁 ') . htmlspecialchars($na['libelle_annee']) . ($isActifOpt ? ' (En cours)' : ' (Clôturé)');
+                            ?>
+                            <option value="<?= htmlspecialchars($na['code_annee']) ?>" <?= $isSel ? 'selected' : '' ?>>
+                                <?= $label ?>
+                            </option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+            </div>
+        </div>
         <?php
         $showSouscriptionShortcut = Context::can(['GESTIONNAIRE_MANAGE_SOUSCRIPTIONS', 'COMMERCIAL_COLLECT_COTISATION']);
         $showCotisationShortcut  = Context::can('COMMERCIAL_COLLECT_COTISATION');
@@ -390,7 +443,7 @@
                                             <span class="unread-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #059669; flex-shrink: 0;"></span>
                                         <?php endif; ?>
                                     </div>
-                                    <p style="margin: 3px 0 0; font-size: 11px; color: #475569; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                    <p style="margin: 3px 0 0; font-size: 11px; color: #475569; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                                         <?= htmlspecialchars($notif['message_notification'] ?? '') ?>
                                     </p>
                                     <span style="color: #94A3B8; font-size: 10px; display: block; margin-top: 4px;">
@@ -445,3 +498,50 @@
         </div>
     </div>
 </header>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var yearSwitcher = document.getElementById('navYearSwitcher');
+    if (yearSwitcher) {
+        yearSwitcher.addEventListener('change', function() {
+            var selectedCode = this.value;
+            var csrfToken = document.getElementById('csrf_token') ? document.getElementById('csrf_token').value : '';
+
+            yearSwitcher.disabled = true;
+            yearSwitcher.style.opacity = '0.5';
+
+            var formData = new URLSearchParams();
+            formData.append('code_annee', selectedCode);
+            if (csrfToken) {
+                formData.append('csrf_token', csrfToken);
+            }
+
+            fetch('<?= RACINE ?>annee/switchSession', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData.toString()
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.status === 1 || data.success) {
+                    if (window.toastr) {
+                        toastr.success(data.message || 'Exercice basculé avec succès');
+                    }
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Erreur lors du changement d'exercice");
+                    yearSwitcher.disabled = false;
+                    yearSwitcher.style.opacity = '1';
+                }
+            })
+            .catch(function(err) {
+                console.error('Erreur switchSession:', err);
+                window.location.reload();
+            });
+        });
+    }
+});
+</script>

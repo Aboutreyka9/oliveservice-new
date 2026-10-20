@@ -185,6 +185,46 @@ class AnneeController extends BaseController
         }
     }
 
+    public function switchSession()
+    {
+        $this->requireAuth();
+        $this->requirePost(false);
+        $code = trim($this->post('code_annee') ?? '');
+        if (empty($code)) {
+            $this->error('Code de l\'année d\'activité requis.');
+            return;
+        }
+
+        $db = $this->model->getCon();
+        $stmt = $db->prepare("
+            SELECT code_annee, libelle_annee, statut_annee 
+            FROM annees 
+            WHERE code_annee = ? 
+            LIMIT 1
+        ");
+        $stmt->execute([$code]);
+        $annee = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$annee) {
+            $this->error('Année d\'activité introuvable.');
+            return;
+        }
+
+        if (!in_array($annee['statut_annee'], ['actif', 'cloture'], true)) {
+            $this->error('Vous ne pouvez basculer que vers l\'exercice actif ou un exercice clôturé.');
+            return;
+        }
+
+        $_SESSION['annee_active_code'] = $annee['code_annee'];
+        $_SESSION['annee_active_libelle'] = $annee['libelle_annee'];
+
+        $this->success("Exercice basculé sur " . $annee['libelle_annee'] . " avec succès.", [
+            'code' => $annee['code_annee'],
+            'libelle' => $annee['libelle_annee'],
+            'statut' => $annee['statut_annee']
+        ]);
+    }
+
     public function details($details)
     {
         $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');

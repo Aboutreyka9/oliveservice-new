@@ -35,6 +35,14 @@ class Context
         return $code;
     }
 
+    public static function anneeLibelle(): string
+    {
+        if (empty($_SESSION['annee_active_libelle'])) {
+            self::annee();
+        }
+        return $_SESSION['annee_active_libelle'] ?? 'Exercice';
+    }
+
     public static function etablissement(): string
     {
         return $_SESSION['etablissement_active_code'] ?? '';
