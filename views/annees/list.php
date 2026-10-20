@@ -324,7 +324,7 @@ $(document).ready(function() {
       }},
 
       // 10. Actions
-      { data: null, width: '230px', orderable: false, className: 'text-end', render: function(d) {
+      { data: null, width: '250px', orderable: false, className: 'text-end', render: function(d) {
         var editId = d.editId || d.id_annee;
         var canManage = (window.AppConfig && typeof window.AppConfig.can === 'function') ? window.AppConfig.can('GESTIONNAIRE_MANAGE_ANNEES') : false;
         var statut = (d.statut_annee || 'planifie').toLowerCase();
@@ -334,10 +334,23 @@ $(document).ready(function() {
         var html = '<div style="display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:nowrap;">';
         
         if (canManage) {
-          // Bouton Changer Statut
-          html += '<button type="button" class="btn btn-change-statut" data-id="' + d.id_annee + '" data-statut="' + statut + '" data-libelle="' + libelleEsc + '" style="background:#FFFFFF; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 11px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; transition:all 0.2s;" title="Changer le statut">' +
-                  '<i data-lucide="refresh-cw" style="width:13px;height:13px;color:#1E3A5F;"></i> Statut' +
-                  '</button>';
+          // Bouton d'action de statut approprié
+          if (statut === 'planifie') {
+            // Statut planifié -> Bouton "Activer"
+            html += '<button type="button" class="btn btn-action-statut" data-id="' + d.id_annee + '" data-action="actif" data-libelle="' + libelleEsc + '" style="background:#ECFDF5; color:#059669; font-weight:700; border-radius:8px; padding:6px 12px; border:1px solid #A7F3D0; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; transition:all 0.2s;" title="Activer cette année">' +
+                    '<i data-lucide="play" style="width:13px;height:13px;color:#059669;"></i> Activer' +
+                    '</button>';
+          } else if (statut === 'actif') {
+            // Statut actif -> Bouton "Clôturer"
+            html += '<button type="button" class="btn btn-action-statut" data-id="' + d.id_annee + '" data-action="cloture" data-libelle="' + libelleEsc + '" style="background:#FFFBEB; color:#D97706; font-weight:700; border-radius:8px; padding:6px 12px; border:1px solid #FDE68A; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; transition:all 0.2s;" title="Clôturer cette année">' +
+                    '<i data-lucide="lock" style="width:13px;height:13px;color:#D97706;"></i> Clôturer' +
+                    '</button>';
+          } else {
+            // Statut clôturé -> Bouton "Clôturer" désactivé
+            html += '<button type="button" class="btn" disabled style="background:#F8FAFC; color:#94A3B8; font-weight:700; border-radius:8px; padding:6px 12px; border:1px solid #E2E8F0; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:not-allowed; opacity:0.6;" title="Cette année est déjà clôturée">' +
+                    '<i data-lucide="lock" style="width:13px;height:13px;"></i> Clôturer' +
+                    '</button>';
+          }
 
           // Bouton Éditer (Désactivé si clôturé)
           if (isCloture) {
@@ -366,68 +379,39 @@ $(document).ready(function() {
     }
   });
 
-  $(document).on('click', '.btn-change-statut', function(e) {
+  // Action directe sur le statut (Activer ou Clôturer)
+  $(document).on('click', '.btn-action-statut', function(e) {
     e.preventDefault();
     var id = $(this).data('id');
-    var currentStatut = ($(this).data('statut') || 'planifie').toLowerCase();
+    var targetStatut = $(this).data('action'); // 'actif' ou 'cloture'
     var libelle = $(this).data('libelle') || ('Exercice #' + id);
 
-    var contentHtml = 
-      '<div style="text-align:left; font-size:13px; color:#334155;">' +
-        '<p style="margin-bottom:14px; font-size:13px;">Année : <strong style="color:#0F172A; font-size:14px;">' + libelle + '</strong></p>' +
-        '<label style="display:block; font-weight:700; margin-bottom:6px; color:#1E293B;">Sélectionner le nouveau statut :</label>' +
-        '<select id="select-modal-statut" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #CBD5E1; font-size:13px; font-weight:600; outline:none; background:#FFFFFF;">' +
-          '<option value="planifie"' + (currentStatut === 'planifie' ? ' selected' : '') + '>🔵 Planifié (En préparation)</option>' +
-          '<option value="actif"' + (currentStatut === 'actif' ? ' selected' : '') + '>🟢 Actif (Exercice en cours)</option>' +
-          '<option value="cloture"' + (currentStatut === 'cloture' ? ' selected' : '') + '>⚪ Clôturé (Archivé / Terminé)</option>' +
-        '</select>' +
-        '<div id="modal-statut-warning" style="margin-top:12px; padding:10px 12px; border-radius:8px; background:#FFFBEB; border:1px solid #FDE68A; color:#92400E; font-size:12px; display:' + (currentStatut !== 'actif' ? 'block' : 'none') + ';">' +
-          '<strong><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i> Note importante :</strong><br>' +
-          'Passer cet exercice à <b>Actif</b> clôturera automatiquement toute autre année active de l\'établissement. De plus, un exercice <b>Clôturé</b> ne pourra plus être modifié.' +
-        '</div>' +
-      '</div>';
+    var isActifAction = (targetStatut === 'actif');
+    var title = isActifAction ? 'Activer cette année ?' : 'Clôturer cette année ?';
+    var text = isActifAction
+      ? "L'année d'activité <strong>" + libelle + "</strong> deviendra l'exercice actif. Toute autre année actuellement active de l'établissement sera automatiquement clôturée."
+      : "L'année d'activité <strong>" + libelle + "</strong> sera clôturée. Une fois clôturée, elle ne pourra plus être modifiée.";
+    var confirmBtnText = isActifAction ? 'Oui, activer' : 'Oui, clôturer';
+    var confirmColor = isActifAction ? '#059669' : '#D97706';
 
     if (window.Swal) {
       Swal.fire({
-        title: 'Changer le statut',
-        html: contentHtml,
+        title: title,
+        html: '<div style="font-size:13px; color:#334155; margin-top:6px; line-height:1.5;">' + text + '</div>',
+        icon: isActifAction ? 'question' : 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Appliquer',
+        confirmButtonText: confirmBtnText,
         cancelButtonText: 'Annuler',
-        confirmButtonColor: '#1E3A5F',
-        cancelButtonColor: '#64748B',
-        didOpen: function() {
-          if (window.lucide) lucide.createIcons();
-          $('#select-modal-statut').on('change', function() {
-            var val = $(this).val();
-            if (val === 'actif' && currentStatut !== 'actif') {
-              $('#modal-statut-warning').html('<strong><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i> Note importante :</strong><br>Passer cet exercice à <b>Actif</b> clôturera automatiquement toute autre année active de l\'établissement.').slideDown(150);
-              if (window.lucide) lucide.createIcons();
-            } else if (val === 'cloture') {
-              $('#modal-statut-warning').html('<strong><i data-lucide="lock" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i> Attention :</strong><br>Une fois clôturé, cet exercice ne pourra plus être édité via le formulaire de modification.').slideDown(150);
-              if (window.lucide) lucide.createIcons();
-            } else {
-              $('#modal-statut-warning').slideUp(150);
-            }
-          });
-        },
-        preConfirm: function() {
-          var sel = $('#select-modal-statut').val();
-          if (!sel) {
-            Swal.showValidationMessage('Veuillez sélectionner un statut');
-            return false;
-          }
-          return sel;
-        }
+        confirmButtonColor: confirmColor,
+        cancelButtonColor: '#64748B'
       }).then(function(result) {
         if (result.isConfirmed) {
-          executeStatutChange(id, result.value);
+          executeStatutChange(id, targetStatut);
         }
       });
     } else {
-      var newStat = prompt("Entrez le nouveau statut (planifie, actif, cloture) pour " + libelle + " :", currentStatut);
-      if (newStat && ['planifie', 'actif', 'cloture'].indexOf(newStat) !== -1) {
-        executeStatutChange(id, newStat);
+      if (confirm(title + "\n\n" + text.replace(/<[^>]+>/g, ''))) {
+        executeStatutChange(id, targetStatut);
       }
     }
   });
@@ -448,7 +432,7 @@ $(document).ready(function() {
           if (window.toastr) {
             toastr.success(res.message || 'Statut mis à jour avec succès');
           } else if (window.Swal) {
-            Swal.fire('Statut mis à jour', res.message || 'Statut mis à jour avec succès', 'success');
+            Swal.fire('Succès', res.message || 'Statut mis à jour avec succès', 'success');
           }
           table.ajax.reload(null, false);
         } else {
