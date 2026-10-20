@@ -67,9 +67,7 @@
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Période (Début - Fin)</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; text-align: center;">Pén. Reconduction</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; text-align: center;">Pén. Restauration</th>
-                <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Zone Commerciale</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; text-align: center;">Statut</th>
-                <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Date Création</th>
                 <th style="padding: 14px 16px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; text-align: right;">Actions</th>
               </tr>
             </thead>
@@ -92,18 +90,6 @@ $(document).ready(function() {
       return parts[2] + '/' + parts[1] + '/' + parts[0];
     }
     return isoStr;
-  }
-
-  function formatLocalDateTime(dtStr) {
-    if (!dtStr) return '-';
-    var d = new Date(dtStr.replace(' ', 'T'));
-    if (isNaN(d.getTime())) return dtStr;
-    var day = ('0' + d.getDate()).slice(-2);
-    var month = ('0' + (d.getMonth() + 1)).slice(-2);
-    var year = d.getFullYear();
-    var hours = ('0' + d.getHours()).slice(-2);
-    var mins = ('0' + d.getMinutes()).slice(-2);
-    return day + '/' + month + '/' + year + ' ' + hours + ':' + mins;
   }
 
   var table = $('#table-annees').DataTable({
@@ -156,13 +142,7 @@ $(document).ready(function() {
         return '<span style="font-size:12px; font-weight:700; color:#7C3AED; background:#FAF5FF; padding:3px 10px; border-radius:6px; border:1px solid #E9D5FF;">' + val.toFixed(2) + ' %</span>';
       }},
 
-      // 7. Zone Commerciale
-      { data: null, render: function(d, type, row) {
-        var zone = row.libelle_zone || row.zone_code || 'Toutes zones';
-        return '<div style="font-size:12px; color:#334155; font-weight:600;"><i data-lucide="map-pin" style="width:13px; height:13px; color:#059669; vertical-align:middle; margin-right:4px;"></i>' + zone + '</div>';
-      }},
-
-      // 8. Statut (Uniquement le badge)
+      // 7. Statut (Uniquement le badge)
       { data: 'statut_annee', width: '110px', className: 'text-center', render: function(d) {
         var statut = (d || 'planifie').toLowerCase();
         if (statut === 'actif') {
@@ -172,11 +152,6 @@ $(document).ready(function() {
         } else {
           return '<span class="annee-badge badge-statut-cloture"><i data-lucide="lock" style="width:12px;height:12px;"></i> Clôturé</span>';
         }
-      }},
-
-      // 9. Date Création
-      { data: 'created_at_annee', render: function(d) {
-        return '<span style="font-size:12px; color:#64748B;">' + formatLocalDateTime(d) + '</span>';
       }},
 
       // 10. Actions
