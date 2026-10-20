@@ -107,6 +107,12 @@ class SouscriptionController extends BaseController
         ]);
     }
 
+    public function annulees()
+    {
+        $_GET['statut'] = 'annule';
+        return $this->list();
+    }
+
     public function apiList()
     {
         $this->requirePermission(['COMMERCIAL_VIEW_OWN_SOUSCRIPTIONS', 'GESTIONNAIRE_VIEW_ALL_SOUSCRIPTIONS']);

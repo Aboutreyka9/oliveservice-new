@@ -166,6 +166,7 @@ $route->addRoute('/souscription/ressouscription', ['SouscriptionController', 're
 $route->addRoute('/souscription/apiClientsSearch', ['SouscriptionController', 'apiClientsSearch']);
 $route->addRoute('/souscription/processRessouscription', ['SouscriptionController', 'processRessouscription']);
 $route->addRoute('/souscription/annuler', ['SouscriptionController', 'annuler']);
+$route->addRoute('/souscription/annulees', ['SouscriptionController', 'annulees']);
 $route->addRoute('/souscription/reconduire', ['SouscriptionController', 'reconduire']);
 
 $route->addRoute('/cotisation/list', ['CotisationController', 'list']);

@@ -108,6 +108,19 @@ $(function () {
         }
       ],
       language: { url: racine + 'json/datatables-i18n-fr-FR.json' },
+      initComplete: function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const filterParam = (urlParams.get('statut') || urlParams.get('status') || '').toLowerCase();
+        if (filterParam === 'annule' || filterParam === 'annulée' || filterParam === 'annulee') {
+          $('.btn-filter-status[data-status="Annulée"]').trigger('click');
+        } else if (filterParam === 'reconduite' || filterParam === 'reconduit') {
+          $('.btn-filter-status[data-status="Reconduite"]').trigger('click');
+        } else if (filterParam === 'solde' || filterParam === 'soldée') {
+          $('.btn-filter-status[data-status="Soldée"]').trigger('click');
+        } else if (filterParam === 'valide' || filterParam === 'validée') {
+          $('.btn-filter-status[data-status="Validée"]').trigger('click');
+        }
+      },
       drawCallback: () => {
         if (window.lucide) lucide.createIcons();
       }

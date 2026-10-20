@@ -365,8 +365,11 @@
                 <a href="<?= RACINE ?>client/list" class="nav-item sub <?= (strpos($currentUri, '/client/') !== false && strpos($currentUri, '/client_commercial/') === false) ? 'active' : '' ?>" data-title="Liste clients">
                     <i data-lucide="users"></i> <span>Liste clients</span>
                 </a>
-                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= (strpos($currentUri, '/souscription/') !== false) ? 'active' : '' ?>" data-title="Liste souscriptions">
+                <a href="<?= RACINE ?>souscription/list" class="nav-item sub <?= (strpos($currentUri, '/souscription/') !== false && strpos($_SERVER['REQUEST_URI'] ?? '', 'annule') === false) ? 'active' : '' ?>" data-title="Liste souscriptions">
                     <i data-lucide="file-text"></i> <span>Liste souscriptions</span>
+                </a>
+                <a href="<?= RACINE ?>souscription/list?statut=annule" class="nav-item sub <?= (strpos($_SERVER['REQUEST_URI'] ?? '', 'annule') !== false) ? 'active' : '' ?>" data-title="Souscriptions Annulées">
+                    <i data-lucide="ban"></i> <span>Souscriptions annulées</span>
                 </a>
             </div>
         </div>

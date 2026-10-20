@@ -149,14 +149,25 @@
       }
       </style>
 
+      <?php
+        $paramStatut = strtolower(trim($_GET['statut'] ?? $_GET['status'] ?? ''));
+        $isAnnule = in_array($paramStatut, ['annule', 'annulee', 'annulée']);
+        $isReconduite = in_array($paramStatut, ['reconduite', 'reconduit']);
+        $isSolde = in_array($paramStatut, ['solde', 'soldee', 'soldée']);
+        $isValide = in_array($paramStatut, ['valide', 'validee', 'validée']);
+        $isAll = !$isAnnule && !$isReconduite && !$isSolde && !$isValide;
+      ?>
+
       <!-- EN-TÊTE DE PAGE -->
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
         <div>
           <h1 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 10px;">
-            <i data-lucide="file-text" style="color: #1E3A5F; width: 26px; height: 26px;"></i>
-            <span>Souscriptions Clients</span>
+            <i data-lucide="<?= $isAnnule ? 'ban' : 'file-text' ?>" style="color: <?= $isAnnule ? '#DC2626' : '#1E3A5F' ?>; width: 26px; height: 26px;"></i>
+            <span>Souscriptions Clients <?= $isAnnule ? '<span style="color:#DC2626; font-size:15px; font-weight:700; background:#FEF2F2; padding:3px 12px; border-radius:20px; border:1px solid #FECACA; margin-left:8px;">Annulées</span>' : '' ?></span>
           </h1>
-          <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Contrats d'abonnement packs et suivi des cotisations terrain</p>
+          <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">
+            <?= $isAnnule ? 'Registre et historique des contrats d\'abonnement annulés ou interrompus' : 'Contrats d\'abonnement packs et suivi des cotisations terrain' ?>
+          </p>
         </div>
         <?php if (Context::can('COMMERCIAL_ADD_SOUSCRIPTION')): ?>
         <div style="display: flex; gap: 10px;">
@@ -300,27 +311,27 @@
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <span style="font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; margin-right: 6px; letter-spacing: 0.5px;">Filtrer par :</span>
           
-          <button type="button" class="btn btn-sm btn-filter-status active" data-status="all" style="background: #1E3A5F; color: #FFFFFF; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: 1px solid #1E3A5F; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <button type="button" class="btn btn-sm btn-filter-status <?= $isAll ? 'active' : '' ?>" data-status="all" style="<?= $isAll ? 'background: #1E3A5F; color: #FFFFFF; border: 1px solid #1E3A5F;' : 'background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1;' ?> font-weight: 700; border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
             <span>Toutes les souscriptions</span>
-            <span style="background: rgba(255,255,255,0.25); color: #FFFFFF; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800;"><?= $stats['total_souscriptions'] ?? 0 ?></span>
+            <span style="<?= $isAll ? 'background: rgba(255,255,255,0.25); color: #FFFFFF;' : 'background: #F1F5F9; color: #475569;' ?> padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800;"><?= $stats['total_souscriptions'] ?? 0 ?></span>
           </button>
           
-          <button type="button" class="btn btn-sm btn-filter-status" data-status="Validée" style="background: #F8FAFC; color: #475569; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: 1px solid #CBD5E1; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <button type="button" class="btn btn-sm btn-filter-status <?= $isValide ? 'active' : '' ?>" data-status="Validée" style="<?= $isValide ? 'background: #1E3A5F; color: #FFFFFF; border: 1px solid #1E3A5F;' : 'background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1;' ?> font-weight: 700; border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
             <span>En cours / Validées</span>
             <span style="background: #EFF6FF; color: #1E3A5F; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid #BFDBFE;"><?= $stats['total_valide_count'] ?? 0 ?></span>
           </button>
           
-          <button type="button" class="btn btn-sm btn-filter-status" data-status="Soldée" style="background: #F8FAFC; color: #475569; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: 1px solid #CBD5E1; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <button type="button" class="btn btn-sm btn-filter-status <?= $isSolde ? 'active' : '' ?>" data-status="Soldée" style="<?= $isSolde ? 'background: #1E3A5F; color: #FFFFFF; border: 1px solid #1E3A5F;' : 'background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1;' ?> font-weight: 700; border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
             <span>Soldées</span>
             <span style="background: #DCFCE7; color: #15803D; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid #BBF7D0;"><?= $stats['total_solde_count'] ?? 0 ?></span>
           </button>
           
-          <button type="button" class="btn btn-sm btn-filter-status" data-status="Reconduite" style="background: #F8FAFC; color: #475569; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: 1px solid #CBD5E1; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <button type="button" class="btn btn-sm btn-filter-status <?= $isReconduite ? 'active' : '' ?>" data-status="Reconduite" style="<?= $isReconduite ? 'background: #1E3A5F; color: #FFFFFF; border: 1px solid #1E3A5F;' : 'background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1;' ?> font-weight: 700; border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
             <span>Reconduites</span>
             <span style="background: #FEF3C7; color: #92400E; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid #FDE68A;"><?= $stats['total_reconduite_count'] ?? 0 ?></span>
           </button>
           
-          <button type="button" class="btn btn-sm btn-filter-status" data-status="Annulée" style="background: #F8FAFC; color: #475569; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: 1px solid #CBD5E1; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <button type="button" class="btn btn-sm btn-filter-status <?= $isAnnule ? 'active' : '' ?>" data-status="Annulée" style="<?= $isAnnule ? 'background: #1E3A5F; color: #FFFFFF; border: 1px solid #1E3A5F;' : 'background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1;' ?> font-weight: 700; border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
             <span>Annulées</span>
             <span style="background: #FEE2E2; color: #B91C1C; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid #FECACA;"><?= $stats['total_annule_count'] ?? 0 ?></span>
           </button>
@@ -353,5 +364,5 @@
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/souscriptions.js?v=1.4"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/souscriptions.js?v=1.5"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>
