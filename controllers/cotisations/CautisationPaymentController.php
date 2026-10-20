@@ -499,37 +499,50 @@ class CautisationPaymentController extends BaseController
 
         $sql = "
             SELECT s.*, 
-                   c.nom_client, c.telephone_client, c.code_client,
+                   c.nom_client, c.telephone_client, c.code_client, c.sexe_client, c.lieu_residence_client, c.profession_client, c.email_client,
                    sess.libelle_session, sess.nombre_jour_session,
                    z.libelle_zone, z.code_zone
             FROM souscriptions s
             LEFT JOIN clients c ON c.code_client = s.client_code
-            LEFT JOIN sessions sess ON sess.code_session = s.session_code AND sess.etablissement_code = ? AND sess.zone_code = ? AND sess.annee_code = ?
+            LEFT JOIN sessions sess ON sess.code_session = s.session_code
             LEFT JOIN zones z ON z.code_zone = s.zone_code
             WHERE s.code_souscription = ?
-              AND s.etablissement_code = ? AND s.zone_code = ? AND s.annee_code = ?
         ";
-        $params = [$etabCode, $zoneCode, $anneeCode, $codeSouscription, $etabCode, $zoneCode, $anneeCode];
+        $params = [$codeSouscription];
 
-        if (Context::isCommercial()) {
-            $commercialCode = Context::user() ?? '';
-            $sql .= " AND (
-                EXISTS (
-                    SELECT 1 FROM client_commercials cc 
-                    WHERE cc.client_code = s.client_code 
-                      AND cc.commercial_code = ? 
-                      AND cc.statut_client_commercial = 'actif'
-                )
-                OR (
-                    NOT EXISTS (
-                        SELECT 1 FROM client_commercials cc_any 
-                        WHERE cc_any.client_code = s.client_code
+        if (!Context::hasJoker() && !Context::isSuperAdmin()) {
+            if (!empty($etabCode)) {
+                $sql .= " AND s.etablissement_code = ?";
+                $params[] = $etabCode;
+            }
+            if (!empty($zoneCode)) {
+                $sql .= " AND s.zone_code = ?";
+                $params[] = $zoneCode;
+            }
+            if (!empty($anneeCode)) {
+                $sql .= " AND s.annee_code = ?";
+                $params[] = $anneeCode;
+            }
+            if (Context::isCommercial()) {
+                $commercialCode = Context::user() ?? '';
+                $sql .= " AND (
+                    EXISTS (
+                        SELECT 1 FROM client_commercials cc 
+                        WHERE cc.client_code = s.client_code 
+                          AND cc.commercial_code = ? 
+                          AND cc.statut_client_commercial = 'actif'
                     )
-                    AND c.user_code = ?
-                )
-            )";
-            $params[] = $commercialCode;
-            $params[] = $commercialCode;
+                    OR (
+                        NOT EXISTS (
+                            SELECT 1 FROM client_commercials cc_any 
+                            WHERE cc_any.client_code = s.client_code
+                        )
+                        AND c.user_code = ?
+                    )
+                )";
+                $params[] = $commercialCode;
+                $params[] = $commercialCode;
+            }
         }
 
         $stmt = $con->prepare($sql);
@@ -584,19 +597,14 @@ class CautisationPaymentController extends BaseController
     private function getPacksSouscrits(string $codeSouscription): array
     {
         $con = $this->model->getCon();
-        $etabCode = Context::etablissement();
-        $zoneCode = Context::zone();
-        $anneeCode = Context::annee();
-
         $stmt = $con->prepare("
             SELECT p.code_pack, p.libelle_pack, p.prix_cotisation_pack, cp.libelle_categorie_pack
             FROM pack_souscriptions ps
-            JOIN packs p ON p.code_pack = ps.pack_code AND p.etablissement_code = ? AND p.zone_code = ? AND p.annee_code = ?
+            JOIN packs p ON p.code_pack = ps.pack_code
             LEFT JOIN categorie_packs cp ON cp.code_categorie_pack = p.categorie_pack_code
             WHERE ps.souscription_code = ?
-              AND ps.etablissement_code = ? AND ps.zone_code = ? AND ps.annee_code = ?
         ");
-        $stmt->execute([$etabCode, $zoneCode, $anneeCode, $codeSouscription, $etabCode, $zoneCode, $anneeCode]);
+        $stmt->execute([$codeSouscription]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
@@ -624,10 +632,9 @@ class CautisationPaymentController extends BaseController
             FROM cautisation_clients c
             LEFT JOIN users u ON u.code_user = c.commercial_code
             WHERE c.souscription_code = ?
-              AND c.etablissement_code = ? AND c.zone_code = ? AND c.annee_code = ?
             ORDER BY c.date_cautisation DESC
         ");
-        $stmt->execute([$codeSouscription, Context::etablissement(), Context::zone(), Context::annee()]);
+        $stmt->execute([$codeSouscription]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $result = [];

@@ -40,12 +40,12 @@ $libelleSession = $item['libelle_session'] ?? '-';
           <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Détails contractuels, packs souscrits et suivi des encaissements terrain</p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION') && $statut !== 'solde' && $statut !== 'annule' && ($soldeRestant > 0 || $joursRestants > 0)): ?>
+          <?php if (strtolower(trim((string)$statut)) === 'valide'): ?>
           <button type="button" class="btn" onclick="openPaymentModal()" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #FFF; border: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); cursor: pointer;">
             <i data-lucide="wallet" style="width: 18px; height: 18px;"></i> Payer une Cotisation
           </button>
           <?php endif; ?>
-          <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION')): ?>
+          <?php if (Context::can(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION', 'MAIN_ACCESS'])): ?>
           <a href="<?= RACINE ?>cautisation-payment/situation/<?= $codeSouscription ?>" class="btn" style="background: #10B981; border-color: #10B981; color: #FFF; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; text-decoration: none; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
             <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i> Situation
           </a>

@@ -52,7 +52,12 @@ $pourcentagePaye = $montantTotal > 0 ? min(100, round(($montantPaye / $montantTo
             &bull; Session : <strong><?= htmlspecialchars($libelleSession) ?></strong>
           </p>
         </div>
-        <div style="display: flex; gap: 12px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <?php if (strtolower(trim((string)$statutSouscription)) === 'valide'): ?>
+          <button type="button" class="btn btn-primary" onclick="openPaymentModal()" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); transition: all 0.2s ease;">
+            <i data-lucide="wallet" style="width: 18px; height: 18px;"></i> Faire un paiement
+          </button>
+          <?php endif; ?>
           <a href="<?= RACINE ?>cautisation-payment/search-form" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border-radius: 8px; padding: 10px 18px; text-decoration: none; color: #475569; border: 1px solid #CBD5E1;">
             <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> Retour Recherche
           </a>
@@ -85,6 +90,28 @@ $pourcentagePaye = $montantTotal > 0 ? min(100, round(($montantPaye / $montantTo
                     </span>
                   </div>
                 </div>
+              </div>
+              <div style="text-align: right;">
+                <?php 
+                  $statutClean = strtolower(trim((string)$statutSouscription));
+                ?>
+                <?php if ($statutClean === 'valide'): ?>
+                  <span style="background: #EFF6FF; color: #1E3A5F; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; border: 1px solid #BFDBFE; display: inline-flex; align-items: center; gap: 4px;">
+                    <i data-lucide="check-circle" style="width: 14px; height: 14px; color: #2563EB;"></i> Contrat Validé
+                  </span>
+                <?php elseif ($statutClean === 'solde'): ?>
+                  <span style="background: #ECFDF5; color: #047857; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; border: 1px solid #A7F3D0; display: inline-flex; align-items: center; gap: 4px;">
+                    <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #059669;"></i> Contrat Soldé
+                  </span>
+                <?php elseif ($statutClean === 'annule'): ?>
+                  <span style="background: #FEE2E2; color: #B91C1C; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; border: 1px solid #FECACA; display: inline-flex; align-items: center; gap: 4px;">
+                    <i data-lucide="x-circle" style="width: 14px; height: 14px; color: #DC2626;"></i> Contrat Annulé
+                  </span>
+                <?php elseif ($statutClean === 'reconduite'): ?>
+                  <span style="background: #FEF3C7; color: #92400E; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; border: 1px solid #FDE68A; display: inline-flex; align-items: center; gap: 4px;">
+                    <i data-lucide="refresh-cw" style="width: 14px; height: 14px; color: #D97706;"></i> Contrat Reconduit
+                  </span>
+                <?php endif; ?>
               </div>
             </div>
 
@@ -272,16 +299,29 @@ $pourcentagePaye = $montantTotal > 0 ? min(100, round(($montantPaye / $montantTo
                 </div>
               </div>
 
-              <?php if ($statutSouscription !== 'solde' && ($montantRestant > 0 || $joursRestants > 0)): ?>
-                <?php if (Context::can('COMMERCIAL_COLLECT_COTISATION')): ?>
-                <button class="btn" id="paymentBtn" onclick="openPaymentModal()" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); transition: all 0.2s ease;">
-                  <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Nouveau Paiement
+              <?php 
+                $statutClean = strtolower(trim((string)$statutSouscription));
+              ?>
+              <?php if ($statutClean === 'valide'): ?>
+                <button class="btn btn-primary" id="paymentBtn" onclick="openPaymentModal()" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); transition: all 0.2s ease;">
+                  <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Faire un paiement
                 </button>
-                <?php endif; ?>
-              <?php else: ?>
+              <?php elseif ($statutClean === 'solde'): ?>
                 <span style="background: #ECFDF5; color: #047857; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 12px; border: 1px solid #A7F3D0; display: inline-flex; align-items: center; gap: 6px;">
                   <i data-lucide="check-circle-2" style="width: 16px; height: 16px;"></i> Souscription Soldée
                 </span>
+              <?php elseif ($statutClean === 'annule'): ?>
+                <span style="background: #FEE2E2; color: #B91C1C; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 12px; border: 1px solid #FECACA; display: inline-flex; align-items: center; gap: 6px;">
+                  <i data-lucide="x-circle" style="width: 16px; height: 16px;"></i> Souscription Annulée
+                </span>
+              <?php elseif ($statutClean === 'reconduite'): ?>
+                <span style="background: #FEF3C7; color: #92400E; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 12px; border: 1px solid #FDE68A; display: inline-flex; align-items: center; gap: 6px;">
+                  <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Souscription Reconduite
+                </span>
+              <?php else: ?>
+                <button class="btn btn-primary" id="paymentBtn" onclick="openPaymentModal()" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); transition: all 0.2s ease;">
+                  <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Faire un paiement
+                </button>
               <?php endif; ?>
             </div>
 
@@ -609,11 +649,11 @@ document.getElementById('savePaymentBtn').addEventListener('click', function() {
         notifyToast('Le montant doit être un multiple de ' + formatCurrency(PRIX_COTISATION) + '.', 'warning', 'Montant incorrect');
         return;
     }
-    if (montant > MONTANT_RESTANT) {
+    if (MONTANT_RESTANT > 0 && montant > MONTANT_RESTANT) {
         notifyToast('Le montant dépasse le solde restant à payer (' + formatCurrency(MONTANT_RESTANT) + ').', 'warning', 'Plafond dépassé');
         return;
     }
-    if (jours > JOURS_RESTANTS) {
+    if (JOURS_RESTANTS > 0 && jours > JOURS_RESTANTS) {
         notifyToast('Le nombre de jours dépasse le nombre de jours restants (' + JOURS_RESTANTS + ' jours).', 'warning', 'Plafond dépassé');
         return;
     }

@@ -88,7 +88,7 @@ $(function () {
           className: 'text-end',
           render: function (d) {
             const editId = d.editId || d.id_souscription;
-            const canCollect = window.AppConfig && window.AppConfig.can ? window.AppConfig.can('COMMERCIAL_COLLECT_COTISATION') : false;
+            const canCollect = window.AppConfig && window.AppConfig.can ? window.AppConfig.can(['COMMERCIAL_COLLECT_COTISATION', 'GESTIONNAIRE_VIEW_ALL_CLIENTS', 'FINANCE_VALIDATE_COTISATION', 'MAIN_ACCESS']) : false;
 
             const situationBtn = canCollect ? `
               <a href="${racine}cautisation-payment/situation/${d.code_souscription}" class="btn-action-icon success" title="Situation des versements">
