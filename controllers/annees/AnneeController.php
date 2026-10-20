@@ -10,19 +10,7 @@ class AnneeController extends BaseController
     public function list()
     {
         $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
-        $db = $this->model->getCon();
-        $totalAnnees = (int)$db->query("SELECT COUNT(*) FROM annees")->fetchColumn();
-        $stmtActive = $db->query("SELECT * FROM annees WHERE statut_annee = 'actif' ORDER BY id_annee DESC LIMIT 1");
-        $activeAnnee = $stmtActive ? $stmtActive->fetch(PDO::FETCH_ASSOC) : null;
-        $totalPlanifie = (int)$db->query("SELECT COUNT(*) FROM annees WHERE statut_annee = 'planifie'")->fetchColumn();
-        $totalCloture = (int)$db->query("SELECT COUNT(*) FROM annees WHERE statut_annee = 'cloture'")->fetchColumn();
-
-        $this->loadView('../views/annees/list.php', [
-            'totalAnnees'   => $totalAnnees,
-            'activeAnnee'   => $activeAnnee,
-            'totalPlanifie' => $totalPlanifie,
-            'totalCloture'  => $totalCloture,
-        ]);
+        $this->loadView('../views/annees/list.php');
     }
 
     public function apiList()

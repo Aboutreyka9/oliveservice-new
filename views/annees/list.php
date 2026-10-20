@@ -1,10 +1,4 @@
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
-<?php
-$totalAnnees = $totalAnnees ?? 0;
-$activeAnnee = $activeAnnee ?? null;
-$totalPlanifie = $totalPlanifie ?? 0;
-$totalCloture = $totalCloture ?? 0;
-?>
 <div class="app-layout">
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
   <main class="main-content">
@@ -12,79 +6,6 @@ $totalCloture = $totalCloture ?? 0;
     <div class="content-wrapper" style="padding: 24px; width: 100%; max-width: 100%; box-sizing: border-box;">
 
       <style>
-      .annee-kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 18px;
-        margin-bottom: 24px;
-      }
-      .annee-kpi-card {
-        background: #FFFFFF;
-        border-radius: 14px;
-        padding: 20px;
-        border: 1px solid #E2E8F0;
-        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
-        transition: all 0.25s ease;
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-      }
-      .annee-kpi-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--kpi-accent, #1E3A5F);
-        border-radius: 14px 14px 0 0;
-      }
-      .annee-kpi-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 18px -4px rgba(15, 23, 42, 0.08);
-      }
-      .annee-kpi-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-      }
-      .annee-kpi-title {
-        font-size: 11px;
-        font-weight: 800;
-        color: #64748B;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-      .annee-kpi-icon {
-        width: 42px;
-        height: 42px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--kpi-bg-icon, #EFF6FF);
-        color: var(--kpi-color-icon, #1E3A5F);
-      }
-      .annee-kpi-val {
-        font-size: 24px;
-        font-weight: 800;
-        line-height: 1.15;
-        letter-spacing: -0.5px;
-        color: #0F172A;
-        margin-bottom: 8px;
-      }
-      .annee-kpi-footer {
-        font-size: 12px;
-        color: #64748B;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
       .annee-badge {
         display: inline-flex;
         align-items: center;
@@ -132,71 +53,6 @@ $totalCloture = $totalCloture ?? 0;
           <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Nouvelle Année
         </a>
         <?php endif; ?>
-      </div>
-
-      <!-- GRILLE KPIS STATISTIQUES EN-TÊTE -->
-      <div class="annee-kpi-grid">
-        
-        <!-- Card 1 : Exercice Actif -->
-        <div class="annee-kpi-card" style="--kpi-accent: linear-gradient(90deg, #059669, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #059669;">
-          <div class="annee-kpi-header">
-            <span class="annee-kpi-title">Exercice Actif en cours</span>
-            <div class="annee-kpi-icon"><i data-lucide="calendar-check" style="width: 20px; height: 20px;"></i></div>
-          </div>
-          <div class="annee-kpi-val" style="color: #059669;">
-            <?= htmlspecialchars($activeAnnee['libelle_annee'] ?? 'Aucun actif') ?>
-          </div>
-          <div class="annee-kpi-footer">
-            <span>Code : <code style="font-weight:700; color:#059669;"><?= htmlspecialchars($activeAnnee['code_annee'] ?? '-') ?></code></span>
-            <span class="annee-badge badge-statut-actif"><i data-lucide="check-circle" style="width: 12px; height: 12px;"></i> Actif</span>
-          </div>
-        </div>
-
-        <!-- Card 2 : Total Années / Exercices -->
-        <div class="annee-kpi-card" style="--kpi-accent: linear-gradient(90deg, #1E3A5F, #0F172A); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #1E3A5F;">
-          <div class="annee-kpi-header">
-            <span class="annee-kpi-title">Total Exercices</span>
-            <div class="annee-kpi-icon"><i data-lucide="calendar" style="width: 20px; height: 20px;"></i></div>
-          </div>
-          <div class="annee-kpi-val" style="color: #0F172A;">
-            <?= (int)$totalAnnees ?> <small style="font-size: 13px; font-weight: 600; color: #64748B;">enregistré(s)</small>
-          </div>
-          <div class="annee-kpi-footer">
-            <span><?= (int)$totalPlanifie ?> planifié(s)</span>
-            <span class="annee-badge badge-statut-cloture"><?= (int)$totalCloture ?> clôturé(s)</span>
-          </div>
-        </div>
-
-        <!-- Card 3 : Pénalité Reconduction Active -->
-        <div class="annee-kpi-card" style="--kpi-accent: linear-gradient(90deg, #F59E0B, #D97706); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;">
-          <div class="annee-kpi-header">
-            <span class="annee-kpi-title">Pénalité Reconduction</span>
-            <div class="annee-kpi-icon"><i data-lucide="refresh-cw" style="width: 20px; height: 20px;"></i></div>
-          </div>
-          <div class="annee-kpi-val" style="color: #D97706;">
-            <?= number_format((float)($activeAnnee['penalite_annee'] ?? 0), 2, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700;">%</small>
-          </div>
-          <div class="annee-kpi-footer">
-            <span>Taux appliqué sur reconduction</span>
-            <span class="annee-badge" style="background:#FFFBEB; color:#B45309; border:1px solid #FDE68A;">Exercice actif</span>
-          </div>
-        </div>
-
-        <!-- Card 4 : Pénalité Restauration Active -->
-        <div class="annee-kpi-card" style="--kpi-accent: linear-gradient(90deg, #7C3AED, #6D28D9); --kpi-bg-icon: #FAF5FF; --kpi-color-icon: #7C3AED;">
-          <div class="annee-kpi-header">
-            <span class="annee-kpi-title">Pénalité Restauration</span>
-            <div class="annee-kpi-icon"><i data-lucide="shield-alert" style="width: 20px; height: 20px;"></i></div>
-          </div>
-          <div class="annee-kpi-val" style="color: #7C3AED;">
-            <?= number_format((float)($activeAnnee['penalite_restore'] ?? 0), 2, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700;">%</small>
-          </div>
-          <div class="annee-kpi-footer">
-            <span>Taux de restauration souscription</span>
-            <span class="annee-badge" style="background:#FAF5FF; color:#6D28D9; border:1px solid #E9D5FF;">Exercice actif</span>
-          </div>
-        </div>
-
       </div>
 
       <!-- CARTE TABLEAU PRINCIPALE (NAVY PREMIUM) -->
