@@ -115,6 +115,14 @@ class AnneeController extends BaseController
         $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
         $id = (int)$this->post('id_annee');
         if (!$id) { $this->error('Identifiant invalide'); return; }
+
+        $existing = $this->model->getById($id);
+        if (!$existing) { $this->error('Exercice introuvable'); return; }
+        if (($existing['statut_annee'] ?? '') === 'cloture') {
+            $this->error('Cette année d\'activité est clôturée et ne peut plus être modifiée.');
+            return;
+        }
+
         $data = $_POST;
         unset($data['csrf_token']);
         if (!empty($data['libelle_annee'])) {
@@ -136,7 +144,6 @@ class AnneeController extends BaseController
 
         // Si on passe cette année à actif, clôturer les autres de l'établissement
         if (($filteredData['statut_annee'] ?? '') === 'actif') {
-            $existing = $this->model->getById($id);
             $etabCode = $existing['etablissement_code'] ?? Context::etablissement();
             if (!empty($etabCode)) {
                 $this->model->getCon()->prepare("
@@ -165,17 +172,25 @@ class AnneeController extends BaseController
         $this->requirePost(false);
         $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
         $id = (int)$this->post('id');
+        $statut = $this->post('statut');
         if ($id && $this->model->getById($id)) {
-            if ($this->model->toggleStatus($id)) {
+            $res = false;
+            if (!empty($statut) && in_array($statut, ['planifie', 'actif', 'cloture'], true)) {
+                $res = $this->model->updateStatut($id, $statut);
+            } else {
+                $res = $this->model->toggleStatus($id);
+            }
+
+            if ($res) {
                 $updated = $this->model->getById($id);
                 if ($updated && ($updated['statut_annee'] ?? '') === 'actif') {
                     $_SESSION['annee_active_code'] = $updated['code_annee'];
                     $_SESSION['annee_active_libelle'] = $updated['libelle_annee'];
                     NotificationService::resolveAnneeNonActive(Context::etablissement());
                 }
-                $this->success('Statut mis à jour avec succès!', ['reload' => true]);
+                $this->success('Statut mis à jour avec succès !', ['reload' => true]);
             } else {
-                $this->error('Erreur lors de la mise à jour du statut');
+                $this->error('Erreur lors de la mise à jour du statut.');
             }
         } else {
             $this->error('Item introuvable');
@@ -262,7 +277,10 @@ class AnneeController extends BaseController
         try {
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
-            if (!$item) { header('Location: ' . RACINE . 'annee/list'); exit(); }
+            if (!$item || ($item['statut_annee'] ?? '') === 'cloture') { 
+                header('Location: ' . RACINE . 'annee/list'); 
+                exit(); 
+            }
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             header('Location: ' . RACINE . 'annee/list'); exit();

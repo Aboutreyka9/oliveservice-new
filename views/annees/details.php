@@ -31,9 +31,15 @@ $sessions = isset($sessions) ? $sessions : [];
             <i data-lucide="arrow-left" style="width: 16px; height: 16px; color: #64748B;"></i> Retour à la liste
           </a>
           <?php if (!empty($encryptedId) && Context::can('GESTIONNAIRE_MANAGE_ANNEES')): ?>
-          <a href="<?= RACINE ?>annee/edition/<?= $encryptedId ?>" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 10px 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);">
-            <i data-lucide="edit" style="width: 16px; height: 16px;"></i> Modifier l'année
-          </a>
+            <?php if (($item['statut_annee'] ?? '') === 'cloture'): ?>
+              <button type="button" class="btn" disabled style="background: #F1F5F9; border: 1px solid #E2E8F0; color: #94A3B8; font-weight: 700; border-radius: 10px; padding: 10px 20px; display: inline-flex; align-items: center; gap: 8px; cursor: not-allowed; opacity: 0.65;" title="Année clôturée - Modification impossible">
+                <i data-lucide="lock" style="width: 16px; height: 16px;"></i> Modifier l'année
+              </button>
+            <?php else: ?>
+              <a href="<?= RACINE ?>annee/edition/<?= $encryptedId ?>" class="btn" style="background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); color: white; font-weight: 800; border-radius: 10px; padding: 10px 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);">
+                <i data-lucide="edit" style="width: 16px; height: 16px;"></i> Modifier l'année
+              </a>
+            <?php endif; ?>
           <?php endif; ?>
         </div>
       </div>

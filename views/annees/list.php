@@ -226,6 +226,7 @@ $totalCloture = $totalCloture ?? 0;
   </main>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 $(document).ready(function() {
   function formatLocalDate(isoStr) {
@@ -305,33 +306,16 @@ $(document).ready(function() {
         return '<div style="font-size:12px; color:#334155; font-weight:600;"><i data-lucide="map-pin" style="width:13px; height:13px; color:#059669; vertical-align:middle; margin-right:4px;"></i>' + zone + '</div>';
       }},
 
-      // 8. Statut (Badge + Toggle)
-      { data: 'statut_annee', width: '130px', className: 'text-center', render: function(d, type, row) {
+      // 8. Statut (Uniquement le badge)
+      { data: 'statut_annee', width: '110px', className: 'text-center', render: function(d) {
         var statut = (d || 'planifie').toLowerCase();
-        var isActif = (statut === 'actif');
-        var checkedAttr = isActif ? 'checked' : '';
-        var canManage = (window.AppConfig && typeof window.AppConfig.can === 'function') ? window.AppConfig.can('GESTIONNAIRE_MANAGE_ANNEES') : false;
-        var disabledAttr = canManage ? '' : 'disabled';
-        var cursorStyle = canManage ? 'cursor:pointer;' : 'cursor:not-allowed; opacity:0.6;';
-
-        var badgeHtml = '';
         if (statut === 'actif') {
-          badgeHtml = '<span class="annee-badge badge-statut-actif" style="margin-bottom:4px;"><i data-lucide="check-circle" style="width:11px;height:11px;"></i> Actif</span>';
+          return '<span class="annee-badge badge-statut-actif"><i data-lucide="check-circle" style="width:12px;height:12px;"></i> Actif</span>';
         } else if (statut === 'planifie') {
-          badgeHtml = '<span class="annee-badge badge-statut-planifie" style="margin-bottom:4px;"><i data-lucide="clock" style="width:11px;height:11px;"></i> Planifié</span>';
+          return '<span class="annee-badge badge-statut-planifie"><i data-lucide="clock" style="width:12px;height:12px;"></i> Planifié</span>';
         } else {
-          badgeHtml = '<span class="annee-badge badge-statut-cloture" style="margin-bottom:4px;"><i data-lucide="lock" style="width:11px;height:11px;"></i> Clôturé</span>';
+          return '<span class="annee-badge badge-statut-cloture"><i data-lucide="lock" style="width:12px;height:12px;"></i> Clôturé</span>';
         }
-
-        return '<div style="display:flex; flex-direction:column; align-items:center; gap:2px;">' +
-               badgeHtml +
-               '<label style="position:relative; display:inline-block; width:38px; height:20px; margin:0; ' + cursorStyle + '" title="' + (isActif ? 'Cliquer pour clôturer' : 'Cliquer pour activer') + '">' +
-               '<input type="checkbox" class="toggle-statut-annee" data-id="' + row.id_annee + '" ' + checkedAttr + ' ' + disabledAttr + ' style="opacity:0; width:0; height:0;">' +
-               '<span style="position:absolute; ' + cursorStyle + ' top:0; left:0; right:0; bottom:0; background-color:' + (isActif ? '#059669' : '#CBD5E1') + '; transition:.3s; border-radius:20px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">' +
-               '<span style="position:absolute; content:\'\'; height:14px; width:14px; left:' + (isActif ? '21px' : '3px') + '; bottom:3px; background-color:white; transition:.3s; border-radius:50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></span>' +
-               '</span>' +
-               '</label>' +
-               '</div>';
       }},
 
       // 9. Date Création
@@ -340,15 +324,39 @@ $(document).ready(function() {
       }},
 
       // 10. Actions
-      { data: null, width: '160px', orderable: false, className: 'text-end', render: function(d) {
+      { data: null, width: '230px', orderable: false, className: 'text-end', render: function(d) {
         var editId = d.editId || d.id_annee;
         var canManage = (window.AppConfig && typeof window.AppConfig.can === 'function') ? window.AppConfig.can('GESTIONNAIRE_MANAGE_ANNEES') : false;
-        var html = '<div style="display:flex; justify-content:flex-end; gap:6px;">';
+        var statut = (d.statut_annee || 'planifie').toLowerCase();
+        var isCloture = (statut === 'cloture');
+        var libelleEsc = $('<div>').text(d.libelle_annee || ('Année #' + d.id_annee)).html();
+
+        var html = '<div style="display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:nowrap;">';
+        
         if (canManage) {
-          html += '<a href="' + window.RACINE + 'annee/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier"><i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer</a>';
+          // Bouton Changer Statut
+          html += '<button type="button" class="btn btn-change-statut" data-id="' + d.id_annee + '" data-statut="' + statut + '" data-libelle="' + libelleEsc + '" style="background:#FFFFFF; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 11px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; transition:all 0.2s;" title="Changer le statut">' +
+                  '<i data-lucide="refresh-cw" style="width:13px;height:13px;color:#1E3A5F;"></i> Statut' +
+                  '</button>';
+
+          // Bouton Éditer (Désactivé si clôturé)
+          if (isCloture) {
+            html += '<button type="button" class="btn" disabled style="background:#F8FAFC; color:#94A3B8; font-weight:700; border-radius:8px; padding:6px 12px; border:1px solid #E2E8F0; display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:not-allowed; opacity:0.65;" title="Année clôturée - Modification impossible">' +
+                    '<i data-lucide="lock" style="width:14px;height:14px;"></i> Éditer' +
+                    '</button>';
+          } else {
+            html += '<a href="' + window.RACINE + 'annee/edition/' + editId + '" class="btn" style="background:#F1F5F9; color:#1E3A5F; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; border:1px solid #CBD5E1; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Modifier">' +
+                    '<i data-lucide="edit" style="width:14px;height:14px;"></i> Éditer' +
+                    '</a>';
+          }
         }
-        html += '<a href="' + window.RACINE + 'annee/details/' + editId + '" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir fiche & statistiques"><i data-lucide="eye" style="width:14px;height:14px;"></i> Détails</a>' +
-                '</div>';
+
+        // Bouton Détails
+        html += '<a href="' + window.RACINE + 'annee/details/' + editId + '" class="btn" style="background:#1E3A5F; color:#FFFFFF; font-weight:700; border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12px;" title="Voir fiche & statistiques">' +
+                '<i data-lucide="eye" style="width:14px;height:14px;"></i> Détails' +
+                '</a>';
+        
+        html += '</div>';
         return html;
       }}
     ],
@@ -358,41 +366,108 @@ $(document).ready(function() {
     }
   });
 
-  $(document).on('change', '.toggle-statut-annee', function() {
+  $(document).on('click', '.btn-change-statut', function(e) {
+    e.preventDefault();
     var id = $(this).data('id');
-    var isChecked = $(this).is(':checked');
-    var $input = $(this);
+    var currentStatut = ($(this).data('statut') || 'planifie').toLowerCase();
+    var libelle = $(this).data('libelle') || ('Exercice #' + id);
 
+    var contentHtml = 
+      '<div style="text-align:left; font-size:13px; color:#334155;">' +
+        '<p style="margin-bottom:14px; font-size:13px;">Année : <strong style="color:#0F172A; font-size:14px;">' + libelle + '</strong></p>' +
+        '<label style="display:block; font-weight:700; margin-bottom:6px; color:#1E293B;">Sélectionner le nouveau statut :</label>' +
+        '<select id="select-modal-statut" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #CBD5E1; font-size:13px; font-weight:600; outline:none; background:#FFFFFF;">' +
+          '<option value="planifie"' + (currentStatut === 'planifie' ? ' selected' : '') + '>🔵 Planifié (En préparation)</option>' +
+          '<option value="actif"' + (currentStatut === 'actif' ? ' selected' : '') + '>🟢 Actif (Exercice en cours)</option>' +
+          '<option value="cloture"' + (currentStatut === 'cloture' ? ' selected' : '') + '>⚪ Clôturé (Archivé / Terminé)</option>' +
+        '</select>' +
+        '<div id="modal-statut-warning" style="margin-top:12px; padding:10px 12px; border-radius:8px; background:#FFFBEB; border:1px solid #FDE68A; color:#92400E; font-size:12px; display:' + (currentStatut !== 'actif' ? 'block' : 'none') + ';">' +
+          '<strong><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i> Note importante :</strong><br>' +
+          'Passer cet exercice à <b>Actif</b> clôturera automatiquement toute autre année active de l\'établissement. De plus, un exercice <b>Clôturé</b> ne pourra plus être modifié.' +
+        '</div>' +
+      '</div>';
+
+    if (window.Swal) {
+      Swal.fire({
+        title: 'Changer le statut',
+        html: contentHtml,
+        showCancelButton: true,
+        confirmButtonText: 'Appliquer',
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: '#1E3A5F',
+        cancelButtonColor: '#64748B',
+        didOpen: function() {
+          if (window.lucide) lucide.createIcons();
+          $('#select-modal-statut').on('change', function() {
+            var val = $(this).val();
+            if (val === 'actif' && currentStatut !== 'actif') {
+              $('#modal-statut-warning').html('<strong><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i> Note importante :</strong><br>Passer cet exercice à <b>Actif</b> clôturera automatiquement toute autre année active de l\'établissement.').slideDown(150);
+              if (window.lucide) lucide.createIcons();
+            } else if (val === 'cloture') {
+              $('#modal-statut-warning').html('<strong><i data-lucide="lock" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i> Attention :</strong><br>Une fois clôturé, cet exercice ne pourra plus être édité via le formulaire de modification.').slideDown(150);
+              if (window.lucide) lucide.createIcons();
+            } else {
+              $('#modal-statut-warning').slideUp(150);
+            }
+          });
+        },
+        preConfirm: function() {
+          var sel = $('#select-modal-statut').val();
+          if (!sel) {
+            Swal.showValidationMessage('Veuillez sélectionner un statut');
+            return false;
+          }
+          return sel;
+        }
+      }).then(function(result) {
+        if (result.isConfirmed) {
+          executeStatutChange(id, result.value);
+        }
+      });
+    } else {
+      var newStat = prompt("Entrez le nouveau statut (planifie, actif, cloture) pour " + libelle + " :", currentStatut);
+      if (newStat && ['planifie', 'actif', 'cloture'].indexOf(newStat) !== -1) {
+        executeStatutChange(id, newStat);
+      }
+    }
+  });
+
+  function executeStatutChange(id, targetStatut) {
     $.ajax({
       url: '<?= RACINE ?>annee/changer',
       type: 'POST',
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
       data: {
         id: id,
+        statut: targetStatut,
         csrf_token: '<?= Validator::generateCsrfToken() ?>'
       },
       dataType: 'json',
       success: function(res) {
         if (res.status === 1 || res.success) {
           if (window.toastr) {
-            toastr.success(res.message || 'Statut de l\'année mis à jour avec succès');
+            toastr.success(res.message || 'Statut mis à jour avec succès');
+          } else if (window.Swal) {
+            Swal.fire('Statut mis à jour', res.message || 'Statut mis à jour avec succès', 'success');
           }
           table.ajax.reload(null, false);
         } else {
           if (window.toastr) {
             toastr.error(res.message || 'Erreur lors du changement de statut');
+          } else if (window.Swal) {
+            Swal.fire('Erreur', res.message || 'Erreur lors du changement de statut', 'error');
           }
-          $input.prop('checked', !isChecked);
         }
       },
       error: function() {
         if (window.toastr) {
           toastr.error('Erreur réseau');
+        } else if (window.Swal) {
+          Swal.fire('Erreur', 'Erreur de communication avec le serveur', 'error');
         }
-        $input.prop('checked', !isChecked);
       }
     });
-  });
+  }
 });
 </script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

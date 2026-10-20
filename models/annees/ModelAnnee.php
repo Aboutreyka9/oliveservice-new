@@ -41,25 +41,38 @@ class ModelAnnee extends BaseModel
         }
     }
 
-    public function toggleStatus(int $id): bool
+    public function updateStatut(int $id, string $newStatut): bool
     {
         try {
+            if (!in_array($newStatut, ['planifie', 'actif', 'cloture'], true)) {
+                return false;
+            }
             $item = $this->getById($id);
             if (!$item) return false;
-            $newStatus = ($item['statut_annee'] === 'actif') ? 'cloture' : 'actif';
 
-            if ($newStatus === 'actif' && !empty($item['etablissement_code'])) {
+            if ($newStatut === 'actif' && !empty($item['etablissement_code'])) {
                 $stmtClose = $this->pdo->getCon()->prepare("
-                    UPDATE annees SET statut_annee = 'cloture' WHERE etablissement_code = ? AND id_annee != ? AND statut_annee = 'actif'
+                    UPDATE annees SET statut_annee = 'cloture', updated_at_annee = NOW() WHERE etablissement_code = ? AND id_annee != ? AND statut_annee = 'actif'
                 ");
                 $stmtClose->execute([$item['etablissement_code'], $id]);
             }
 
-            $sql = "UPDATE annees SET statut_annee = ? WHERE id_annee = ?";
-            return $this->pdo->getCon()->prepare($sql)->execute([$newStatus, $id]);
+            $sql = "UPDATE annees SET statut_annee = ?, updated_at_annee = NOW() WHERE id_annee = ?";
+            return $this->pdo->getCon()->prepare($sql)->execute([$newStatut, $id]);
         } catch (\Exception $e) {
-            error_log("ModelAnnee::toggleStatus error: " . $e->getMessage());
+            error_log("ModelAnnee::updateStatut error: " . $e->getMessage());
             return false;
         }
+    }
+
+    public function toggleStatus(int $id, ?string $targetStatus = null): bool
+    {
+        if ($targetStatus && in_array($targetStatus, ['planifie', 'actif', 'cloture'], true)) {
+            return $this->updateStatut($id, $targetStatus);
+        }
+        $item = $this->getById($id);
+        if (!$item) return false;
+        $newStatus = ($item['statut_annee'] === 'actif') ? 'cloture' : 'actif';
+        return $this->updateStatut($id, $newStatus);
     }
 }
