@@ -518,12 +518,12 @@ $libelleSession = $item['libelle_session'] ?? '-';
   </div>
 </div>
 
-<!-- Modal: Reconduire le Contrat -->
+<!-- Modal: Reconduire la Souscription -->
 <div class="modal-overlay" id="reconduireModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 16px;">
   <div style="background: #FFFFFF; border-radius: 16px; width: 100%; max-width: 560px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; display: flex; flex-direction: column;">
     <div class="modal-header" style="background: #1E3A5F; color: white; border: none; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #F59E0B;">
       <h5 class="modal-title" style="font-size: 18px; font-weight: 700; margin: 0; color: white; display: flex; align-items: center; gap: 8px;">
-        <i data-lucide="refresh-cw" style="width: 20px; height: 20px; color: #FBBF24;"></i> Reconduction du Contrat
+        <i data-lucide="refresh-cw" style="width: 20px; height: 20px; color: #FBBF24;"></i> Reconduction de la Souscription
       </h5>
       <button type="button" onclick="closeReconduireModal()" style="background: none; border: none; color: white; opacity: 0.8; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px;">
         <i data-lucide="x" style="width: 20px; height: 20px; color: white;"></i>
@@ -534,7 +534,7 @@ $libelleSession = $item['libelle_session'] ?? '-';
       <div style="background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-start;">
         <i data-lucide="info" style="width: 22px; height: 22px; color: #D97706; flex-shrink: 0; margin-top: 2px;"></i>
         <div style="font-size: 13px; color: #92400E; line-height: 1.5;">
-          La reconduction marque le contrat actuel avec le statut <strong>Reconduit</strong> et permet d'initier un nouveau contrat pour ce même souscripteur.
+          La reconduction marque la souscription actuelle avec le statut <strong>Reconduite</strong> et permet d'initier une nouvelle souscription pour ce même client.
         </div>
       </div>
 
@@ -545,7 +545,7 @@ $libelleSession = $item['libelle_session'] ?? '-';
             <strong style="color: #0F172A;"><?= htmlspecialchars($nomClient) ?></strong>
           </div>
           <div>
-            <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">N° Contrat</span>
+            <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 700; display: block;">N° Souscription</span>
             <code style="background: #EFF6FF; padding: 2px 6px; border-radius: 4px; color: #1E3A5F; font-weight: 700;"><?= htmlspecialchars($codeSouscription) ?></code>
           </div>
           <div>
@@ -561,10 +561,10 @@ $libelleSession = $item['libelle_session'] ?? '-';
 
       <div style="display: flex; flex-direction: column; gap: 10px;">
         <button type="button" id="btnConfirmReconduireAndNew" class="btn" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #FFF; border: none; border-radius: 8px; padding: 12px 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);">
-          <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Marquer Reconduit & Ouvrir Nouveau Contrat
+          <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Marquer Reconduite & Ouvrir Nouvelle Souscription
         </button>
         <button type="button" id="btnConfirmReconduireOnly" class="btn" style="background: #F8FAFC; border: 1px solid #CBD5E1; color: #334155; border-radius: 8px; padding: 10px 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
-          <i data-lucide="check" style="width: 16px; height: 16px;"></i> Marquer comme Reconduit uniquement
+          <i data-lucide="check" style="width: 16px; height: 16px;"></i> Marquer comme Reconduite uniquement
         </button>
         <button type="button" onclick="closeReconduireModal()" class="btn" style="background: transparent; border: none; color: #64748B; font-size: 13px; font-weight: 600; padding: 6px; cursor: pointer;">
           Annuler l'opération

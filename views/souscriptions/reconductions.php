@@ -169,7 +169,7 @@
           <div>
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
               <h1 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0; line-height: 1.2;">
-                Reconductions des Contrats
+                Reconductions des Souscriptions
               </h1>
               <span style="background: #FEF3C7; color: #92400E; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #FDE68A;">
                 Page Dédiée
@@ -199,16 +199,16 @@
       <!-- 4 CARTES KPIS DYNAMIQUES (Strictement évaluées depuis la BDD) -->
       <div class="recon-kpi-grid">
 
-        <!-- Card 1: Contrats Reconduits -->
-        <div class="recon-kpi-card" data-filter-target="Reconduite" style="--kpi-accent: linear-gradient(90deg, #F59E0B, #D97706); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;" title="Cliquer pour afficher les contrats reconduits">
+        <!-- Card 1: Souscriptions Reconduites -->
+        <div class="recon-kpi-card" data-filter-target="Reconduite" style="--kpi-accent: linear-gradient(90deg, #F59E0B, #D97706); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;" title="Cliquer pour afficher les souscriptions reconduites">
           <div class="recon-kpi-header">
-            <span class="recon-kpi-title">Contrats Reconduits</span>
+            <span class="recon-kpi-title">Souscriptions Reconduites</span>
             <div class="recon-kpi-icon">
               <i data-lucide="refresh-cw" style="width: 20px; height: 20px;"></i>
             </div>
           </div>
           <div class="recon-kpi-val" style="color: #D97706;">
-            <?= number_format($stats['total_reconduite_count'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #B45309;">contrat(s)</small>
+            <?= number_format($stats['total_reconduite_count'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #B45309;">souscription(s)</small>
           </div>
           <div class="recon-kpi-footer">
             <span class="recon-kpi-badge" style="background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A;">
@@ -219,7 +219,7 @@
         </div>
 
         <!-- Card 2: Volume Financier Reconduit -->
-        <div class="recon-kpi-card" data-filter-target="Reconduite" style="--kpi-accent: linear-gradient(90deg, #2563EB, #1D4ED8); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #2563EB;" title="Volume contractuel total des souscriptions reconduites">
+        <div class="recon-kpi-card" data-filter-target="Reconduite" style="--kpi-accent: linear-gradient(90deg, #2563EB, #1D4ED8); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #2563EB;" title="Volume financier total des souscriptions reconduites">
           <div class="recon-kpi-header">
             <span class="recon-kpi-title">Volume Financier Reconduit</span>
             <div class="recon-kpi-icon">
@@ -233,12 +233,12 @@
             <span class="recon-kpi-badge" style="background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE;">
               <i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Recouvrement : <?= $stats['taux_reconduite_recouvrement'] ?? 0 ?>%
             </span>
-            <span style="font-size: 11px; color: #64748B;">Engagements reportés</span>
+            <span style="font-size: 11px; color: #64748B;">Souscriptions reportées</span>
           </div>
         </div>
 
         <!-- Card 3: Cotisations Recouvrées -->
-        <div class="recon-kpi-card" data-filter-target="Reconduite" style="--kpi-accent: linear-gradient(90deg, #10B981, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #059669;" title="Total des cotisations enregistrées sur les contrats reconduits">
+        <div class="recon-kpi-card" data-filter-target="Reconduite" style="--kpi-accent: linear-gradient(90deg, #10B981, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #059669;" title="Total des cotisations enregistrées sur les souscriptions reconduites">
           <div class="recon-kpi-header">
             <span class="recon-kpi-title">Cotisations Encaissées</span>
             <div class="recon-kpi-icon">
@@ -256,27 +256,27 @@
               <span class="recon-kpi-badge" style="background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;">
                 <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i> <?= $stats['taux_reconduite_recouvrement'] ?? 0 ?>% payé
               </span>
-              <span style="font-size: 11px; color: #64748B;">Sur contrats reconduits</span>
+              <span style="font-size: 11px; color: #64748B;">Sur souscriptions reconduites</span>
             </div>
           </div>
         </div>
 
-        <!-- Card 4: Contrats Éligibles à la Reconduction -->
-        <div class="recon-kpi-card" data-filter-target="Éligible" style="--kpi-accent: linear-gradient(90deg, #1E3A5F, #0F172A); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #1E3A5F;" title="Cliquer pour afficher les contrats prêts à être reconduits">
+        <!-- Card 4: Souscriptions Éligibles à la Reconduction -->
+        <div class="recon-kpi-card" data-filter-target="Éligible" style="--kpi-accent: linear-gradient(90deg, #1E3A5F, #0F172A); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #1E3A5F;" title="Cliquer pour afficher les souscriptions prêtes à être reconduites">
           <div class="recon-kpi-header">
-            <span class="recon-kpi-title">Contrats Éligibles au Report</span>
+            <span class="recon-kpi-title">Souscriptions Éligibles au Report</span>
             <div class="recon-kpi-icon">
               <i data-lucide="user-check" style="width: 20px; height: 20px;"></i>
             </div>
           </div>
           <div class="recon-kpi-val" style="color: #1E3A5F;">
-            <?= number_format($stats['total_eligible_count'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #64748B;">contrat(s)</small>
+            <?= number_format($stats['total_eligible_count'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #64748B;">souscription(s)</small>
           </div>
           <div class="recon-kpi-footer">
             <span class="recon-kpi-badge" style="background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0;">
               <i data-lucide="zap" style="width: 12px; height: 12px;"></i> <?= number_format($stats['total_eligible_engage'] ?? 0, 0, ',', ' ') ?> FCFA
             </span>
-            <span style="font-size: 11px; color: #15803D; font-weight: 700;">Prêts pour réengagement</span>
+            <span style="font-size: 11px; color: #15803D; font-weight: 700;">Prêtes pour réengagement</span>
           </div>
         </div>
 
@@ -289,7 +289,7 @@
           
           <button type="button" class="btn btn-sm btn-filter-recon active" data-status="Reconduite" style="background: #1E3A5F; color: #FFFFFF; border: 1px solid #1E3A5F; font-weight: 700; border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
-            <span>Contrats Reconduits</span>
+            <span>Souscriptions Reconduites</span>
             <span style="background: #FEF3C7; color: #92400E; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid #FDE68A;"><?= $stats['total_reconduite_count'] ?? 0 ?></span>
           </button>
           
@@ -300,14 +300,14 @@
           </button>
           
           <button type="button" class="btn btn-sm btn-filter-recon" data-status="all" style="background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1; font-weight: 700; border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-            <span>Tous les contrats</span>
+            <span>Toutes les souscriptions</span>
             <span style="background: #F1F5F9; color: #475569; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800;"><?= $stats['total_tous_count'] ?? 0 ?></span>
           </button>
         </div>
 
         <div style="font-size: 12px; color: #64748B; font-weight: 600;">
           <i data-lucide="info" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 4px; color: #0284C7;"></i>
-          Filtrez ou sélectionnez un contrat pour effectuer une reconduction
+          Filtrez ou sélectionnez une souscription pour effectuer une reconduction
         </div>
       </div>
 
@@ -317,7 +317,7 @@
           <table id="table-reconductions" class="table display nowrap" style="width:100%; max-width:100%; border-collapse: collapse;">
             <thead>
               <tr style="background: #F8FAFC; text-align: left; color: #64748B;">
-                <th style="padding: 12px;">Code Contrat</th>
+                <th style="padding: 12px;">Code Souscription</th>
                 <th style="padding: 12px; text-align: center;">État Reconduction</th>
                 <th style="padding: 12px;">Client</th>
                 <th style="padding: 12px;">Session</th>
@@ -351,7 +351,7 @@
         </div>
         <div>
           <h5 class="modal-title" style="font-size: 16px; font-weight: 800; margin: 0; color: #FFFFFF; line-height: 1.2;">
-            Reconduction du Contrat
+            Reconduction de la Souscription
           </h5>
           <span style="font-size: 11px; color: #94A3B8; font-weight: 500;">
             Report et réengagement pour une nouvelle session
@@ -371,11 +371,11 @@
 
       <div class="modal-body" style="padding: 24px; overflow-y: auto; flex: 1; min-height: 0;">
 
-        <!-- CARTOUCHE INFO CONTRAT -->
+        <!-- CARTOUCHE INFO SOUSCRIPTION -->
         <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #E2E8F0;">
             <div>
-              <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Contrat Sélectionné</span>
+              <span style="color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Souscription Sélectionnée</span>
               <span id="recon-modal-code-display" style="font-family: monospace; font-size: 15px; font-weight: 800; color: #1E3A5F; background: #EFF6FF; padding: 3px 8px; border-radius: 6px; border: 1px solid #BFDBFE;">-</span>
             </div>
             <div style="text-align: right;">
@@ -409,7 +409,7 @@
         <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-start;">
           <i data-lucide="info" style="width: 20px; height: 20px; color: #D97706; flex-shrink: 0; margin-top: 2px;"></i>
           <div style="font-size: 12px; color: #92400E; line-height: 1.5;">
-            Cette opération marque le contrat courant comme <strong>Reconduit</strong> et vous permet d'engager immédiatement la nouvelle souscription de ce client pour la session suivante.
+            Cette opération marque la souscription courante comme <strong>Reconduite</strong> et vous permet d'engager immédiatement la nouvelle souscription de ce client pour la session suivante.
           </div>
         </div>
 
@@ -455,5 +455,5 @@
   </div>
 </div>
 
-<script src="<?= RACINE ?>public/assets/js/modules/reconductions.js?v=1.1"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/reconductions.js?v=1.2"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

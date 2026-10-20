@@ -1,5 +1,5 @@
 /**
- * Module Reconductions - Gestion Dédiée des Reports et Renouvellements de Contrats
+ * Module Reconductions - Gestion Dédiée des Reports et Renouvellements de Souscriptions
  * DataTable, Filtres dynamiques, Modal de reconduction & Actions rapides
  */
 
@@ -126,7 +126,7 @@ $(function () {
                   data-cotise="${Number(d.montant_total_cotise || 0).toLocaleString('fr-FR')} FCFA"
                   data-total="${Number(d.totale_souscription || 0).toLocaleString('fr-FR')} FCFA"
                   data-statut="${d.reconduction_status || 'Éligible'}"
-                  title="Reconduire ce contrat">
+                  title="Reconduire cette souscription">
                   <i data-lucide="refresh-cw" style="width:15px;height:15px;"></i>
                 </button>`;
             }
@@ -276,7 +276,7 @@ $(function () {
             if (typeof Swal !== 'undefined') {
               Swal.fire({
                 icon: 'success',
-                title: 'Contrat Reconduit !',
+                title: 'Souscription Reconduite !',
                 text: res.message || 'La souscription a été marquée comme reconduite avec succès.',
                 showCancelButton: true,
                 confirmButtonText: 'Aller à la Ressouscription',

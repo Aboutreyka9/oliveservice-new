@@ -166,7 +166,7 @@
             <span>Souscriptions Clients <?= $isAnnule ? '<span style="color:#DC2626; font-size:15px; font-weight:700; background:#FEF2F2; padding:3px 12px; border-radius:20px; border:1px solid #FECACA; margin-left:8px;">Annulées</span>' : '' ?></span>
           </h1>
           <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">
-            <?= $isAnnule ? 'Registre et historique des contrats d\'abonnement annulés ou interrompus' : 'Contrats d\'abonnement packs et suivi des cotisations terrain' ?>
+            <?= $isAnnule ? 'Registre et historique des souscriptions annulées ou interrompues' : 'Souscriptions aux packs et suivi des cotisations terrain' ?>
           </p>
         </div>
         <?php if (Context::can('COMMERCIAL_ADD_SOUSCRIPTION')): ?>
@@ -219,7 +219,7 @@
             <span class="sous-kpi-badge" style="background: #F1F5F9; color: #334155; border: 1px solid #CBD5E1;">
               Actifs : <?= number_format($stats['total_engage_actif'] ?? 0, 0, ',', ' ') ?> FCFA
             </span>
-            <span style="font-size: 11px; color: #64748B;">Cumul contractuel</span>
+            <span style="font-size: 11px; color: #64748B;">Cumul des souscriptions</span>
           </div>
         </div>
 
@@ -242,13 +242,13 @@
               <span class="sous-kpi-badge" style="background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;">
                 <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i> <?= $stats['taux_recouvrement'] ?? 0 ?>% recouvré
               </span>
-              <span style="font-size: 11px; color: #64748B;">Sur contrats actifs</span>
+              <span style="font-size: 11px; color: #64748B;">Sur souscriptions actives</span>
             </div>
           </div>
         </div>
 
         <!-- Card 4: Reste à Recouvrer -->
-        <div class="sous-kpi-card" data-filter-target="Validée" style="--kpi-accent: linear-gradient(90deg, #EF4444, #B91C1C); --kpi-bg-icon: #FEF2F2; --kpi-color-icon: #DC2626;" title="Cliquer pour afficher les contrats en cours">
+        <div class="sous-kpi-card" data-filter-target="Validée" style="--kpi-accent: linear-gradient(90deg, #EF4444, #B91C1C); --kpi-bg-icon: #FEF2F2; --kpi-color-icon: #DC2626;" title="Cliquer pour afficher les souscriptions en cours">
           <div class="sous-kpi-header">
             <span class="sous-kpi-title">Reste à Recouvrer</span>
             <div class="sous-kpi-icon">
@@ -260,22 +260,22 @@
           </div>
           <div class="sous-kpi-footer">
             <span class="sous-kpi-badge" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">
-              <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i> <?= $stats['total_valide_count'] ?? 0 ?> contrat(s) en cours
+              <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i> <?= $stats['total_valide_count'] ?? 0 ?> souscription(s) en cours
             </span>
             <span style="font-size: 11px; color: #64748B;">Encaissements attendus</span>
           </div>
         </div>
 
         <!-- Card 5: Souscriptions Reconduites -->
-        <div class="sous-kpi-card" data-filter-target="Reconduite" style="--kpi-accent: linear-gradient(90deg, #F59E0B, #D97706); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;" title="Cliquer pour afficher les contrats reconduits">
+        <div class="sous-kpi-card" data-filter-target="Reconduite" style="--kpi-accent: linear-gradient(90deg, #F59E0B, #D97706); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;" title="Cliquer pour afficher les souscriptions reconduites">
           <div class="sous-kpi-header">
-            <span class="sous-kpi-title">Contrats Reconduits</span>
+            <span class="sous-kpi-title">Souscriptions Reconduites</span>
             <div class="sous-kpi-icon">
               <i data-lucide="refresh-cw" style="width: 20px; height: 20px;"></i>
             </div>
           </div>
           <div class="sous-kpi-val" style="color: #D97706;">
-            <?= number_format($stats['total_reconduite_count'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #B45309;">contrat(s)</small>
+            <?= number_format($stats['total_reconduite_count'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #B45309;">souscription(s)</small>
           </div>
           <div class="sous-kpi-footer">
             <span class="sous-kpi-badge" style="background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A;">
@@ -286,15 +286,15 @@
         </div>
 
         <!-- Card 6: Souscriptions Annulées -->
-        <div class="sous-kpi-card" data-filter-target="Annulée" style="--kpi-accent: linear-gradient(90deg, #991B1B, #7F1D1D); --kpi-bg-icon: #FEF2F2; --kpi-color-icon: #991B1B;" title="Cliquer pour afficher les contrats annulés">
+        <div class="sous-kpi-card" data-filter-target="Annulée" style="--kpi-accent: linear-gradient(90deg, #991B1B, #7F1D1D); --kpi-bg-icon: #FEF2F2; --kpi-color-icon: #991B1B;" title="Cliquer pour afficher les souscriptions annulées">
           <div class="sous-kpi-header">
-            <span class="sous-kpi-title">Contrats Annulés</span>
+            <span class="sous-kpi-title">Souscriptions Annulées</span>
             <div class="sous-kpi-icon">
               <i data-lucide="ban" style="width: 20px; height: 20px;"></i>
             </div>
           </div>
           <div class="sous-kpi-val" style="color: #991B1B;">
-            <?= number_format($stats['total_annule_count'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #991B1B;">contrat(s)</small>
+            <?= number_format($stats['total_annule_count'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #991B1B;">souscription(s)</small>
           </div>
           <div class="sous-kpi-footer">
             <span class="sous-kpi-badge" style="background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;">
