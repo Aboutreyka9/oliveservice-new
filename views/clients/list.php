@@ -582,22 +582,22 @@ $stats = $stats ?? [
           </div>
         </div>
 
-        <!-- KPI 4 : TOTAL COTISATIONS RECOUVRÉES -->
-        <div class="cli-kpi-card" style="--kpi-accent: linear-gradient(90deg, #059669, #065F46); --kpi-bg-icon: #F0FDF4; --kpi-color-icon: #16A34A;">
+        <!-- KPI 4 : TOTAL COTISATIONS RECOUVRÉES (SOUSCRIPTIONS ACTIVES) -->
+        <div class="cli-kpi-card" style="--kpi-accent: linear-gradient(90deg, #059669, #065F46); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #059669;">
           <div class="cli-kpi-header">
             <span class="cli-kpi-title">Cotisations Encaissées</span>
             <div class="cli-kpi-icon">
               <i data-lucide="wallet" style="width: 20px; height: 20px;"></i>
             </div>
           </div>
-          <div class="cli-kpi-val" id="kpi-total-cotise" style="color: #15803D;">
-            <?= number_format($stats['total_cotise'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700;">FCFA</small>
+          <div class="cli-kpi-val" id="kpi-total-cotise" style="color: #059669;">
+            <?= number_format($stats['total_cotise'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #64748B;">FCFA</small>
           </div>
           <div class="cli-kpi-footer">
-            <span class="cli-kpi-badge" style="background: #F0FDF4; color: #16A34A;">
-              <i data-lucide="trending-up" style="width: 12px; height: 12px;"></i> Cumul encaissé
+            <span class="cli-kpi-badge" style="background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;">
+              <i data-lucide="check-circle-2" style="width: 12px; height: 12px;"></i> Contrats actifs
             </span>
-            <span style="font-size: 11px; color: #94A3B8;">Périmètre actif</span>
+            <span style="font-size: 11px; color: #64748B; font-weight: 600;">Validés & soldés</span>
           </div>
         </div>
 

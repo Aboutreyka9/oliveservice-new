@@ -49,13 +49,15 @@ class ClientController extends BaseController
         ";
         $statsParams = array_merge($subExistsParams, $params);
 
-        // Cumul des cotisations encaissées pour les clients du périmètre
+        // Cumul des cotisations encaissées uniquement sur les souscriptions actives (validées ou soldées)
         $sqlCot = "
             SELECT COALESCE(SUM(cc.montant_cautisation_client), 0) as total_cotise
             FROM cautisation_clients cc
             JOIN clients c ON c.code_client = cc.client_code
+            JOIN souscriptions sub ON sub.code_souscription = cc.souscription_code AND sub.etablissement_code = cc.etablissement_code
             WHERE cc.etablissement_code = ?
               AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)
+              AND LOWER(TRIM(sub.statut_souscription)) IN ('valide', 'solde')
         ";
         $cotParams = [$etabCode];
         if (!empty($zoneCode)) {
@@ -209,10 +211,12 @@ class ClientController extends BaseController
         $subSousSql = "SELECT COUNT(*) FROM souscriptions sub WHERE sub.client_code = c.code_client AND sub.etablissement_code = c.etablissement_code";
         $subSousParams = [];
 
-        $subCotSql = "SELECT COALESCE(SUM(montant_cautisation_client), 0) FROM cautisation_clients cc 
+        $subCotSql = "SELECT COALESCE(SUM(cc.montant_cautisation_client), 0) FROM cautisation_clients cc 
+                      JOIN souscriptions sub ON sub.code_souscription = cc.souscription_code AND sub.etablissement_code = cc.etablissement_code
                       WHERE cc.client_code = c.code_client 
                         AND cc.etablissement_code = c.etablissement_code 
-                        AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)";
+                        AND (cc.statut_cautisation_client != 'annule' OR cc.statut_cautisation_client IS NULL)
+                        AND LOWER(TRIM(sub.statut_souscription)) IN ('valide', 'solde')";
         $subCotParams = [];
 
         $sql = "
