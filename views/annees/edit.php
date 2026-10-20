@@ -1,7 +1,8 @@
 <?php require_once __DIR__ . '/../../public/inc/header.php'; ?>
 <?php 
+$item = $item ?? [];
 $isEdit = !empty($item['id_annee']);
-$title = $isEdit ? 'Éditer l\'Année Académique' : 'Nouvelle Année Académique';
+$title = $isEdit ? 'Éditer l\'Année d\'Activité' : 'Nouvelle Année d\'Activité';
 ?>
 <div class="app-layout">
   <?php require_once __DIR__ . '/../../public/inc/sidbar.php'; ?>
@@ -69,7 +70,26 @@ $title = $isEdit ? 'Éditer l\'Année Académique' : 'Nouvelle Année Académiqu
                 <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
                   Pénalité de reconduction (%)
                 </label>
-                <input type="number" step="0.01" min="0" max="100" name="penalite_annee" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" value="<?= htmlspecialchars($item['penalite_annee'] ?? '0') ?>" placeholder="Ex: 10">
+                <input type="number" step="0.01" min="0" max="100" name="penalite_annee" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" value="<?= htmlspecialchars($item['penalite_annee'] ?? '0') ?>" placeholder="Ex: 30">
+              </div>
+
+              <div class="form-group" style="width: 100%; box-sizing: border-box;">
+                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                  Pénalité de restauration (%)
+                </label>
+                <input type="number" step="0.01" min="0" max="100" name="penalite_restore" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;" value="<?= htmlspecialchars($item['penalite_restore'] ?? '0') ?>" placeholder="Ex: 0">
+              </div>
+
+              <div class="form-group" style="width: 100%; box-sizing: border-box;">
+                <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                  Statut de l'exercice
+                </label>
+                <?php $currentStatut = $item['statut_annee'] ?? 'actif'; ?>
+                <select name="statut_annee" class="form-control" style="width: 100%; box-sizing: border-box; padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; outline: none; background: #F8FAFC; color: #0F172A;">
+                  <option value="actif" <?= $currentStatut === 'actif' ? 'selected' : '' ?>>Actif (Exercice en cours)</option>
+                  <option value="planifie" <?= $currentStatut === 'planifie' ? 'selected' : '' ?>>Planifié (À venir)</option>
+                  <option value="cloture" <?= $currentStatut === 'cloture' ? 'selected' : '' ?>>Clôturé (Archivé)</option>
+                </select>
               </div>
             </div>
           </div>

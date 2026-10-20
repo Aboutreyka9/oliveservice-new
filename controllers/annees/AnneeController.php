@@ -10,13 +10,25 @@ class AnneeController extends BaseController
     public function list()
     {
         $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
-        $this->loadView('../views/annees/list.php');
+        $db = $this->model->getCon();
+        $totalAnnees = (int)$db->query("SELECT COUNT(*) FROM annees")->fetchColumn();
+        $stmtActive = $db->query("SELECT * FROM annees WHERE statut_annee = 'actif' ORDER BY id_annee DESC LIMIT 1");
+        $activeAnnee = $stmtActive ? $stmtActive->fetch(PDO::FETCH_ASSOC) : null;
+        $totalPlanifie = (int)$db->query("SELECT COUNT(*) FROM annees WHERE statut_annee = 'planifie'")->fetchColumn();
+        $totalCloture = (int)$db->query("SELECT COUNT(*) FROM annees WHERE statut_annee = 'cloture'")->fetchColumn();
+
+        $this->loadView('../views/annees/list.php', [
+            'totalAnnees'   => $totalAnnees,
+            'activeAnnee'   => $activeAnnee,
+            'totalPlanifie' => $totalPlanifie,
+            'totalCloture'  => $totalCloture,
+        ]);
     }
 
     public function apiList()
     {
         $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
-        $items = $this->model->getAll();
+        $items = $this->model->getAllWithDetails();
         $data = [];
         foreach ($items as $i) {
             $id = $i['id_annee'];
@@ -36,7 +48,7 @@ class AnneeController extends BaseController
         $data = $_POST;
         unset($data['csrf_token']);
         if (!empty($data['libelle_annee'])) {
-            if (!$this->checkUnique('annees', 'libelle_annee', $data['libelle_annee'], 'Annee academique')) return;
+            if (!$this->checkUnique('annees', 'libelle_annee', $data['libelle_annee'], 'Année d\'activité')) return;
         }
 
         $userCode = Context::user() ?: ($_SESSION[USERS_AUTH]['code_user'] ?? null);
@@ -66,21 +78,34 @@ class AnneeController extends BaseController
             $data['code_annee'] = $this->validator->generateCode('annees', 'code_annee', 'ANN-', 8);
         }
         $data['statut_annee'] = $data['statut_annee'] ?? 'actif';
+        if (!in_array($data['statut_annee'], ['planifie', 'actif', 'cloture'])) {
+            $data['statut_annee'] = 'actif';
+        }
+        $data['penalite_annee'] = isset($data['penalite_annee']) && $data['penalite_annee'] !== '' ? (float)$data['penalite_annee'] : 0.0;
+        $data['penalite_restore'] = isset($data['penalite_restore']) && $data['penalite_restore'] !== '' ? (float)$data['penalite_restore'] : 0.0;
         $data['created_at_annee'] = date('Y-m-d H:i:s');
         $cols = $this->model->getCon()->query("DESCRIBE annees")->fetchAll(PDO::FETCH_COLUMN);
         if (in_array('user_code', $cols)) $data['user_code'] = $userCode;
         if (in_array('etablissement_code', $cols)) $data['etablissement_code'] = $etabCode;
         if (in_array('zone_code', $cols)) $data['zone_code'] = $zoneCode;
         $filteredData = array_intersect_key($data, array_flip($cols));
+
+        // Si la nouvelle année est active, clôturer les précédentes de cet établissement
+        if (($filteredData['statut_annee'] ?? '') === 'actif' && !empty($etabCode)) {
+            $this->model->getCon()->prepare("
+                UPDATE annees SET statut_annee = 'cloture' WHERE etablissement_code = ? AND statut_annee = 'actif'
+            ")->execute([$etabCode]);
+        }
+
         if ($this->model->create($filteredData)) {
             if (($filteredData['statut_annee'] ?? '') === 'actif') {
                 $_SESSION['annee_active_code'] = $filteredData['code_annee'] ?? ($data['code_annee'] ?? '');
                 $_SESSION['annee_active_libelle'] = $filteredData['libelle_annee'] ?? ($data['libelle_annee'] ?? '');
                 NotificationService::resolveAnneeNonActive($etabCode);
             }
-            $this->success('Année académique créée avec succès !');
+            $this->success('Année d\'activité créée avec succès !');
         } else {
-            $this->error('Erreur lors de la création de l\'année académique');
+            $this->error('Erreur lors de la création de l\'année');
         }
     }
 
@@ -93,11 +118,33 @@ class AnneeController extends BaseController
         $data = $_POST;
         unset($data['csrf_token']);
         if (!empty($data['libelle_annee'])) {
-            if (!$this->checkUnique('annees', 'libelle_annee', $data['libelle_annee'], 'Annee academique', 'id_annee', $id)) return;
+            if (!$this->checkUnique('annees', 'libelle_annee', $data['libelle_annee'], 'Année d\'activité', 'id_annee', $id)) return;
+        }
+
+        if (isset($data['penalite_annee'])) {
+            $data['penalite_annee'] = $data['penalite_annee'] !== '' ? (float)$data['penalite_annee'] : 0.0;
+        }
+        if (isset($data['penalite_restore'])) {
+            $data['penalite_restore'] = $data['penalite_restore'] !== '' ? (float)$data['penalite_restore'] : 0.0;
+        }
+        if (isset($data['statut_annee']) && !in_array($data['statut_annee'], ['planifie', 'actif', 'cloture'])) {
+            unset($data['statut_annee']);
         }
 
         $cols = $this->model->getCon()->query("DESCRIBE annees")->fetchAll(PDO::FETCH_COLUMN);
         $filteredData = array_intersect_key($data, array_flip($cols));
+
+        // Si on passe cette année à actif, clôturer les autres de l'établissement
+        if (($filteredData['statut_annee'] ?? '') === 'actif') {
+            $existing = $this->model->getById($id);
+            $etabCode = $existing['etablissement_code'] ?? Context::etablissement();
+            if (!empty($etabCode)) {
+                $this->model->getCon()->prepare("
+                    UPDATE annees SET statut_annee = 'cloture' WHERE etablissement_code = ? AND id_annee != ? AND statut_annee = 'actif'
+                ")->execute([$etabCode, $id]);
+            }
+        }
+
         if ($this->model->update($filteredData, $id)) {
             if (($filteredData['statut_annee'] ?? '') === 'actif') {
                 $existing = $this->model->getById($id);
@@ -107,9 +154,9 @@ class AnneeController extends BaseController
                 }
                 NotificationService::resolveAnneeNonActive(Context::etablissement());
             }
-            $this->success('Année académique modifiée avec succès !');
+            $this->success('Année d\'activité modifiée avec succès !');
         } else {
-            $this->error('Erreur lors de la modification de l\'année académique');
+            $this->error('Erreur lors de la modification de l\'année');
         }
     }
 
@@ -117,7 +164,7 @@ class AnneeController extends BaseController
     {
         $this->requirePost(false);
         $this->requirePermission('GESTIONNAIRE_MANAGE_ANNEES');
-        $id = $this->post('id');
+        $id = (int)$this->post('id');
         if ($id && $this->model->getById($id)) {
             if ($this->model->toggleStatus($id)) {
                 $updated = $this->model->getById($id);
@@ -142,56 +189,69 @@ class AnneeController extends BaseController
             $id = $this->validator->decrypter($details);
             $item = $this->model->getById($id);
             if (!$item) { 
-                $this->renderNotFound("L'année académique demandée est introuvable.");
+                $this->renderNotFound("L'année d'activité demandée est introuvable.");
                 return;
             }
             
             $anneeCode = $item['code_annee'];
+            $db = $this->model->getCon();
             
-            // Statistiques
-            $stmtStats = $this->model->getCon()->prepare("
-                SELECT 
-                    (SELECT COUNT(*) FROM inscriptions WHERE annee_code = ? AND statut_inscription = 'actif') as total_etudiants,
-                    (SELECT COUNT(*) FROM classes WHERE annee_code = ? AND statut_classe = 'actif') as total_classes,
-                    (SELECT COUNT(*) FROM semestres WHERE annee_code = ? AND statut_semestre = 'actif') as total_semestres,
-                    (SELECT COALESCE(SUM(montant_paiement), 0) FROM paiements WHERE annee_code = ? AND statut_paiement != 'annule') as total_recouvrement
+            // Métadonnées étendues (Établissement, Zone, Créateur)
+            $stmtMeta = $db->prepare("
+                SELECT z.libelle_zone, e.libelle_etablissement, u.nom_user, u.prenom_user
+                FROM annees a
+                LEFT JOIN zones z ON z.code_zone = a.zone_code
+                LEFT JOIN etablissements e ON e.code_etablissement = a.etablissement_code
+                LEFT JOIN users u ON u.code_user = a.user_code
+                WHERE a.code_annee = ?
             ");
-            $stmtStats->execute([$anneeCode, $anneeCode, $anneeCode, $anneeCode]);
+            $stmtMeta->execute([$anneeCode]);
+            $meta = $stmtMeta->fetch(PDO::FETCH_ASSOC) ?: [];
+            $item = array_merge($item, $meta);
+
+            // Statistiques réelles Olive Service
+            $stmtStats = $db->prepare("
+                SELECT 
+                    (SELECT COUNT(*) FROM souscriptions WHERE annee_code = ?) as total_souscriptions,
+                    (SELECT COUNT(*) FROM souscriptions WHERE annee_code = ? AND statut_souscription = 'valide') as total_valides,
+                    (SELECT COUNT(*) FROM souscriptions WHERE annee_code = ? AND statut_souscription = 'solde') as total_soldees,
+                    (SELECT COUNT(*) FROM souscriptions WHERE annee_code = ? AND statut_souscription = 'reconduite') as total_reconduites,
+                    (SELECT COUNT(*) FROM souscriptions WHERE annee_code = ? AND statut_souscription = 'annule') as total_annulees,
+                    (SELECT COUNT(*) FROM sessions WHERE annee_code = ?) as total_sessions,
+                    (SELECT COALESCE(SUM(c.montant_cautisation_client), 0) 
+                     FROM cautisation_clients c 
+                     JOIN souscriptions sub ON sub.code_souscription = c.souscription_code 
+                     WHERE c.annee_code = ? 
+                       AND (c.statut_cautisation_client != 'annule' OR c.statut_cautisation_client IS NULL) 
+                       AND sub.statut_souscription IN ('valide', 'solde')) as total_cotise
+            ");
+            $stmtStats->execute([$anneeCode, $anneeCode, $anneeCode, $anneeCode, $anneeCode, $anneeCode, $anneeCode]);
             $stats = $stmtStats->fetch(PDO::FETCH_ASSOC) ?: [
-                'total_etudiants' => 0, 'total_classes' => 0, 'total_semestres' => 0, 'total_recouvrement' => 0
+                'total_souscriptions' => 0, 'total_valides' => 0, 'total_soldees' => 0,
+                'total_reconduites' => 0, 'total_annulees' => 0, 'total_sessions' => 0, 'total_cotise' => 0
             ];
 
-            // Liste des classes de cette année
-            $stmtCls = $this->model->getCon()->prepare("
-                SELECT cl.*, f.libelle_filiere, n.libelle_niveau,
-                       (SELECT COUNT(*) FROM inscriptions ins WHERE ins.classe_code = cl.code_classe AND ins.statut_inscription = 'actif') as nb_eleves
-                FROM classes cl
-                LEFT JOIN filieres f ON f.code_filiere = cl.filiere_code
-                LEFT JOIN niveaux n ON n.code_niveau = cl.niveau_code
-                WHERE cl.annee_code = ?
-                ORDER BY cl.libelle_classe ASC
+            // Liste des sessions de cette année
+            $stmtSess = $db->prepare("
+                SELECT s.*, z.libelle_zone
+                FROM sessions s
+                LEFT JOIN zones z ON z.code_zone = s.zone_code
+                WHERE s.annee_code = ?
+                ORDER BY s.id_session DESC
             ");
-            $stmtCls->execute([$anneeCode]);
-            $classes = $stmtCls->fetchAll(PDO::FETCH_ASSOC);
-
-            // Liste des semestres de cette année
-            $stmtSem = $this->model->getCon()->prepare("
-                SELECT * FROM semestres WHERE annee_code = ? ORDER BY id_semestre ASC
-            ");
-            $stmtSem->execute([$anneeCode]);
-            $semestres = $stmtSem->fetchAll(PDO::FETCH_ASSOC);
+            $stmtSess->execute([$anneeCode]);
+            $sessions = $stmtSess->fetchAll(PDO::FETCH_ASSOC);
 
             $encryptedId = $this->validator->crypter($id);
         } catch (Exception $e) {
             error_log("AnneeController::details error: " . $e->getMessage());
-            $this->renderNotFound("L'année académique demandée est introuvable.");
+            $this->renderNotFound("L'année d'activité demandée est introuvable.");
             return;
         }
         $this->loadView('../views/annees/details.php', [
             'item' => $item, 
             'stats' => $stats,
-            'classes' => $classes,
-            'semestres' => $semestres,
+            'sessions' => $sessions,
             'encryptedId' => $encryptedId
         ]);
     }
