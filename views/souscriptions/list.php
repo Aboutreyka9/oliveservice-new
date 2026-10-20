@@ -53,6 +53,100 @@
         justify-content: flex-end;
         gap: 6px;
       }
+      .sous-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 18px;
+        margin-bottom: 24px;
+      }
+      .sous-kpi-card {
+        background: #FFFFFF;
+        border-radius: 14px;
+        padding: 20px;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+        transition: all 0.25s ease;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        cursor: pointer;
+      }
+      .sous-kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--kpi-accent, #1E3A5F);
+        border-radius: 14px 14px 0 0;
+      }
+      .sous-kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 20px -5px rgba(15, 23, 42, 0.08);
+      }
+      .sous-kpi-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .sous-kpi-title {
+        font-size: 11px;
+        font-weight: 800;
+        color: #64748B;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .sous-kpi-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--kpi-bg-icon, #EFF6FF);
+        color: var(--kpi-color-icon, #1E3A5F);
+        transition: transform 0.2s ease;
+      }
+      .sous-kpi-card:hover .sous-kpi-icon {
+        transform: scale(1.08);
+      }
+      .sous-kpi-val {
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1.15;
+        letter-spacing: -0.5px;
+        color: #0F172A;
+        margin-bottom: 10px;
+      }
+      .sous-kpi-footer {
+        font-size: 12px;
+        color: #64748B;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .sous-kpi-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .btn-filter-status {
+        transition: all 0.2s ease;
+      }
+      .btn-filter-status:hover {
+        border-color: #94A3B8;
+        transform: translateY(-1px);
+      }
       </style>
 
       <!-- EN-TÊTE DE PAGE -->
@@ -76,96 +170,159 @@
         <?php endif; ?>
       </div>
 
-      <!-- GRILLE DES KPIS / STATISTIQUES -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; margin-bottom: 24px;">
+      <!-- GRILLE DES KPIS / STATISTIQUES (6 CARTES DYNAMIQUES) -->
+      <div class="sous-kpi-grid">
 
         <!-- Card 1: Total Souscriptions -->
-        <div class="kpi-card-modern" style="background: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-            <div>
-              <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Souscriptions Totales</span>
-              <h3 style="font-size: 24px; font-weight: 800; color: #0F172A; margin: 4px 0 0 0;"><?= number_format($stats['total_souscriptions'] ?? 0, 0, ',', ' ') ?></h3>
-            </div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); display: flex; align-items: center; justify-content: center; color: #FFF;">
-              <i data-lucide="file-text" style="width: 22px; height: 22px;"></i>
+        <div class="sous-kpi-card" data-filter-target="all" style="--kpi-accent: linear-gradient(90deg, #1E3A5F, #0F172A); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #1E3A5F;" title="Cliquer pour afficher toutes les souscriptions">
+          <div class="sous-kpi-header">
+            <span class="sous-kpi-title">Souscriptions Totales</span>
+            <div class="sous-kpi-icon">
+              <i data-lucide="file-text" style="width: 20px; height: 20px;"></i>
             </div>
           </div>
-          <div style="display: flex; gap: 8px; font-size: 11px; font-weight: 700; align-items: center; flex-wrap: wrap;">
-            <span style="background: #EFF6FF; color: #1E3A5F; padding: 3px 10px; border-radius: 12px; border: 1px solid #BFDBFE;">En cours: <?= $stats['total_encours_count'] ?? 0 ?></span>
-            <span style="background: #DCFCE7; color: #15803D; padding: 3px 10px; border-radius: 12px; border: 1px solid #BBF7D0;">Soldées: <?= $stats['total_solde_count'] ?? 0 ?></span>
-            <span style="background: #F1F5F9; color: #475569; padding: 3px 10px; border-radius: 12px; border: 1px solid #CBD5E1;">Sur <?= $stats['total_clients_souscripteurs'] ?? 0 ?> abonné(s)</span>
+          <div class="sous-kpi-val" style="color: #0F172A;">
+            <?= number_format($stats['total_souscriptions'] ?? 0, 0, ',', ' ') ?>
+          </div>
+          <div class="sous-kpi-footer">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: 11px; font-weight: 700;">
+              <span class="sous-kpi-badge" style="background: #EFF6FF; color: #1E3A5F; border: 1px solid #BFDBFE;">En cours: <?= $stats['total_valide_count'] ?? 0 ?></span>
+              <span class="sous-kpi-badge" style="background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0;">Soldées: <?= $stats['total_solde_count'] ?? 0 ?></span>
+            </div>
+            <span style="font-size: 11px; color: #64748B; font-weight: 600;"><?= $stats['total_clients_souscripteurs'] ?? 0 ?> client(s)</span>
           </div>
         </div>
 
-        <!-- Card 2: Total Engagé -->
-        <div class="kpi-card-modern" style="background: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-            <div>
-              <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Montant Total Engagé</span>
-              <h3 style="font-size: 22px; font-weight: 800; color: #1E3A5F; margin: 4px 0 0 0;"><?= number_format($stats['total_engage'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 12px;">FCFA</small></h3>
-            </div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); display: flex; align-items: center; justify-content: center; color: #FFF;">
-              <i data-lucide="trending-up" style="width: 22px; height: 22px;"></i>
+        <!-- Card 2: Montant Total Engagé -->
+        <div class="sous-kpi-card" data-filter-target="all" style="--kpi-accent: linear-gradient(90deg, #2563EB, #1D4ED8); --kpi-bg-icon: #EFF6FF; --kpi-color-icon: #2563EB;" title="Montant cumulé de l'ensemble des souscriptions">
+          <div class="sous-kpi-header">
+            <span class="sous-kpi-title">Montant Total Engagé</span>
+            <div class="sous-kpi-icon">
+              <i data-lucide="trending-up" style="width: 20px; height: 20px;"></i>
             </div>
           </div>
-          <span style="color: #64748B; font-size: 12px; font-weight: 600;">Cumul contractuel global</span>
+          <div class="sous-kpi-val" style="color: #1E3A5F;">
+            <?= number_format($stats['total_engage'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #64748B;">FCFA</small>
+          </div>
+          <div class="sous-kpi-footer">
+            <span class="sous-kpi-badge" style="background: #F1F5F9; color: #334155; border: 1px solid #CBD5E1;">
+              Actifs : <?= number_format($stats['total_engage_actif'] ?? 0, 0, ',', ' ') ?> FCFA
+            </span>
+            <span style="font-size: 11px; color: #64748B;">Cumul contractuel</span>
+          </div>
         </div>
 
         <!-- Card 3: Total Recouvré -->
-        <div class="kpi-card-modern" style="background: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-            <div>
-              <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Total Recouvré</span>
-              <h3 style="font-size: 22px; font-weight: 800; color: #15803D; margin: 4px 0 0 0;"><?= number_format($stats['total_cotise'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 12px;">FCFA</small></h3>
-            </div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #10B981 0%, #047857 100%); display: flex; align-items: center; justify-content: center; color: #FFF;">
-              <i data-lucide="wallet" style="width: 22px; height: 22px;"></i>
+        <div class="sous-kpi-card" data-filter-target="Soldée" style="--kpi-accent: linear-gradient(90deg, #10B981, #047857); --kpi-bg-icon: #ECFDF5; --kpi-color-icon: #059669;" title="Cliquer pour afficher les souscriptions soldées">
+          <div class="sous-kpi-header">
+            <span class="sous-kpi-title">Total Recouvré</span>
+            <div class="sous-kpi-icon">
+              <i data-lucide="wallet" style="width: 20px; height: 20px;"></i>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="flex: 1; height: 6px; background: #E2E8F0; border-radius: 3px; overflow: hidden;">
+          <div class="sous-kpi-val" style="color: #059669;">
+            <?= number_format($stats['total_cotise'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #64748B;">FCFA</small>
+          </div>
+          <div>
+            <div style="height: 6px; background: #E2E8F0; border-radius: 3px; overflow: hidden; margin-bottom: 8px;">
               <div style="width: <?= min(100, $stats['taux_recouvrement'] ?? 0) ?>%; background: #10B981; height: 100%;"></div>
             </div>
-            <span style="font-size: 12px; font-weight: 800; color: #15803D;"><?= $stats['taux_recouvrement'] ?? 0 ?>%</span>
+            <div class="sous-kpi-footer">
+              <span class="sous-kpi-badge" style="background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;">
+                <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i> <?= $stats['taux_recouvrement'] ?? 0 ?>% recouvré
+              </span>
+              <span style="font-size: 11px; color: #64748B;">Sur contrats actifs</span>
+            </div>
           </div>
         </div>
 
         <!-- Card 4: Reste à Recouvrer -->
-        <div class="kpi-card-modern" style="background: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-            <div>
-              <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Reste à Recouvrer</span>
-              <h3 style="font-size: 22px; font-weight: 800; color: #DC2626; margin: 4px 0 0 0;"><?= number_format($stats['reste_a_recouvrer'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 12px;">FCFA</small></h3>
-            </div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%); display: flex; align-items: center; justify-content: center; color: #FFF;">
-              <i data-lucide="clock" style="width: 22px; height: 22px;"></i>
+        <div class="sous-kpi-card" data-filter-target="Validée" style="--kpi-accent: linear-gradient(90deg, #EF4444, #B91C1C); --kpi-bg-icon: #FEF2F2; --kpi-color-icon: #DC2626;" title="Cliquer pour afficher les contrats en cours">
+          <div class="sous-kpi-header">
+            <span class="sous-kpi-title">Reste à Recouvrer</span>
+            <div class="sous-kpi-icon">
+              <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
             </div>
           </div>
-          <span style="color: #DC2626; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-            <i data-lucide="alert-circle" style="width: 14px; height: 14px;"></i> Encaissements en attente
-          </span>
+          <div class="sous-kpi-val" style="color: #DC2626;">
+            <?= number_format($stats['reste_a_recouvrer'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #64748B;">FCFA</small>
+          </div>
+          <div class="sous-kpi-footer">
+            <span class="sous-kpi-badge" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">
+              <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i> <?= $stats['total_valide_count'] ?? 0 ?> contrat(s) en cours
+            </span>
+            <span style="font-size: 11px; color: #64748B;">Encaissements attendus</span>
+          </div>
+        </div>
+
+        <!-- Card 5: Souscriptions Reconduites -->
+        <div class="sous-kpi-card" data-filter-target="Reconduite" style="--kpi-accent: linear-gradient(90deg, #F59E0B, #D97706); --kpi-bg-icon: #FFFBEB; --kpi-color-icon: #D97706;" title="Cliquer pour afficher les contrats reconduits">
+          <div class="sous-kpi-header">
+            <span class="sous-kpi-title">Contrats Reconduits</span>
+            <div class="sous-kpi-icon">
+              <i data-lucide="refresh-cw" style="width: 20px; height: 20px;"></i>
+            </div>
+          </div>
+          <div class="sous-kpi-val" style="color: #D97706;">
+            <?= number_format($stats['total_reconduite_count'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #B45309;">contrat(s)</small>
+          </div>
+          <div class="sous-kpi-footer">
+            <span class="sous-kpi-badge" style="background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A;">
+              <i data-lucide="repeat" style="width: 12px; height: 12px;"></i> Engagé : <?= number_format($stats['total_reconduite_engage'] ?? 0, 0, ',', ' ') ?> FCFA
+            </span>
+            <span style="font-size: 11px; color: #92400E; font-weight: 600;">Cotisé : <?= number_format($stats['total_reconduite_cotise'] ?? 0, 0, ',', ' ') ?> FCFA</span>
+          </div>
+        </div>
+
+        <!-- Card 6: Souscriptions Annulées -->
+        <div class="sous-kpi-card" data-filter-target="Annulée" style="--kpi-accent: linear-gradient(90deg, #991B1B, #7F1D1D); --kpi-bg-icon: #FEF2F2; --kpi-color-icon: #991B1B;" title="Cliquer pour afficher les contrats annulés">
+          <div class="sous-kpi-header">
+            <span class="sous-kpi-title">Contrats Annulés</span>
+            <div class="sous-kpi-icon">
+              <i data-lucide="ban" style="width: 20px; height: 20px;"></i>
+            </div>
+          </div>
+          <div class="sous-kpi-val" style="color: #991B1B;">
+            <?= number_format($stats['total_annule_count'] ?? 0, 0, ',', ' ') ?> <small style="font-size: 13px; font-weight: 700; color: #991B1B;">contrat(s)</small>
+          </div>
+          <div class="sous-kpi-footer">
+            <span class="sous-kpi-badge" style="background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;">
+              <i data-lucide="x-circle" style="width: 12px; height: 12px;"></i> Annulé : <?= number_format($stats['total_annule_engage'] ?? 0, 0, ',', ' ') ?> FCFA
+            </span>
+            <span style="font-size: 11px; color: #991B1B; font-weight: 600;">Cotisé : <?= number_format($stats['total_annule_cotise'] ?? 0, 0, ',', ' ') ?> FCFA</span>
+          </div>
         </div>
 
       </div>
 
-      <!-- BARRE DE FILTRES RAPIDES -->
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; background: #FFFFFF; border-radius: 12px; padding: 14px 20px; border: 1px solid #E2E8F0;">
+      <!-- BARRE DE FILTRES RAPIDES DYNAMIQUES -->
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; background: #FFFFFF; border-radius: 12px; padding: 12px 18px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <span style="font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; margin-right: 8px;">Filtrer par :</span>
-          <button type="button" class="btn btn-sm btn-filter-status active" data-status="all" style="background: #1E3A5F; color: #FFFFFF; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: none; font-size: 12px;">
-            Toutes les souscriptions
+          <span style="font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; margin-right: 6px; letter-spacing: 0.5px;">Filtrer par :</span>
+          
+          <button type="button" class="btn btn-sm btn-filter-status active" data-status="all" style="background: #1E3A5F; color: #FFFFFF; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: 1px solid #1E3A5F; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <span>Toutes les souscriptions</span>
+            <span style="background: rgba(255,255,255,0.25); color: #FFFFFF; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800;"><?= $stats['total_souscriptions'] ?? 0 ?></span>
           </button>
-          <button type="button" class="btn btn-sm btn-filter-status" data-status="Validée" style="background: #F1F5F9; color: #64748B; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: none; font-size: 12px;">
-            En cours / Validées
+          
+          <button type="button" class="btn btn-sm btn-filter-status" data-status="Validée" style="background: #F8FAFC; color: #475569; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: 1px solid #CBD5E1; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <span>En cours / Validées</span>
+            <span style="background: #EFF6FF; color: #1E3A5F; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid #BFDBFE;"><?= $stats['total_valide_count'] ?? 0 ?></span>
           </button>
-          <button type="button" class="btn btn-sm btn-filter-status" data-status="Soldée" style="background: #F1F5F9; color: #64748B; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: none; font-size: 12px;">
-            Soldées
+          
+          <button type="button" class="btn btn-sm btn-filter-status" data-status="Soldée" style="background: #F8FAFC; color: #475569; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: 1px solid #CBD5E1; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <span>Soldées</span>
+            <span style="background: #DCFCE7; color: #15803D; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid #BBF7D0;"><?= $stats['total_solde_count'] ?? 0 ?></span>
           </button>
-          <button type="button" class="btn btn-sm btn-filter-status" data-status="Reconduite" style="background: #F1F5F9; color: #64748B; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: none; font-size: 12px;">
-            Reconduites
+          
+          <button type="button" class="btn btn-sm btn-filter-status" data-status="Reconduite" style="background: #F8FAFC; color: #475569; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: 1px solid #CBD5E1; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <span>Reconduites</span>
+            <span style="background: #FEF3C7; color: #92400E; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid #FDE68A;"><?= $stats['total_reconduite_count'] ?? 0 ?></span>
           </button>
-          <button type="button" class="btn btn-sm btn-filter-status" data-status="Annulée" style="background: #F1F5F9; color: #64748B; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: none; font-size: 12px;">
-            Annulées
+          
+          <button type="button" class="btn btn-sm btn-filter-status" data-status="Annulée" style="background: #F8FAFC; color: #475569; font-weight: 700; border-radius: 20px; padding: 6px 14px; border: 1px solid #CBD5E1; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <span>Annulées</span>
+            <span style="background: #FEE2E2; color: #B91C1C; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid #FECACA;"><?= $stats['total_annule_count'] ?? 0 ?></span>
           </button>
         </div>
       </div>
@@ -196,5 +353,5 @@
     </div>
   </main>
 </div>
-<script src="<?= RACINE ?>public/assets/js/modules/souscriptions.js?v=1.3"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/souscriptions.js?v=1.4"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>

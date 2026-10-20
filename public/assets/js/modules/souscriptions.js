@@ -23,11 +23,12 @@ $(function () {
           className: 'text-center',
           width: '100px',
           render: function (d) {
+            const st = (d || '').toLowerCase().trim();
             let badgeStyle = 'background: #EFF6FF; color: #1E3A5F; border: 1px solid #BFDBFE;';
             let libelle = 'Validée';
-            if (d === 'solde') { badgeStyle = 'background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0;'; libelle = 'Soldée'; }
-            else if (d === 'annule') { badgeStyle = 'background: #FEE2E2; color: #B91C1C; border: 1px solid #FECACA;'; libelle = 'Annulée'; }
-            else if (d === 'reconduite') { badgeStyle = 'background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A;'; libelle = 'Reconduite'; }
+            if (st === 'solde') { badgeStyle = 'background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0;'; libelle = 'Soldée'; }
+            else if (st === 'annule' || st === 'annulé' || st === 'annulee' || st === 'annulée') { badgeStyle = 'background: #FEE2E2; color: #B91C1C; border: 1px solid #FECACA;'; libelle = 'Annulée'; }
+            else if (st === 'reconduite' || st === 'reconduit') { badgeStyle = 'background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A;'; libelle = 'Reconduite'; }
             return `<span style="display: inline-block; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; ${badgeStyle}">${libelle}</span>`;
           }
         },
@@ -114,13 +115,28 @@ $(function () {
 
     // Filtres rapides par statut
     $('.btn-filter-status').on('click', function () {
-      $('.btn-filter-status').removeClass('active').css({ 'background': '#F1F5F9', 'color': '#64748B' });
-      $(this).addClass('active').css({ 'background': '#1E3A5F', 'color': '#FFFFFF' });
+      $('.btn-filter-status').removeClass('active').css({ 'background': '#F8FAFC', 'color': '#475569', 'border-color': '#CBD5E1' });
+      $(this).addClass('active').css({ 'background': '#1E3A5F', 'color': '#FFFFFF', 'border-color': '#1E3A5F' });
       var status = $(this).data('status');
       if (status === 'all') {
         dt.column(1).search('').draw();
       } else {
         dt.column(1).search(status).draw();
+      }
+    });
+
+    // Clic sur les cartes KPI pour filtrer le tableau
+    $(document).on('click', '.sous-kpi-card[data-filter-target]', function () {
+      var target = $(this).data('filter-target');
+      if (target) {
+        $('.btn-filter-status[data-status="' + target + '"]').trigger('click');
+        var $tbl = $('#table-souscriptions');
+        if ($tbl.length) {
+          var off = $tbl.offset().top - 120;
+          if ($(window).scrollTop() < off - 200 || $(window).scrollTop() > off + 400) {
+            $('html, body').animate({ scrollTop: off }, 350);
+          }
+        }
       }
     });
   }

@@ -349,6 +349,10 @@ $(function () {
       $('#kpi-taux-actifs').text((stats.taux_actifs || 0) + '%');
       $('#kpi-clients-souscripteurs').text(formatNum(stats.clients_souscripteurs));
       $('#kpi-total-souscriptions').text(formatNum(stats.total_souscriptions));
+      $('#kpi-sous-valide').text(formatNum(stats.souscriptions_valide));
+      $('#kpi-sous-solde').text(formatNum(stats.souscriptions_solde));
+      $('#kpi-sous-reconduite').text(formatNum(stats.souscriptions_reconduite));
+      $('#kpi-sous-annule').text(formatNum(stats.souscriptions_annule));
       $('#kpi-taux-engagement').text((stats.taux_engagement || 0) + '%');
       $('#kpi-total-cotise').html(formatFCFA(stats.total_cotise));
 
@@ -375,6 +379,19 @@ $(function () {
       $(this).addClass('active');
       currentFilter = $(this).data('filter') || 'all';
       table.draw();
+    });
+
+    // Clic sur la carte KPI Souscriptions pour filtrer la table sur les souscripteurs
+    $(document).on('click', '#kpi-card-souscriptions', function (e) {
+      if ($(e.target).closest('a').length) return; // Autoriser le clic sur le lien externe vers /souscription/list
+      $('.btn-cli-filter[data-filter="souscripteur"]').trigger('click');
+      const $tbl = $('#table-clients');
+      if ($tbl.length) {
+        const off = $tbl.offset().top - 120;
+        if ($(window).scrollTop() < off - 200 || $(window).scrollTop() > off + 400) {
+          $('html, body').animate({ scrollTop: off }, 350);
+        }
+      }
     });
 
     // Bouton d'actualisation manuelle

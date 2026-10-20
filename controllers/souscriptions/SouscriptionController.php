@@ -18,40 +18,88 @@ class SouscriptionController extends BaseController
         $items = $this->model->getAllWithDetails($userScopeFilter, $zoneScopeFilter, $anneeScopeFilter);
 
         $totalSouscriptions = count($items);
-        $totalEngage = 0;
-        $totalCotise = 0;
+        $totalValideCount = 0;
         $totalSoldeCount = 0;
-        $totalEnCoursCount = 0;
+        $totalReconduiteCount = 0;
+        $totalAnnuleCount = 0;
+
+        $totalValideEngage = 0;
+        $totalValideCotise = 0;
+        $totalSoldeEngage = 0;
+        $totalSoldeCotise = 0;
+        $totalReconduiteEngage = 0;
+        $totalReconduiteCotise = 0;
+        $totalAnnuleEngage = 0;
+        $totalAnnuleCotise = 0;
 
         foreach ($items as $s) {
             $sumPrixCotisation = (float)($s['sum_prix_cotisation_pack'] ?? 0);
             $nombreJourSession = (int)($s['nombre_jour_session'] ?? 0);
             $totaleSouscription = (float)($s['totale_souscription'] ?? ($sumPrixCotisation * $nombreJourSession));
             $montantCotise = (float)($s['montant_total_cotise'] ?? 0);
+            $statut = strtolower(trim($s['statut_souscription'] ?? 'valide'));
 
-            $totalEngage += $totaleSouscription;
-            $totalCotise += $montantCotise;
-
-            if (($s['statut_souscription'] ?? '') === 'solde') {
-                $totalSoldeCount++;
-            } else {
-                $totalEnCoursCount++;
+            switch ($statut) {
+                case 'solde':
+                    $totalSoldeCount++;
+                    $totalSoldeEngage += $totaleSouscription;
+                    $totalSoldeCotise += $montantCotise;
+                    break;
+                case 'reconduite':
+                case 'reconduit':
+                    $totalReconduiteCount++;
+                    $totalReconduiteEngage += $totaleSouscription;
+                    $totalReconduiteCotise += $montantCotise;
+                    break;
+                case 'annule':
+                case 'annulé':
+                case 'annulee':
+                case 'annulée':
+                    $totalAnnuleCount++;
+                    $totalAnnuleEngage += $totaleSouscription;
+                    $totalAnnuleCotise += $montantCotise;
+                    break;
+                case 'valide':
+                default:
+                    $totalValideCount++;
+                    $totalValideEngage += $totaleSouscription;
+                    $totalValideCotise += $montantCotise;
+                    break;
             }
         }
 
-        $resteARecouvrer = max(0, $totalEngage - $totalCotise);
-        $tauxRecouvrement = $totalEngage > 0 ? round(($totalCotise / $totalEngage) * 100, 1) : 0;
+        $totalEngageGlobal = $totalValideEngage + $totalSoldeEngage + $totalReconduiteEngage + $totalAnnuleEngage;
+        $totalCotiseGlobal = $totalValideCotise + $totalSoldeCotise + $totalReconduiteCotise + $totalAnnuleCotise;
+
+        $totalEngageActif = $totalValideEngage + $totalSoldeEngage;
+        $totalCotiseActif = $totalValideCotise + $totalSoldeCotise;
+
+        $resteARecouvrer = max(0, $totalValideEngage - $totalValideCotise);
+        $tauxRecouvrement = $totalEngageActif > 0 ? round(($totalCotiseActif / $totalEngageActif) * 100, 1) : 0;
         $clientsDistincts = count(array_unique(array_filter(array_column($items, 'client_code'))));
 
         $stats = [
             'total_souscriptions' => $totalSouscriptions,
             'total_clients_souscripteurs' => $clientsDistincts,
-            'total_engage' => $totalEngage,
-            'total_cotise' => $totalCotise,
+            'total_engage' => $totalEngageGlobal,
+            'total_engage_actif' => $totalEngageActif,
+            'total_cotise' => $totalCotiseGlobal,
+            'total_cotise_actif' => $totalCotiseActif,
             'reste_a_recouvrer' => $resteARecouvrer,
             'taux_recouvrement' => $tauxRecouvrement,
-            'total_encours_count' => $totalEnCoursCount,
+            'total_encours_count' => $totalValideCount,
+            'total_valide_count' => $totalValideCount,
+            'total_valide_engage' => $totalValideEngage,
+            'total_valide_cotise' => $totalValideCotise,
             'total_solde_count' => $totalSoldeCount,
+            'total_solde_engage' => $totalSoldeEngage,
+            'total_solde_cotise' => $totalSoldeCotise,
+            'total_reconduite_count' => $totalReconduiteCount,
+            'total_reconduite_engage' => $totalReconduiteEngage,
+            'total_reconduite_cotise' => $totalReconduiteCotise,
+            'total_annule_count' => $totalAnnuleCount,
+            'total_annule_engage' => $totalAnnuleEngage,
+            'total_annule_cotise' => $totalAnnuleCotise,
         ];
 
         $this->loadView('../views/souscriptions/list.php', [

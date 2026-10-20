@@ -78,9 +78,14 @@ class ClientController extends BaseController
             $cotParams[] = $userCode;
         }
 
-        // Total des contrats de souscription réels dans le périmètre
+        // Total et ventilation par statut des contrats de souscription réels dans le périmètre
         $sqlSous = "
-            SELECT COUNT(*) as total_souscriptions
+            SELECT 
+                COUNT(*) as total_souscriptions,
+                COUNT(CASE WHEN LOWER(TRIM(sub.statut_souscription)) = 'valide' THEN 1 END) as souscriptions_valide,
+                COUNT(CASE WHEN LOWER(TRIM(sub.statut_souscription)) = 'solde' THEN 1 END) as souscriptions_solde,
+                COUNT(CASE WHEN LOWER(TRIM(sub.statut_souscription)) = 'reconduite' THEN 1 END) as souscriptions_reconduite,
+                COUNT(CASE WHEN LOWER(TRIM(sub.statut_souscription)) = 'annule' THEN 1 END) as souscriptions_annule
             FROM souscriptions sub
             JOIN clients c ON c.code_client = sub.client_code
             WHERE sub.etablissement_code = ?
@@ -124,6 +129,10 @@ class ClientController extends BaseController
             $inactifs = (int)($res['clients_inactifs'] ?? 0);
             $souscripteurs = (int)($res['clients_souscripteurs'] ?? 0);
             $totalSouscriptions = (int)($resSous['total_souscriptions'] ?? 0);
+            $sousValide = (int)($resSous['souscriptions_valide'] ?? 0);
+            $sousSolde = (int)($resSous['souscriptions_solde'] ?? 0);
+            $sousReconduite = (int)($resSous['souscriptions_reconduite'] ?? 0);
+            $sousAnnule = (int)($resSous['souscriptions_annule'] ?? 0);
             $nouveaux = (int)($res['nouveaux_ce_mois'] ?? 0);
             $totalCotise = (float)($resCot['total_cotise'] ?? 0);
             $tauxEngagement = $total > 0 ? round(($souscripteurs / $total) * 100, 1) : 0;
@@ -135,6 +144,10 @@ class ClientController extends BaseController
                 'clients_inactifs' => $inactifs,
                 'clients_souscripteurs' => $souscripteurs,
                 'total_souscriptions' => $totalSouscriptions,
+                'souscriptions_valide' => $sousValide,
+                'souscriptions_solde' => $sousSolde,
+                'souscriptions_reconduite' => $sousReconduite,
+                'souscriptions_annule' => $sousAnnule,
                 'nouveaux_ce_mois' => $nouveaux,
                 'total_cotise' => $totalCotise,
                 'taux_engagement' => $tauxEngagement,
@@ -148,6 +161,10 @@ class ClientController extends BaseController
                 'clients_inactifs' => 0,
                 'clients_souscripteurs' => 0,
                 'total_souscriptions' => 0,
+                'souscriptions_valide' => 0,
+                'souscriptions_solde' => 0,
+                'souscriptions_reconduite' => 0,
+                'souscriptions_annule' => 0,
                 'nouveaux_ce_mois' => 0,
                 'total_cotise' => 0,
                 'taux_engagement' => 0,
@@ -294,18 +311,17 @@ class ClientController extends BaseController
             ]);
         }
 
+        $fullStats = $this->getStats();
+        $fullStats['total_clients'] = $totalClients;
+        $fullStats['clients_actifs'] = $totalActifs;
+        $fullStats['clients_inactifs'] = $totalInactifs;
+        $fullStats['clients_souscripteurs'] = $totalSouscripteurs;
+        $fullStats['taux_engagement'] = $totalClients > 0 ? round(($totalSouscripteurs / $totalClients) * 100, 1) : 0;
+        $fullStats['taux_actifs'] = $totalClients > 0 ? round(($totalActifs / $totalClients) * 100, 1) : 0;
+
         $this->json([
             'data' => $data,
-            'stats' => [
-                'total_clients' => $totalClients,
-                'clients_actifs' => $totalActifs,
-                'clients_inactifs' => $totalInactifs,
-                'clients_souscripteurs' => $totalSouscripteurs,
-                'total_souscriptions' => $totalSouscriptions,
-                'total_cotise' => $cumulCotise,
-                'taux_engagement' => $totalClients > 0 ? round(($totalSouscripteurs / $totalClients) * 100, 1) : 0,
-                'taux_actifs' => $totalClients > 0 ? round(($totalActifs / $totalClients) * 100, 1) : 0
-            ]
+            'stats' => $fullStats
         ]);
     }
 

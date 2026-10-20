@@ -215,6 +215,17 @@ $stats = $stats ?? [
   font-weight: 600;
 }
 
+.cli-sub-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 /* Barre de filtres rapides */
 .cli-filter-bar {
   display: flex;
@@ -528,22 +539,46 @@ $stats = $stats ?? [
           </div>
         </div>
 
-        <!-- KPI 3 : TOTAL SOUSCRIPTIONS & SOUSCRIPTEURS -->
-        <div class="cli-kpi-card" style="--kpi-accent: linear-gradient(90deg, #2563EB, #1D4ED8); --kpi-bg-icon: #EEF2FF; --kpi-color-icon: #2563EB;">
+        <!-- KPI 3 : TOTAL SOUSCRIPTIONS & VENTILATION DES STATUTS -->
+        <div class="cli-kpi-card" id="kpi-card-souscriptions" style="--kpi-accent: linear-gradient(90deg, #2563EB, #1D4ED8); --kpi-bg-icon: #EEF2FF; --kpi-color-icon: #2563EB; cursor: pointer;" title="Cliquer pour filtrer les abonnés souscripteurs">
           <div class="cli-kpi-header">
             <span class="cli-kpi-title">Souscriptions</span>
-            <div class="cli-kpi-icon">
-              <i data-lucide="file-text" style="width: 20px; height: 20px;"></i>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <a href="<?= RACINE ?>souscription/list" style="width: 28px; height: 28px; border-radius: 6px; background: #EFF6FF; color: #2563EB; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; border: 1px solid #BFDBFE;" title="Ouvrir la liste détaillée des souscriptions">
+                <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
+              </a>
+              <div class="cli-kpi-icon">
+                <i data-lucide="file-text" style="width: 20px; height: 20px;"></i>
+              </div>
             </div>
           </div>
-          <div class="cli-kpi-val" id="kpi-total-souscriptions" style="color: #2563EB;">
+          <div class="cli-kpi-val" id="kpi-total-souscriptions" style="color: #2563EB; margin-bottom: 8px;">
             <?= number_format($stats['total_souscriptions'] ?? 0, 0, ',', ' ') ?>
+          </div>
+          <!-- Ventilation dynamique des statuts de souscription -->
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+            <span class="cli-sub-badge" style="background: #EFF6FF; color: #1E3A5F; border: 1px solid #BFDBFE;" title="Contrats en cours / validés">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: #2563EB; display: inline-block;"></span>
+              <span id="kpi-sous-valide"><?= $stats['souscriptions_valide'] ?? 0 ?></span> validé(s)
+            </span>
+            <span class="cli-sub-badge" style="background: #ECFDF5; color: #15803D; border: 1px solid #BBF7D0;" title="Contrats intégralement soldés">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+              <span id="kpi-sous-solde"><?= $stats['souscriptions_solde'] ?? 0 ?></span> soldé(s)
+            </span>
+            <span class="cli-sub-badge" style="background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A;" title="Contrats reconduits sur nouvelle session">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: #F59E0B; display: inline-block;"></span>
+              <span id="kpi-sous-reconduite"><?= $stats['souscriptions_reconduite'] ?? 0 ?></span> reconduit(s)
+            </span>
+            <span class="cli-sub-badge" style="background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;" title="Contrats annulés">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: #DC2626; display: inline-block;"></span>
+              <span id="kpi-sous-annule"><?= $stats['souscriptions_annule'] ?? 0 ?></span> annulé(s)
+            </span>
           </div>
           <div class="cli-kpi-footer">
             <span class="cli-kpi-badge" style="background: #EEF2FF; color: #2563EB;">
-              Taux engagement : <span id="kpi-taux-engagement"><?= $stats['taux_engagement'] ?? 0 ?>%</span>
+              <i data-lucide="pie-chart" style="width: 12px; height: 12px;"></i> Taux engagement : <span id="kpi-taux-engagement"><?= $stats['taux_engagement'] ?? 0 ?>%</span>
             </span>
-            <span style="font-size: 11px; color: #94A3B8;">Avec contrat actif</span>
+            <span style="font-size: 11px; color: #64748B;"><strong id="kpi-clients-souscripteurs"><?= $stats['clients_souscripteurs'] ?? 0 ?></strong> abonné(s)</span>
           </div>
         </div>
 
@@ -746,5 +781,5 @@ $stats = $stats ?? [
 </div>
 <?php endif; ?>
 
-<script src="<?= RACINE ?>public/assets/js/modules/clients.js?v=2.3"></script>
+<script src="<?= RACINE ?>public/assets/js/modules/clients.js?v=2.4"></script>
 <?php require_once __DIR__ . '/../../public/inc/footer-link.php'; ?>
